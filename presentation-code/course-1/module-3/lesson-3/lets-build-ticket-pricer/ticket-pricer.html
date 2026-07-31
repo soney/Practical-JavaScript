@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ticket Price Checker</title>
+  </head>
+  <body>
+    <h1>Ticket Price Checker</h1>
+    <p>Open the browser console to see the ticket price.</p>
+
+    <script>
+      // Try changing these values and re-running the page.
+      const age = 15;
+      const isMember = true;
+
+      // Comparison operators produce boolean values.
+      const isChild = age < 13;
+      const isSenior = age >= 65;
+
+      let price;
+
+      // Conditionals run different branches depending on the data.
+      if (isChild) {
+        price = 5;
+      } else if (isSenior) {
+        price = 8;
+      } else {
+        price = 12;
+      }
+
+      // Logical operators combine boolean expressions.
+      if (isMember && !isChild) {
+        price = price - 2; // members save $2
+      }
+
+      console.log("Age: " + age);
+      console.log("Ticket price: $" + price);
+    </script>
+  </body>
+</html>

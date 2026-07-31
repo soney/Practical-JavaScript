@@ -1,0 +1,14 @@
+{
+  "users": [
+    {
+      "created": 1770747649988,
+      "email": "user@company.com",
+      "password": "abc123"
+    },
+    {
+      "created": 1770747666719,
+      "email": "differentperson@company.com",
+      "password": "abc123"
+    }
+  ]
+}

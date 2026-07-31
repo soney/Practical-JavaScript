@@ -1,0 +1,15 @@
+<html>
+<body>
+    <button>Click me</button>
+    <span id="el"></span>
+</body>
+<script>
+const btn = document.querySelector("button");
+function onClick() {
+    const el = document.querySelector("#el");
+    console.log(el);
+    el.innerText="clicked!";
+}
+btn.addEventListener("click", onClick);
+</script>
+</html>

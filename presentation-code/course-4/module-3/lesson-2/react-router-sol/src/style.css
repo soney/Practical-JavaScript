@@ -1,0 +1,10 @@
+body {
+    font-family: sans-serif;
+    padding: 20px;
+}
+nav {
+    margin-bottom: 20px;
+}
+nav a, nav button {
+    margin-right: 10px;
+}

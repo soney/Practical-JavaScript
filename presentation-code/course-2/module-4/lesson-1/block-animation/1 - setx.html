@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <script src="setx.js" defer></script>
+    </head>
+    <body>
+        <code>setX(</code><input id="num_inp" type="number" value="0" /><code>);</code>
+        <div id="block" />
+        <script>
+            const num_inp = document.querySelector("#num_inp");
+            num_inp.addEventListener("change", () => {
+                setX(num_inp.value);
+            });
+        </script>
+    </body>
+</html>

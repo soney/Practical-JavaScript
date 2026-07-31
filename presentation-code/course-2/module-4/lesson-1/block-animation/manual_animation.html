@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    #block {
+        position: fixed;
+        border: 2px solid black;
+        width: 150px;
+        height: 150px;
+        background-color: red;
+        border-radius: 5px;
+    }
+  </style>
+  <script>
+    function setX(x) {
+      const element = document.querySelector('#block'); // get the element
+      element.style.setProperty('left', x+'px');
+    }
+  </script>
+</head>
+  <body>
+    <button>Animate</button>
+    <div id="block" />
+    <script>
+        const btn = document.querySelector("button");
+        btn.addEventListener("click", animate);
+        function animate() {
+            const fromX = 0, toX = 300, duration = 5000;
+            const animationStarted = Date.now();
+            function step() {
+                const now = Date.now();
+                const pct = (now - animationStarted)/duration;
+                const pos = ease(pct)
+                const x = fromX + pos*(toX - fromX);
+                setX(x);
+                if(pct < 1) { requestAnimationFrame(step); }
+                else { setX(toX); }
+            }
+            step();
+        }
+        function ease (pct) {
+          return pct<.5 ? 2*pct*pct : -1+(4-2*pct)*pct;
+        }
+    </script>
+  </body>
+</html>

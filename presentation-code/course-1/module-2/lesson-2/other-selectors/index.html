@@ -1,0 +1,91 @@
+<html>
+    <head>
+        <title>Other selector examples</title>
+        <style>
+            button:hover {
+                background-color: gold;
+            }
+            input:focus {
+                outline: 3px solid red;
+            }
+            .child-examples li:first-child {
+                color: green;
+            }
+            .child-examples li:nth-child(even) {
+                background-color: lightyellow;
+            }
+
+            .not-examples p:not(.special) {
+                opacity: 0.2;
+            }
+            section:has(h2) {
+                background-color: lavender;
+            }
+
+            .parent > span {
+                background-color: lightblue;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>Other selector examples</h1>
+        <button class="hover-example">Hover over this button</button>
+        <p>
+            <label>
+                Focus this input:
+                <input class="focus-example" type="text" placeholder="Click or tab here">
+            </label>
+        </p>
+        <ul class="child-examples">
+            <li>First child</li>
+            <li>Second child</li>
+            <li>Third child</li>
+            <li>Fourth child</li>
+        </ul>
+        <div class="not-examples">
+            <p>This paragraph matches <code>:not(.special)</code>.</p>
+            <p class="special">This paragraph has the class <code>special</code>.</p>
+            <p>This paragraph also matches <code>:not(.special)</code>.</p>
+        </div>
+
+        <div class="has-examples">
+            <section>
+                <h2>Section with a heading</h2>
+                <p>This section matches <code>:has(h2)</code>.</p>
+            </section>
+
+            <section>
+                <p>This section does not contain a heading.</p>
+            </section>
+        </div>
+
+        <h2>Combinator selectors</h2>
+
+        <div class="combinator-examples">
+            <div class="ancestor">
+                <p>
+                    This <span>span</span> matches <code>.ancestor span</code>.
+                </p>
+            </div>
+
+            <div class="parent">
+                <span>This span matches <code>.parent &gt; span</code>.</span>
+                <p>
+                    This nested <span>span</span> does not match <code>.parent &gt; span</code>.
+                </p>
+            </div>
+
+            <div>
+                <h3 class="before-adjacent">Adjacent sibling marker</h3>
+                <p>This paragraph matches <code>.before-adjacent + p</code>.</p>
+                <p>This paragraph does not match the adjacent sibling selector.</p>
+            </div>
+
+            <div>
+                <h3 class="before-later">Later sibling marker</h3>
+                <p>This paragraph matches <code>.before-later ~ p</code>.</p>
+                <p>This paragraph also matches <code>.before-later ~ p</code>.</p>
+            </div>
+        </div>
+    </body>
+</html>

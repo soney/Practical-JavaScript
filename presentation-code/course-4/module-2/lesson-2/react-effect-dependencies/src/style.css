@@ -1,0 +1,8 @@
+body {
+    font-family: sans-serif;
+}
+
+body.dark {
+    background-color: black;
+    color: white;
+}

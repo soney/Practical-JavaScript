@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Receipt Calculator</title>
+  </head>
+  <body>
+    <h1>Receipt Calculator</h1>
+    <p>Open the browser console to see the receipt totals.</p>
+
+    <script>
+      // Strings hold text; numbers hold numeric data.
+      const itemName = "Coffee";
+      const price = 4.5; // a number
+      const quantity = 3;
+
+      // Arithmetic operators produce new numeric values.
+      const subtotal = price * quantity;
+      const taxRate = 0.08;
+      const tax = subtotal * taxRate;
+      const total = subtotal + tax;
+
+      // Combine strings and numbers to build readable output.
+      console.log(itemName + " x " + quantity);
+      console.log("Subtotal: $" + subtotal);
+      console.log("Tax: $" + tax);
+      console.log("Total: $" + total);
+    </script>
+  </body>
+</html>

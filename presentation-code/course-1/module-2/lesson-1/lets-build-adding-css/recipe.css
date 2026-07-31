@@ -1,0 +1,18 @@
+/* External stylesheet linked from recipe.html. */
+
+body {
+  font-family: Arial, sans-serif;
+  max-width: 500px;
+  margin: 20px auto;
+  color: #222;
+}
+
+.ingredients li {
+  margin-bottom: 4px;
+}
+
+.step {
+  background-color: #f4f4f4;
+  border-left: 3px solid darkgreen;
+  padding: 8px;
+}

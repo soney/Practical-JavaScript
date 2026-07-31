@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tip Calculator</title>
+  </head>
+  <body>
+    <h1>Tip Calculator</h1>
+    <p>Open the browser console to see the calculated tips.</p>
+
+    <script>
+      // A function is a reusable block of behavior.
+      // billAmount and tipPercent are parameters (local names).
+      function calculateTip(billAmount, tipPercent) {
+        const tip = billAmount * (tipPercent / 100);
+        return tip; // return sends a value back to the caller
+      }
+
+      function calculateTotal(billAmount, tipPercent) {
+        // Functions can call other functions.
+        const tip = calculateTip(billAmount, tipPercent);
+        return billAmount + tip;
+      }
+
+      // Calling a function runs its body with the given arguments.
+      console.log("Tip on $40 at 20%: $" + calculateTip(40, 20));
+      console.log("Tip on $40 at 15%: $" + calculateTip(40, 15));
+      console.log("Total on $40 at 20%: $" + calculateTotal(40, 20));
+    </script>
+  </body>
+</html>

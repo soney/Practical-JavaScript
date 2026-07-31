@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+    </style>
+  </head>
+  <body>
+    <!--
+    GUESSING GAME: Let users guess a word
+    -->
+    <input type="text" id="guess" />
+    <button id="guess-btn">Guess</button>
+    <p id="result"></p>
+    <script>
+      const secretWord = "javascript";
+      const inp = document.querySelector("input#guess");
+      const btn = document.querySelector("button#guess-btn");
+      const result = document.querySelector("#result");
+
+      function doGuess() {
+        const guess = inp.value;
+
+        if(guess === secretWord) {
+          result.textContent = "You got it!";
+          btn.setAttribute("disabled", "");
+          inp.disabled = true;
+          const body = document.querySelector("body");
+          body.classList.add("correct-guess");
+        } else {
+          result.textContent = "Guess again";
+
+          inp.value = "";
+          inp.focus();
+        }
+      }
+
+      btn.addEventListener("click", doGuess);
+    </script>
+  </body>
+</html>

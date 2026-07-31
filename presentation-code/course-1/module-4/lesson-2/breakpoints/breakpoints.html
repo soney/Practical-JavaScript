@@ -1,0 +1,25 @@
+<html>
+<script>
+const globalVar = 100;
+
+function innerFunction(x, y) {
+    console.log(x, y);
+}
+
+function doThing() {
+    const dtx = 5;
+    debugger;
+    innerFunction(dtx, 2);
+    console.log("next fn thing");
+}
+
+function parentCall() {
+    const parentVar = "parent";
+    doThing();
+    console.log("next parent thing");
+}
+
+parentCall();
+
+</script>
+</html>

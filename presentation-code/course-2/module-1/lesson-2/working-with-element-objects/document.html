@@ -1,0 +1,28 @@
+<html>
+    <body>
+        <h1>This is the header!</h1>
+        <ul id="list">
+            <li>First item</li>
+            <li class="highlight">Second item</li>
+            <li>Third item</li>
+            <li class="highlight">Fourth item</li>
+        </ul>
+<script>
+    const ulEl = document.querySelector("#list");
+    console.log(ulEl);
+
+    const highlighted = document.querySelectorAll(".highlight")
+    console.log(highlighted);
+
+    console.log(ulEl.innerText);
+    const headerEl = document.querySelector("h1");
+    headerEl.innerText = "changed!"
+    headerEl.setAttribute("id", "id_that_was_added_from_js");
+    headerEl.removeAttribute("id");
+    headerEl.classList.add("added_class_from_js");
+
+    const el = document.querySelectorAll(".xyz";
+    console.log(el);
+</script>
+    </body>
+</html>

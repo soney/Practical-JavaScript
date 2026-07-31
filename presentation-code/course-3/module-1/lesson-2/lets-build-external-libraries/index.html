@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Course Grade Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
+</head>
+<body>
+    <h1>SI 379 Grade Tracker</h1>
+    
+    <div>
+        <label>Add Assignment Score: 
+            <input type="number" id="scoreInput" min="0" max="100">
+        </label>
+        <button onclick="addScore()">Add</button>
+    </div>
+    
+    <div id="stats"></div>
+    <canvas id="gradeChart" width="400" height="200"></canvas>
+    
+    <script>
+        // Sample data: assignment scores with dates
+        let grades = [
+            { score: 85, date: '2024-09-15', name: 'HW1' },
+            { score: 92, date: '2024-09-22', name: 'HW2' },
+            { score: 78, date: '2024-09-29', name: 'HW3' },
+            { score: 88, date: '2024-10-06', name: 'HW4' },
+            { score: 95, date: '2024-10-13', name: 'HW5' }
+        ];
+        
+        let chart = null;
+        
+        function updateDashboard() {
+            // Lodash: Calculate statistics efficiently
+            const scores = _.map(grades, 'score');
+            const average = _.mean(scores).toFixed(1);
+            const median = _.sortBy(scores)[Math.floor(scores.length / 2)];
+            const highest = _.max(scores);
+            const lowest = _.min(scores);
+            
+            // Display statistics
+            document.getElementById('stats').innerHTML = `
+                <h3>Statistics</h3>
+                <p><strong>Average:</strong> ${average}%</p>
+                <p><strong>Median:</strong> ${median}%</p>
+                <p><strong>Highest:</strong> ${highest}%</p>
+                <p><strong>Lowest:</strong> ${lowest}%</p>
+                <p><strong>Total Assignments:</strong> ${grades.length}</p>
+            `;
+            
+            // Day.js: Format dates for display
+            const labels = grades.map(g => 
+                dayjs(g.date).format('MMM D')
+            );
+            
+            // Chart.js: Visualize the data
+            const ctx = document.getElementById('gradeChart');
+            
+            if (chart) {
+                chart.destroy(); // Clean up previous chart
+            }
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Assignment Scores',
+                        data: scores,
+                        borderColor: 'rgb(0, 39, 76)', // Michigan blue
+                        backgroundColor: 'rgba(0, 39, 76, 0.1)',
+                        tension: 0.3
+                    }, {
+                        label: 'Average',
+                        data: Array(scores.length).fill(average),
+                        borderColor: 'rgb(255, 203, 5)', // Michigan maize
+                        borderDash: [5, 5],
+                        pointRadius: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Score (%)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function addScore() {
+            const input = document.getElementById('scoreInput');
+            const score = parseInt(input.value);
+            
+            if (score >= 0 && score <= 100) {
+                // Day.js: Get current date
+                const today = dayjs().format('YYYY-MM-DD');
+                
+                grades.push({
+                    score: score,
+                    date: today,
+                    name: `HW${grades.length + 1}`
+                });
+                
+                // Lodash: Keep only last 10 assignments
+                grades = _.takeRight(grades, 10);
+                
+                updateDashboard();
+                input.value = '';
+            }
+        }
+        
+        // Initialize on load
+        updateDashboard();
+    </script>
+</body>
+</html>

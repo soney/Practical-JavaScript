@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <div id="timepassed"></div>
+    <script>
+        const pageLoaded = Date.now();
+        const timePassedDiv = document.querySelector("#timepassed");
+        setInterval(() => {
+            const timePassed = (Date.now() - pageLoaded)/1000;
+            timePassedDiv.textContent = timePassed;
+        }, 50);
+    </script>
+  </body>
+</html>

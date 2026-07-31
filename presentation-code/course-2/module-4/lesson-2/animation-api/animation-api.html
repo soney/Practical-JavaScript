@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            #block {
+                width: 700px;
+                height: 200px;
+                background-color: red;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="block"></div>
+        <script>
+            const block = document.querySelector("#block");
+            block.addEventListener("click", () => {
+                const myAnimation = block.animate([
+                    {backgroundColor: "blue", width: "100px"}
+                ], 30000);
+                console.log(myAnimation);
+            });
+        </script>
+    </body>
+</html>

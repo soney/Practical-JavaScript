@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://unpkg.com/i18next/dist/umd/i18next.js"></script>
+    </head>
+    <body>
+        <header>
+            <button id="en">English</button>
+            <button id="de">German</button>
+        </header>
+        <div id="output"></div>
+        <script>
+            const enButton = document.querySelector("#en");
+            const deButton = document.querySelector("#de");
+            const output = document.querySelector("#output");
+            enButton.addEventListener("click", () => changeLng("en"));
+            deButton.addEventListener("click", () => changeLng("de"));
+            i18next.init({
+                lng: 'en',
+                resources: {
+                    en: {
+                        translation: {
+                            "key": "hello world"
+                        }
+                    },
+                    de: {
+                        translation: {
+                            "key": "hello welt"
+                        }
+                    }
+                }
+            }, (err, t) => {
+                updateContent();
+            });
+            function updateContent() {
+                output.textContent = i18next.t('key')
+            }
+
+            function changeLng(lng) {
+                i18next.changeLanguage(lng);
+            }
+            i18next.on('languageChanged', () => {
+                updateContent();
+            });
+        </script>
+    </body>
+</html>

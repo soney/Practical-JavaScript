@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <script>
+            const OMDB_BASE_URL = "http://www.omdbapi.com/?" 
+            const params = new URLSearchParams({
+                apikey: "YOUR_OMDB_API_KEY",
+                t: "Star Wars"
+            });
+
+            fetch(OMDB_BASE_URL + params.toString())
+                .then(r => r.json())
+                .then(result => {
+                    console.log(result);
+                });
+
+            // const BASE_URL = "https://api.datamuse.com/words?";
+            // const params = new URLSearchParams({
+            //     sp: "t??k"
+            // });
+            // fetch(BASE_URL + params.toString())
+            //     .then(r => r.json())
+            //     .then(result => {
+            //         console.log(result);
+            //     });
+        </script>
+    </body>
+</html>

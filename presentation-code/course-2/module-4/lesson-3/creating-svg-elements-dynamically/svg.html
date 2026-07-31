@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            svg {
+                border: 1px solid grey;
+            }
+        </style>
+    </head>
+    <body>
+        <svg width="400px" height="400px">
+        </svg>
+        <script>
+            const SVG_NS = "http://www.w3.org/2000/svg";
+            const svg = document.querySelector("svg");
+
+            svg.addEventListener("mousedown", (mdevent) => {
+                const circle = document.createElementNS(SVG_NS, "circle");
+
+                circle.setAttribute("cx", mdevent.offsetX);
+                circle.setAttribute("cy", mdevent.offsetY);
+                circle.setAttribute("fill", "none");
+                circle.setAttribute("stroke", "blue");
+                circle.setAttribute("stroke-width", "3");
+
+                function onMouseMove(mmevent) {
+                    circle.setAttribute("r", distance(mdevent.offsetX, mdevent.offsetY, mmevent.offsetX, mmevent.offsetY));
+                }
+                svg.addEventListener("mousemove", onMouseMove);
+                svg.addEventListener("mouseup", () => {
+                    svg.removeEventListener("mousemove", onMouseMove);
+                });
+                svg.append(circle);
+            });
+
+            // Returns the distance between two points
+            function distance(x1, y1, x2, y2) {
+                return Math.sqrt(Math.pow(x1-x2, 2) + Math.pow(y1-y2, 2));
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+
+function delayPromise(value, ms) {
+    return new Promise((resolve) => {
+        setTimeout(() => {
+            resolve(value);
+        }, ms);
+    });
+}
+
+delayPromise("val1", 3000).then((val1) => {
+    console.log("promise 1 resolved");
+    return delayPromise(val1 + " and value 2", 5000);
+}).then((val2) => {
+    console.log("promise 2 resolved");
+    return delayPromise(val2 + " and value 3", 5000);
+}).then((val3) => {
+    console.log("promise 3 resolved");
+    console.log(val3);
+});
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+    <body>
+         <ul id="todo-list"></ul>
+         <input type="text" id="description" />
+         <button id="add">Add</button>
+
+<script>
+
+const todoUl = document.querySelector("ul#todo-list");
+const descInput = document.querySelector("input#description");
+const addButton = document.querySelector("button#add");
+
+const tasksArray = recallTasksFromLocalStorage();
+for(const description of tasksArray) {
+    createTaskDOMElement(description);
+}
+
+function recallTasksFromLocalStorage() {
+    try {
+        return JSON.parse(localStorage.getItem('todos'));
+    } catch(e) {
+        console.log(e);
+        return [];
+    }
+}
+
+function saveTasksToLocalStorage() {
+    localStorage.setItem('todos', 
+        JSON.stringify(tasksArray)
+    );
+}
+
+function createTaskDOMElement(description) {
+    const taskItem = document.createElement("li");
+    taskItem.textContent = description;
+    todoUl.append(taskItem);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Done";
+    taskItem.append(removeBtn);
+
+    function removeThisTask() {
+        const idx = Array.from(todoUl.children).indexOf(taskItem);
+        taskItem.remove();
+
+        tasksArray.splice(idx, 1);
+        saveTasksToLocalStorage();
+    }
+
+    removeBtn.addEventListener("click", removeThisTask);
+
+}
+
+function addTaskFromDescInput() {
+    const description = descInput.value;
+    createTaskDOMElement(description);
+    descInput.value = "";
+    descInput.focus();
+    tasksArray.push(description);
+    saveTasksToLocalStorage();
+}
+
+addButton.addEventListener("click", addTaskFromDescInput);
+descInput.addEventListener("keydown", (evt) => {
+    if(evt.key === "Enter") {
+        addTaskFromDescInput();
+    }
+})
+
+</script>
+    </body>
+</html>

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Slide Box</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 520px;
+        margin: 20px auto;
+        color: #222;
+      }
+      #track {
+        position: relative;
+        height: 60px;
+        background: #f0f0f0;
+        border: 1px solid #ccc;
+        margin: 16px 0;
+      }
+      #box {
+        position: absolute;
+        top: 10px;
+        left: 0;
+        width: 40px;
+        height: 40px;
+        background: #2a6fb5;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Animating with requestAnimationFrame</h1>
+    <div id="track"><div id="box"></div></div>
+    <button id="run">Slide</button>
+
+    <script>
+      const box = document.querySelector("#box");
+      const track = document.querySelector("#track");
+
+      // Easing makes motion start slow and end slow instead of feeling robotic.
+      function easeInOut(t) {
+        return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+      }
+
+      function slide() {
+        const distance = track.clientWidth - box.clientWidth;
+        const duration = 1000; // milliseconds
+        const startTime = performance.now();
+
+        // requestAnimationFrame calls our function before each repaint.
+        function frame(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(elapsed / duration, 1); // 0 -> 1
+          const eased = easeInOut(progress);
+
+          box.style.left = eased * distance + "px";
+
+          if (progress < 1) {
+            requestAnimationFrame(frame); // schedule the next frame
+          }
+        }
+
+        requestAnimationFrame(frame);
+      }
+
+      document.querySelector("#run").addEventListener("click", slide);
+    </script>
+  </body>
+</html>

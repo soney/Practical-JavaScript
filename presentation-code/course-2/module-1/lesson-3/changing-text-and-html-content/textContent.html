@@ -1,0 +1,17 @@
+<html>
+    <body>
+        <p>This is a paragraph with <strong>bold text</strong></p>
+        <ul id="list">
+            <li>First item</li>
+            <li class="highlight">Second item</li>
+            <li>Third item</li>
+            <li class="highlight">Fourth item</li>
+        </ul>
+        <script>
+            const p = document.querySelector("p");
+            p.innerHTML = "some <em>content</em>"
+            const ul = document.querySelector("ul");
+            console.log(ul.textContent);
+        </script>
+    </body>
+</html>

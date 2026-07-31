@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sample Static Page</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 2rem;
+        }
+
+        h1 {
+            color: #333;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Hello from the Static Server!</h1>
+    <p>This page is served by a vanilla Node.js HTTP server.</p>
+    <hr>
+    <h2>Submit Data</h2>
+    <form action="/submit" method="POST" enctype="multipart/form-data">
+        <label for="message">Message:</label>
+        <input type="text" id="message" name="message" required>
+        <br><br>
+        <label for="email">Email:</label>
+        <input type="email" id="email" name="email" required>
+        <br><br>
+        <label for="subject">Subject:</label>
+        <input type="text" id="subject" name="subject" required>
+        <br><br>
+        <label for="image">Image:</label>
+        <input type="file" id="image" name="image" accept="image/*">
+        <br><br>
+        <button type="submit">Submit</button>
+    </form>
+</body>
+
+</html>

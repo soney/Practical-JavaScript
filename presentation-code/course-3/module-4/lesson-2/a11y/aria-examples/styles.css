@@ -1,0 +1,220 @@
+:root {
+    --bg-color: #f8fafc;
+    --card-bg: #ffffff;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --primary: #3b82f6;
+    --primary-hover: #2563eb;
+    --secondary: #64748b;
+    --secondary-hover: #475569;
+    --border: #e2e8f0;
+    --success-bg: #dcfce7;
+    --success-text: #166534;
+    --slider-track: #cbd5e1;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-primary);
+    line-height: 1.6;
+    padding: 2rem;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+h1 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.5rem;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+}
+
+.demo-section {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border);
+}
+
+.demo-section h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.demo-section p {
+    color: var(--text-secondary);
+    margin-bottom: 1.5rem;
+}
+
+/* Button Styles */
+.controls {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn.primary {
+    background-color: var(--primary);
+    color: white;
+}
+
+.btn.primary:hover {
+    background-color: var(--primary-hover);
+}
+
+.btn.secondary {
+    background-color: var(--secondary);
+    color: white;
+}
+
+.btn.secondary:hover {
+    background-color: var(--secondary-hover);
+}
+
+/* Live Region Style */
+.live-region {
+    padding: 1rem;
+    background-color: #f1f5f9;
+    border-left: 4px solid var(--primary);
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+/* Custom Role Styles */
+.custom-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.fake-button {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background-color: white;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+}
+
+.fake-button:focus {
+    outline: 3px solid rgba(59, 130, 246, 0.5);
+    outline-offset: 2px;
+}
+
+.fake-button[aria-pressed="true"] {
+    background-color: var(--primary);
+    color: white;
+}
+
+.fake-alert {
+    padding: 1rem;
+    background-color: var(--success-bg);
+    color: var(--success-text);
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Custom Slider Styles */
+.slider-container label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+.slider-track {
+    position: relative;
+    width: 100%;
+    height: 12px;
+    background-color: var(--slider-track);
+    border-radius: 6px;
+    margin: 1.5rem 0;
+    cursor: pointer;
+}
+
+.slider-track:focus {
+    outline: none;
+}
+
+.slider-track:focus .slider-thumb {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+    border: 2px solid var(--primary-hover);
+}
+
+.slider-fill {
+    position: absolute;
+    height: 100%;
+    background-color: var(--primary);
+    border-radius: 6px 0 0 6px;
+    pointer-events: none;
+}
+
+.slider-thumb {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: white;
+    border: 2px solid var(--primary);
+    border-radius: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    cursor: grab;
+    z-index: 2;
+}
+
+.slider-thumb:active {
+    cursor: grabbing;
+}
+
+.slider-value {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    font-weight: 600;
+}

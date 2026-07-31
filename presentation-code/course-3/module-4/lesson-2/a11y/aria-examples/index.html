@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ARIA Accessibility Examples</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>ARIA Accessibility Demos</h1>
+            <p class="subtitle">Examples of WAI-ARIA roles, live regions, and custom controls.</p>
+        </header>
+
+        <main>
+            <!-- Example 1: ARIA Live Region -->
+            <section class="demo-section" aria-labelledby="live-heading">
+                <h2 id="live-heading">1. `aria-live` Region</h2>
+                <p>Screen readers will automatically announce changes made to the live region below without the user
+                    needing to move focus to it.</p>
+
+                <div class="controls">
+                    <button id="addCartBtn" class="btn primary">Add to Cart</button>
+                    <button id="clearCartBtn" class="btn secondary">Clear Cart</button>
+                </div>
+
+                <!-- The Live Region -->
+                <div id="cartStatus" class="live-region" aria-live="polite" aria-atomic="true">
+                    Your cart is empty.
+                </div>
+            </section>
+
+            <!-- Example 2: ARIA Roles for Custom Elements -->
+            <section class="demo-section" aria-labelledby="role-heading">
+                <h2 id="role-heading">2. Custom Elements with ARIA `role`</h2>
+                <p>Turning standard `div` elements into semantic interactive controls using ARIA roles.</p>
+
+                <div class="custom-controls">
+                    <!-- A div acting as a button -->
+                    <div id="customButton" class="fake-button" role="button" tabindex="0" aria-pressed="false">
+                        Toggle Status
+                    </div>
+
+                    <!-- A div acting as an alert -->
+                    <div id="statusAlert" class="fake-alert hidden" role="alert">
+                        Status successfully toggled!
+                    </div>
+                </div>
+            </section>
+
+            <!-- Example 3: Custom ARIA Scrollbar / Slider -->
+            <section class="demo-section" aria-labelledby="slider-heading">
+                <h2 id="slider-heading">3. Custom ARIA Slider (Scrollbar)</h2>
+                <p>A custom slider element that uses ARIA attributes (`role="slider"`, `aria-valuenow`, etc.) to
+                    communicate its state to screen readers.</p>
+
+                <div class="slider-container">
+                    <label id="volumeLabel">Media Volume</label>
+                    <div id="customSlider" class="slider-track" role="slider" aria-labelledby="volumeLabel"
+                        aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0">
+                        <div id="sliderThumb" class="slider-thumb" style="left: 50%;"></div>
+                        <div id="sliderFill" class="slider-fill" style="width: 50%;"></div>
+                    </div>
+                    <div class="slider-value">Current Volume: <span id="volumeValue">50</span>%</div>
+                </div>
+            </section>
+        </main>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>

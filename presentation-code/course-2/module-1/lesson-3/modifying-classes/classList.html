@@ -1,0 +1,35 @@
+<html>
+    <head>
+        <style>
+            .item {
+                border: 1px solid grey;
+                margin: 5px;
+            }
+            .item.selected {
+                background-color: yellow;
+            }
+        </style>
+    </head>
+    <body>
+        <ul>
+            <li class="item">Item 1</li>
+            <li class="item selected">Item 2</li>
+            <li class="item">Item 3</li>
+        </ul>
+        <script>
+            const items = document.querySelectorAll(".item");
+
+            for(const item of items) {
+                function onClick() {
+                    if(item.classList.contains("selected")) {
+                        item.classList.remove("selected");
+                    } else {
+                        item.classList.add("selected");
+                    }
+                }
+                item.addEventListener("click", onClick);
+            }
+
+        </script>
+    </body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <button id="apple">Apple</button>
+        <button id="banana">Banana</button>
+        <button id="pear">Pear</button>
+        <div id="pricetag"></div>
+
+        <script>
+            const fruit = [
+                {'id': 'apple',  'price': '6'},
+                {'id': 'banana', 'price': '8'},
+                {'id': 'pear',   'price': '10'}
+            ];
+            for (let i = 0; i < fruit.length; i++) {
+                var item = fruit[i];
+                const btn = document.querySelector("#"+item.id);
+                btn.addEventListener("click", () => {
+                    const priceDiv = document.querySelector("#pricetag")
+                    priceDiv.textContent = "A " + item.id + " costs " + item.price;
+                });
+            }
+        </script>
+    </body>
+</html>

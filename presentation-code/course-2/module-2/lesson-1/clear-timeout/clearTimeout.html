@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .hidden {
+                display: none;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="feedback" class="hidden"><button id="undo">Undo Send</button></div>
+        <textarea></textarea>
+        <button id="send">Send</button>
+        <script>
+            const body = document.querySelector("textarea");
+            const sendButton = document.querySelector("#send");
+            const feedbackDiv = document.querySelector("#feedback");
+            const undoSendButton = document.querySelector("#undo");
+            let timeoutID;
+
+            sendButton.addEventListener("click", () => {
+                feedbackDiv.classList.remove("hidden");
+                sendButton.disabled = true;
+                timeoutID = setTimeout(() => {
+                    sendMessage();
+                    sendButton.disabled = false;
+                }, 3000);
+            });
+
+            undoSendButton.addEventListener("click", () => {
+                clearTimeout(timeoutID);
+                feedbackDiv.classList.add("hidden");
+                sendButton.disabled = false;
+            });
+
+            function sendMessage() {
+                alert("Sending message: " + body.value);
+                feedbackDiv.classList.add("hidden");
+            }
+        </script>
+    </body>
+</html>

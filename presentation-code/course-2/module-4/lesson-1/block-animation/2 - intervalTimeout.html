@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <script src="setx.js" defer></script>
+        <script src="runsimpleanimation.js" defer></script>
+    </head>
+    <body>
+        <button id="run"><code>runSimpleAnimation()</code></button>
+        <div id="block" />
+        <script>
+            const runButton = document.querySelector("#run");
+            runButton.addEventListener("click", () => {
+                runSimpleAnimation();
+            });
+        </script>
+    </body>
+</html>

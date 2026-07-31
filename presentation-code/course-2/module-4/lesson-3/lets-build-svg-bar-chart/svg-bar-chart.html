@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SVG Bar Chart</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 520px;
+        margin: 20px auto;
+        color: #222;
+      }
+      svg {
+        border: 1px solid #ccc;
+        background: #fafafa;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Building an SVG Bar Chart</h1>
+
+    <!-- Some SVG shapes can be written directly as markup. -->
+    <svg id="chart" width="320" height="220">
+      <line x1="40" y1="10" x2="40" y2="180" stroke="#888" />
+      <line x1="40" y1="180" x2="300" y2="180" stroke="#888" />
+    </svg>
+
+    <script>
+      // SVG elements live in their own namespace, so we use createElementNS.
+      const SVG_NS = "http://www.w3.org/2000/svg";
+      const chart = document.querySelector("#chart");
+
+      const data = [120, 80, 150, 60, 100];
+      const barWidth = 40;
+      const gap = 10;
+      const baseline = 180;
+
+      data.forEach(function (value, index) {
+        // Create a <rect> for each bar and configure it with attributes.
+        const bar = document.createElementNS(SVG_NS, "rect");
+        bar.setAttribute("x", 50 + index * (barWidth + gap));
+        bar.setAttribute("y", baseline - value);
+        bar.setAttribute("width", barWidth);
+        bar.setAttribute("height", value);
+        bar.setAttribute("fill", "#2a6fb5");
+        chart.append(bar);
+
+        // Add a <text> label under each bar.
+        const label = document.createElementNS(SVG_NS, "text");
+        label.setAttribute("x", 50 + index * (barWidth + gap) + barWidth / 2);
+        label.setAttribute("y", baseline + 15);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("font-size", "12");
+        label.textContent = value;
+        chart.append(label);
+      });
+    </script>
+  </body>
+</html>

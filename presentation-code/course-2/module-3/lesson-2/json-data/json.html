@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <script>
+        const URL = "https://events.umich.edu/day/json?v=2";
+        fetch(URL).then(r => r.json())
+                .then((events) => {
+                    for(const ev of events) {
+                        const titleEl = document.createElement("h2");
+                        titleEl.textContent = ev.combined_title;
+                        document.body.append(titleEl, ev.description);
+                    }
+                })
+    </script>
+  </body>
+</html>

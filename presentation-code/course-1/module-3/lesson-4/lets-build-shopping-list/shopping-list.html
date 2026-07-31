@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Shopping List Summary</title>
+  </head>
+  <body>
+    <h1>Shopping List Summary</h1>
+    <p>Open the browser console to see the list summary.</p>
+
+    <script>
+      // An array keeps related values together in order.
+      const items = ["apples", "bread", "milk", "eggs"];
+      const prices = [3, 2, 4, 5];
+
+      console.log("You have " + items.length + " items.");
+
+      // for...of visits each value directly.
+      for (const item of items) {
+        console.log("- " + item);
+      }
+
+      // A for loop uses an index to visit positions in an array.
+      let total = 0;
+      for (let i = 0; i < prices.length; i = i + 1) {
+        total = total + prices[i];
+      }
+      console.log("Total: $" + total);
+
+      // A while loop repeats while its condition stays true.
+      let countdown = 3;
+      while (countdown > 0) {
+        console.log("Checking out in " + countdown + "...");
+        countdown = countdown - 1;
+      }
+      console.log("Done!");
+    </script>
+  </body>
+</html>

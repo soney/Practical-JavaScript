@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Color Switcher</title>
+  </head>
+  <body>
+    <h1 id="title">Pick a background color</h1>
+    <button id="calm">Calm</button>
+    <button id="sunny">Sunny</button>
+    <button id="night">Night</button>
+
+    <script>
+      // An object groups named data together as properties.
+      const theme = {
+        name: "Calm",
+        background: "#dfeffb",
+        text: "#13344f",
+      };
+      console.log("Default theme:", theme.name);
+
+      // DOM elements are also objects, with properties and methods.
+      const title = document.querySelector("#title");
+
+      function applyTheme(background, text) {
+        // The window/document gives access to the page.
+        document.body.style.backgroundColor = background;
+        title.style.color = text;
+      }
+
+      // Listen for click events to run code after user interaction.
+      document.querySelector("#calm").addEventListener("click", function () {
+        applyTheme("#dfeffb", "#13344f");
+      });
+      document.querySelector("#sunny").addEventListener("click", function () {
+        applyTheme("#fff4cc", "#7a5b00");
+      });
+      document.querySelector("#night").addEventListener("click", function () {
+        applyTheme("#1e2030", "#e6e6e6");
+      });
+    </script>
+  </body>
+</html>

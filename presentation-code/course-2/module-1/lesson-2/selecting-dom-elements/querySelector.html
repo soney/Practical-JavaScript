@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .highlight {
+                background-color: yellow;
+            }
+            .box {
+                border: 1px solid black;
+                margin: 10px;
+                padding: 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <p class="box">Paragraph with class "box"</p>
+
+        <div id="main_panel">
+            <ul id="list">
+                <li>Item 1</li>
+                <li class="highlight">Item 2</li>
+                <li>Item 3</li>
+                <li class="highlight">Item 4</li>
+            </ul>
+            <div class="box">Box inside main panel</div>
+        </div>
+
+        <div class="highlight">Standalone highlight div</div>
+        <script>
+            // selects *first* paragraph w/ class box
+            const para = document.querySelector("p.box");
+            console.log(para);
+
+            const firstHighlight = document.querySelector(".highlight");
+            console.log(firstHighlight);
+
+            const highlightedElements = document.querySelectorAll("ul li.highlight");
+            console.log(highlightedElements);
+
+            // get the element with ID main_panel
+            const mainPanel = document.querySelector("#main_panel");
+            console.log(mainPanel)
+        </script>
+    </body>
+</html>

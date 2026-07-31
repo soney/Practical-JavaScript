@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <input />
+        <button>Click me!</button>
+
+        <script>
+            const btn = document.querySelector("button");
+            const inp = document.querySelector("input");
+            function onKeyDown() {
+                console.log("key down on input");
+            }
+            inp.addEventListener("keydown", onKeyDown);
+            function callback() {
+                console.log("The user clicked the button");
+                console.log("Yay!");
+            }
+            btn.addEventListener("click", callback);
+
+            function onMouseOver() {
+                console.log("Mouse over button");
+            }
+            btn.addEventListener("mouseover", onMouseOver);
+        </script>
+    </body>
+</html>

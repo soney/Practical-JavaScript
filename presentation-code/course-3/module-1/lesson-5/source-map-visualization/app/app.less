@@ -1,0 +1,143 @@
+.scrollbar-style {
+    &::-webkit-scrollbar {
+        width: 8px;
+    }
+    &::-webkit-scrollbar-thumb {
+        background-color: hsla(0, 0%, 56%, 0.6);
+        border-radius: 50px;
+    }
+    &:hover::-webkit-scrollbar-thumb {
+        background-color: hsla(0, 0%, 25%, 0.6);
+    }
+}
+
+// flexbox mixins
+.flex-container {
+	display: flex;
+	overflow: hidden;
+
+	> * {
+	flex: 0 0 auto;
+	overflow: scroll;
+    .scrollbar-style;
+	}
+}
+
+.stretchy {
+	flex: 1 1 auto;
+}
+
+.column {
+
+	flex-direction: column;
+}
+
+html,
+body,
+.full-screen {
+	height: 100%;
+}
+
+body {
+	margin: 0;
+}
+
+.full-screen {
+
+	.flex-container;
+	.column;
+
+	> main {
+	.stretchy;
+	.flex-container;
+		> .codeblock {
+			.stretchy;
+			width: 50%;
+		}
+        > *:first-child {
+            margin-right: 5px;
+        }
+	}
+}
+
+header {
+	padding: 10px;
+}
+
+footer {
+	height: 200px;
+}
+
+
+header .btn-info {
+	float: right;
+}
+
+span.original-item {
+	// border-left: 1px solid black;
+	margin: 1px;
+	min-width: 3px;
+}
+span.generated-item {
+	margin: 1px;
+}
+span.selected {
+	background: black;
+	color: white;
+}
+.style-0 {
+	background: hsl(291.1, 46%, 87%);
+}
+.style-1 {
+	background: hsl(198.9, 92%, 88%);
+}
+.style-2 {
+	background: hsl(122, 37%, 89%);
+}
+.style-3 {
+	background: hsl(53.8, 51%, 82%);
+}
+.style-4 {
+	background: hsl(14.4, 31%, 82%);
+}
+
+pre {
+    border-radius: 0;
+}
+pre code {
+	white-space: pre-wrap;
+	word-break: normal;
+	word-wrap: normal;
+}
+
+main, footer {
+    h3 {
+        font-size: 16px;
+        line-height: 1;
+        margin: 0;
+        padding: 2px 6px;
+        color: rgb(255, 255, 255);
+        font-weight: normal;
+		background: hsla(0, 0%, 9%, 0.22);
+		border: 1px solid hsla(0, 0%, 50%, 0.5);
+		border-left: 0;
+		border-right: 0;
+		position: sticky;
+		top: 0;
+    }
+}
+
+header small {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+table {
+	width: 100%;
+}
+
+tr, td {
+	margin: 0;
+	width: 33%;
+}

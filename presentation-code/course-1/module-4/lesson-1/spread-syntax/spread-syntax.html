@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+    <script>
+        const L = [10, 20, 30];
+        const L_plus = [...L, 40];
+        // console.log(L_plus); // [ 10, 20, 30, 40 ]
+
+        function add(...numbers) {
+            return Math.sumPrecise(numbers);
+            // let result = 0;
+            // for(const number of numbers) {
+            //     result += number;
+            // }
+            // return result;
+        }
+        const result = add(1,2,3,4);
+        console.log(result);
+        const result2 = add(...L_plus);
+        console.log(result2);
+    </script>
+</html>

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Dashboard Loader</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 520px;
+        margin: 20px auto;
+        color: #222;
+      }
+      button {
+        margin-right: 8px;
+      }
+      #log {
+        margin-top: 16px;
+        white-space: pre-wrap;
+        background: #f4f4f4;
+        border: 1px solid #ddd;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Dashboard Loader</h1>
+    <p>
+      Each "request" takes 1 second. Compare loading the parts one-at-a-time
+      versus all at once.
+    </p>
+    <button id="sequential">Load sequentially</button>
+    <button id="parallel">Load in parallel</button>
+    <div id="log"></div>
+
+    <script>
+      const log = document.querySelector("#log");
+      function write(message) {
+        log.textContent += message + "\n";
+      }
+
+      // A function that returns a promise, simulating a 1-second request.
+      function fetchData(label, value) {
+        return new Promise(function (resolve) {
+          setTimeout(function () {
+            resolve(value);
+          }, 1000);
+        });
+      }
+
+      // async/await lets us write asynchronous steps like synchronous ones.
+      async function loadSequentially() {
+        log.textContent = "";
+        const start = Date.now();
+
+        // Each await waits for the previous request to finish first.
+        const user = await fetchData("user", "Ada");
+        write("Got user: " + user);
+        const posts = await fetchData("posts", "3 posts");
+        write("Got posts: " + posts);
+
+        write("Sequential took ~" + (Date.now() - start) + "ms");
+      }
+
+      async function loadInParallel() {
+        log.textContent = "";
+        const start = Date.now();
+
+        // Start both requests, then wait for all of them together.
+        const [user, posts] = await Promise.all([
+          fetchData("user", "Ada"),
+          fetchData("posts", "3 posts"),
+        ]);
+        write("Got user: " + user);
+        write("Got posts: " + posts);
+
+        write("Parallel took ~" + (Date.now() - start) + "ms");
+      }
+
+      document.querySelector("#sequential").addEventListener("click", loadSequentially);
+      document.querySelector("#parallel").addEventListener("click", loadInParallel);
+    </script>
+  </body>
+</html>

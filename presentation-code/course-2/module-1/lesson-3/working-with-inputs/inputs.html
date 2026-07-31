@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <body>
+<ul>
+    <li><input type="checkbox" id="a"><label for="a">Item A</label></li>
+    <li><input type="checkbox" id="b"><label for="b">Item B</label></li>
+    <li><input type="checkbox" id="c"><label for="c">Item C</label></li>
+    <li><input type="checkbox" id="d"><label for="d">Item D</label></li>
+</ul>
+<button>Submit</button>
+        <script>
+            const btn = document.querySelector("button");
+            function onClick() {
+                const selectedInputs = document.querySelectorAll("input:checked");
+                console.log(selectedInputs);
+            }
+            btn.addEventListener("click", onClick);
+        </script>
+    </body>
+</html>

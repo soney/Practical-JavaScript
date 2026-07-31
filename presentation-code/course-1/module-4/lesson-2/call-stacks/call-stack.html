@@ -1,0 +1,25 @@
+<html>
+<script>
+
+function add(x) {
+    return x+1;
+}
+
+function square(n) {
+    return multiply(n, n);
+}
+
+function multiply(x, y) {
+    console.trace("trace!")
+    return x * y;
+}
+
+function printSquare(n) {
+    const squared = square(n);
+    console.log(squared);
+}
+
+printSquare(5); // 25
+
+</script>
+</html>

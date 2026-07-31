@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="sync_async_functions.js"></script>
+    </head>
+    <body>
+        <button id="btn">Click me</button>
+        <p id="click_counter">You have not clicked the button</p>
+        <button id="start_timer">Start timer</button>
+        <p id="timer_content">Five seconds have **not** passed<p>
+        <em>Notice how the page <strong>does not freeze</strong> when we start the timer (nothing else can run)</em>
+        <script>
+            let clickCount = 0;
+            const button = document.querySelector("#btn");
+            button.addEventListener("click", () => {
+                const clickCounter = document.querySelector("#click_counter");
+                clickCount++;
+                clickCounter.textContent = `You have clicked ${clickCount} time(s)`;
+            });
+
+            const startTimer = document.querySelector("#start_timer");
+            startTimer.addEventListener("click", () => {
+                const timerContent = document.querySelector("#timer_content");
+                timerContent.textContent = "Timer started";
+                setTimeout(() => {
+                    timerContent.textContent = "Five seconds have passed";
+                }, 5000);
+            });
+        </script>
+    </body>
+</html>

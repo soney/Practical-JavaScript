@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <p>This is the para!</p>
+        <ul id="list">
+            <li>First item</li>
+            <li class="highlight">Second item</li>
+            <li>Third item</li>
+            <li class="highlight">Fourth item</li>
+        </ul>
+        <ul id="other">
+            <li class="highlight">Another list's item</li>
+            <li>Another list's second item</li>
+        </ul>
+        <script>
+            const lst = document.querySelector("ul#list");
+            console.log(lst.children);
+            console.log(lst.querySelectorAll(".highlight"));
+
+            const item = document.querySelector("li");
+            console.log(item.parentNode);
+
+            const p = document.querySelector("p");
+            if(p) {
+                console.log(p);
+            } else {
+                console.log("paragraph does not exist");
+            }
+
+        </script>
+    </body>
+</html>

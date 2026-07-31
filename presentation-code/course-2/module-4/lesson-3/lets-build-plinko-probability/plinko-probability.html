@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Plinko Probability</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+
+      form {
+        background-color: #f0f0f0;
+        padding: 20px;
+        border-radius: 5px;
+        border: 1px solid #333;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin: 20px;
+        text-align: center;
+      }
+
+      label {
+        margin-bottom: 10px;
+      }
+
+      input[type="number"] {
+        width: 80px;
+        padding: 5px;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+      }
+
+      button {
+        background-color: #007bff;
+        color: #fff;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+
+      button:hover {
+        background-color: #0056b3;
+      }
+
+      button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
+
+      svg {
+        display: block;
+        margin: 20px auto;
+      }
+    </style>
+  </head>
+  <body>
+    <form>
+      <label>Levels: <input type="number" id="num-levels" value="10" min="2" max="150" /></label>
+      <label>Balls: <input type="number" id="ball-count" value="50" min="1" max="50000" /></label>
+      <label>Rightward Probability: <input type="number" id="prob-right" min="0.00" max="1.00" step="0.05" value="0.5" /></label>
+      <label>Speed: <input type="range" id="speed" min="1" max="10" value="5" /> </label>
+      <button id="do-drop">Drop</button>
+    </form>
+    <svg></svg>
+
+    <script>
+      // ---------------------------------------------------------------------
+      // Tiny stand-ins for the two libraries the original project imported, so
+      // this stays a single self-contained file (no build step / npm install).
+      //
+      //   - `combinations` replaces mathjs's combinations() (binomial coefficient)
+      //   - `chroma` is a minimal shim covering only the parts we use:
+      //       chroma.scale(colors).domain(stops)(t).hex()   // color gradient
+      //       chroma(color).darken(amount).saturate(amount).hex()
+      // ---------------------------------------------------------------------
+
+      // The binomial coefficient "n choose k", computed multiplicatively to
+      // avoid overflowing on the way to the (reasonable) final value.
+      function combinations(n, k) {
+        if (k < 0 || k > n) return 0;
+        k = Math.min(k, n - k);
+        let result = 1;
+        for (let i = 0; i < k; i++) {
+          result = (result * (n - i)) / (i + 1);
+        }
+        return result;
+      }
+
+      const chroma = (function () {
+        const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+        function hexToRgb(hex) {
+          hex = hex.replace('#', '');
+          if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('');
+          return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
+        }
+
+        function rgbToHex(r, g, b) {
+          const h = (v) => clamp(Math.round(v), 0, 255).toString(16).padStart(2, '0');
+          return '#' + h(r) + h(g) + h(b);
+        }
+
+        function rgbToHsl(r, g, b) {
+          r /= 255; g /= 255; b /= 255;
+          const max = Math.max(r, g, b), min = Math.min(r, g, b);
+          let h, s; const l = (max + min) / 2;
+          if (max === min) {
+            h = s = 0;
+          } else {
+            const d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+              case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+              case g: h = (b - r) / d + 2; break;
+              default: h = (r - g) / d + 4;
+            }
+            h /= 6;
+          }
+          return [h, s, l];
+        }
+
+        function hslToRgb(h, s, l) {
+          if (s === 0) return [l * 255, l * 255, l * 255];
+          const hue2rgb = (p, q, t) => {
+            if (t < 0) t += 1;
+            if (t > 1) t -= 1;
+            if (t < 1 / 6) return p + (q - p) * 6 * t;
+            if (t < 1 / 2) return q;
+            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+            return p;
+          };
+          const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+          const p = 2 * l - q;
+          return [hue2rgb(p, q, h + 1 / 3) * 255, hue2rgb(p, q, h) * 255, hue2rgb(p, q, h - 1 / 3) * 255];
+        }
+
+        function color(rgb) {
+          const [r, g, b] = rgb;
+          return {
+            hex() { return rgbToHex(r, g, b); },
+            darken(amount = 1) {
+              const [h, s, l] = rgbToHsl(r, g, b);
+              return color(hslToRgb(h, s, clamp(l - 0.15 * amount, 0, 1)));
+            },
+            saturate(amount = 1) {
+              const [h, s, l] = rgbToHsl(r, g, b);
+              return color(hslToRgb(h, clamp(s + 0.15 * amount, 0, 1), l));
+            },
+          };
+        }
+
+        function chroma(input) {
+          return color(typeof input === 'string' ? hexToRgb(input) : input);
+        }
+
+        // chroma.scale(colors).domain(stops) -> (t) => color. Interpolates in
+        // RGB across the given stops, matching chroma's default scale mode.
+        chroma.scale = function (colors) {
+          const stops = colors.map(hexToRgb);
+          let domain = colors.map((_, i) => i / (colors.length - 1));
+          function scale(t) {
+            if (t <= domain[0]) return color(stops[0]);
+            if (t >= domain[domain.length - 1]) return color(stops[stops.length - 1]);
+            let i = 0;
+            while (i < domain.length - 1 && t > domain[i + 1]) i++;
+            const frac = (t - domain[i]) / (domain[i + 1] - domain[i]);
+            const a = stops[i], b = stops[i + 1];
+            return color([a[0] + (b[0] - a[0]) * frac, a[1] + (b[1] - a[1]) * frac, a[2] + (b[2] - a[2]) * frac]);
+          }
+          scale.domain = function (d) { domain = d; return scale; };
+          return scale;
+        };
+
+        return chroma;
+      })();
+
+      // ---------------------------------------------------------------------
+      // Plinko Probability
+      // ---------------------------------------------------------------------
+
+      const BALL_COLOR = "#2F65A7";     // The color of the balls: [Arboretum Blue](https://brand.umich.edu/design-resources/colors/)
+
+      const GRAPH_HEIGHT = 300;         // The maximum height of the graph (in pixels)
+      const BALL_RADIUS = 10;           // The radius of the balls (in pixels)
+      const PEG_RADIUS = 3;             // The radius of the pegs (in pixels)
+      const X_MOVEMENT = 30;            // The horizontal distance between pegs (in pixels)
+      const Y_MOVEMENT = 20;            // The vertical distance between pegs (in pixels)
+      const DELAY_BETWEEN_BALLS = 1000;  // How long to wait between dropping balls (in milliseconds)
+      const DELAY_BETWEEN_PEGS  = 1000;   // How long it takes for a ball to drop from one peg to the next (in milliseconds)
+      const DELAY_WHEN_DROP     = 1000;   // How long it takes for the ball to "fall" into the hole (in milliseconds)
+
+      const PADDING = Math.max(PEG_RADIUS, BALL_RADIUS, X_MOVEMENT/2) + 5; // The padding around the edge of the SVG element (in pixels)
+
+      const svgElement      = document.querySelector('svg');         // The parent SVG container
+      const numLevelsInput  = document.querySelector('#num-levels'); // The input for the number of levels
+      const ballCountInput  = document.querySelector('#ball-count'); // The input for the number of balls
+      const probRightInput  = document.querySelector('#prob-right'); // The input for the probability of going right after hitting a peg
+      const dropBallsButton = document.querySelector('#do-drop');    // The button to drop the balls
+      const speedInput      = document.querySelector('#speed');      // The input for the speed of the animation
+
+      const pegs = []; // A 2D array of pegs (each peg is a circle element)
+      const actualBars = []; // An array of the number of balls that actually hit each bar
+      const expectedBars = []; // An array of the expected number of balls that hit each bar
+
+      function drawBoard() {
+          Array.from(svgElement.children).forEach(child => child.remove()); // Remove all the children of the SVG element
+
+
+          const NUM_BALLS = parseInt(ballCountInput.value); // How many balls to drop
+          const NUM_LEVELS = parseInt(numLevelsInput.value); // How many levels of pegs to have
+          const PROBABILITY_RIGHT = parseFloat(probRightInput.value); // The probability of going right after hitting a peg
+
+          const colorScale = chroma.scale(['#FEFEFE', '#DDD', BALL_COLOR, '#000']).domain([0, 0.01, 0.1, 1]);
+
+          const TOTAL_WIDTH  = (NUM_LEVELS-1) * X_MOVEMENT + 2 * PADDING;                // The total width of the SVG element (in pixels)
+          const TOTAL_HEIGHT = (NUM_LEVELS-1) * Y_MOVEMENT + 2 * PADDING + GRAPH_HEIGHT; // The total height of the SVG element (in pixels)
+
+          // Some math to estimate the highest probability in a [binomial distribution](https://en.wikipedia.org/wiki/Binomial_distribution)
+          const MODE = Math.round((NUM_LEVELS-1) * PROBABILITY_RIGHT); // The mode (most probable outcome) of the binomial distribution
+          const maxProb = getBinomialProbability(NUM_LEVELS-1, MODE, PROBABILITY_RIGHT); // The estimated maximum probability
+          const BAR_SCALE_FACTOR = 0.5 * GRAPH_HEIGHT / maxProb; // The scale factor for the bars
+
+          svgElement.setAttribute('width', TOTAL_WIDTH);
+          svgElement.setAttribute('height', TOTAL_HEIGHT); // Set the width and height of the SVG element
+
+
+
+          const hitCounts = []; // A 2D array of the number of balls that hit each peg
+
+          for(let level = 0; level < NUM_LEVELS; level++) {
+              const rowHitCounts = []; // The hit counts in this row
+              hitCounts.push(rowHitCounts);
+
+              const rowPegs = []; // The pegs in this row
+              pegs.push(rowPegs);
+
+              for(let i = NUM_LEVELS - level - 1; i <= NUM_LEVELS + level - 1; i+=2) {
+                  hitCounts[level][i] = 0; // Initialize the hit count for this peg at 0
+
+                  const { x, y } = getGraphicLocation(i, level);
+                  const circle = createCircle(x, y, PEG_RADIUS, colorScale(0).hex(), 'none', svgElement);
+                  if(level === 0) {
+                      circle.setAttribute('fill', colorScale(1).hex()); // The top peg is always filled in
+                  }
+
+                  pegs[level][i] = circle; // Store the peg in the 2D array
+              }
+          }
+
+          // Draw the bars for the expected and actual probabilities
+          for(let i = 0; i < 2*NUM_LEVELS-1; i+=2) { // The last row has columns 0, 2, 4, 6, etc. (so we only need to loop through every other column)
+              const { x, y } = getGraphicLocation(i, NUM_LEVELS-1);
+
+              const barY = y + PEG_RADIUS + 2; // The y coordinate of the top of the bar (just below the peg)
+
+              const actualBar = createRect(x - X_MOVEMENT/2, barY, X_MOVEMENT, 0, BALL_COLOR, 'none', svgElement); // Create a new rectangle for the number of balls that actually hit
+              actualBars.push(actualBar);
+
+              const prob = getBinomialProbability(NUM_LEVELS-1, Math.floor(i/2), PROBABILITY_RIGHT); // The binomial probability of getting hit
+              const expectedBar = createRect(x - X_MOVEMENT/2, barY, X_MOVEMENT, BAR_SCALE_FACTOR * prob, 'rgba(0, 0, 0, 0.1)', colorScale(prob).hex(), svgElement); // Create a new rectangle for the expected number of balls that hit
+              expectedBars.push(expectedBar);
+          }
+
+          async function dropBall() {
+              let row = 0; // Start at the top row
+              let col = NUM_LEVELS - 1; // Start in the middle column
+
+              const { x, y } = getGraphicLocation(col, row);
+              const COLOR = chroma(BALL_COLOR).darken(Math.random() * 2 - 1).saturate(Math.random() * 2 - 1).hex()
+              const circle = createCircle(x, y, BALL_RADIUS, COLOR, chroma(COLOR).darken().hex(), svgElement); // Create a new circle at the top of the board
+              circle.setAttribute('opacity', 0.9); // Make the circle slightly transparent (so we can see the pegs it passes through)
+
+              // Drop the ball down the board by looping down the rows and randomly choosing left or right
+              for(let i = 0; i < NUM_LEVELS-1; i++) {
+                  const ANIMATION_TIME = DELAY_BETWEEN_PEGS / parseFloat(speedInput.value); // The time it takes to animate the bar height change
+                  row++; // The row is always incremented
+
+                  if(Math.random() < PROBABILITY_RIGHT) { // If the random number is less than the probability of going right, go right
+                      col++; // Go right
+                  } else {
+                      col--; // Go left
+                  }
+
+                  const { x, y } = getGraphicLocation(col, row); // The new location of the ball (in pixels)
+                  await moveCircleTo(circle, x, y, ANIMATION_TIME); // Move the ball to the new location
+
+                  const peg = pegs[row][col]; // The peg that the ball hit
+                  hitCounts[row][col]++; // Increment the hit count for this peg
+                  peg.setAttribute('fill', colorScale(hitCounts[row][col]/NUM_BALLS).hex()); // Change the color of the peg based on the hit count
+              }
+
+
+              const finalColHitCount = hitCounts[NUM_LEVELS-1][col]; // The hit count for the final column
+              const barIndex = Math.floor(col/2); // The index of the bar that corresponds to the final column (since there are 2 pegs per bar)
+              const newBarHeight = BAR_SCALE_FACTOR * finalColHitCount / NUM_BALLS; // The new height of the bar
+
+              const ANIMATION_TIME = DELAY_WHEN_DROP / parseFloat(speedInput.value); // The time it takes to animate the bar height change
+
+              const barHeightChangePromise = changeHeightTo(actualBars[barIndex], newBarHeight, ANIMATION_TIME); // Animate the change in height of the bar
+              const opacityAnimationPromise = animateOpacityTo(circle, 0, ANIMATION_TIME);
+              const moveCirclePromise = moveCircleTo(circle, parseFloat(circle.getAttribute('cx')), parseFloat(circle.getAttribute('cy')) + 20, ANIMATION_TIME);
+
+              await Promise.all([barHeightChangePromise, opacityAnimationPromise, moveCirclePromise]); // Wait for the bar height change and the circle to move off the screen
+
+              circle.remove(); // Remove the circle from the SVG element
+          }
+
+          async function dropBalls() {
+              redrawBoard(); // Redraw the board to clear the results
+
+              // Disable the inputs and button while the balls are dropping
+              dropBallsButton.setAttribute('disabled', true);
+              numLevelsInput.setAttribute('disabled', true);
+              ballCountInput.setAttribute('disabled', true);
+              probRightInput.setAttribute('disabled', true);
+
+              const dropBallPromises = []; // An array of promises for each ball that is dropped
+              for(let i = 0; i < NUM_BALLS; i++) {
+                  const ballDropPromise = dropBall(); // Drop a ball
+                  await pause(Math.random() * DELAY_BETWEEN_BALLS / parseFloat(speedInput.value)); // Wait a random amount of time before dropping the next ball
+                  dropBallPromises.push(ballDropPromise); // Add the promise to the array
+              }
+
+              await Promise.all(dropBallPromises); // Wait for all the balls to be dropped
+
+              // Re-enable the inputs and button after the balls are done dropping
+              dropBallsButton.removeAttribute('disabled');
+              numLevelsInput.removeAttribute('disabled');
+              ballCountInput.removeAttribute('disabled');
+              probRightInput.removeAttribute('disabled');
+          }
+
+          dropBallsButton.addEventListener('click', dropBalls); // When the button is clicked, drop the balls
+
+          // Return a function that cleans up the board
+          function cleanup() {
+              expectedBars.forEach(bar => bar.remove()); // Remove the "expected" bars
+              expectedBars.splice(0, expectedBars.length); // ...and clear the array
+
+              actualBars.forEach(bar => bar.remove()); // Remove the "actual" bars
+              actualBars.splice(0, actualBars.length); // ...and clear the array
+
+              pegs.forEach(row => row.forEach(peg => peg.remove())); // Remove the pegs
+              pegs.splice(0, pegs.length); // ...and clear the array
+
+              dropBallsButton.removeEventListener('click', dropBalls); // Remove the event listener (we will re-add it when we redraw the board)
+          }
+
+          return cleanup; // Return the cleanup function
+      }
+
+
+      /**
+       * Animates a value from a start to an end using an easing function
+       *
+       * @param {Function} setter A function that sets the value of the animation
+       * @param {number} start The starting value of the animation
+       * @param {number} end The ending value of the animation
+       * @param {number} duration The duration of the animation (in milliseconds)
+       * @param {Function} ease An easing function that takes a number between 0 and 1 and returns a number between 0 and 1
+       * @returns A promise that resolves when the animation is complete
+       */
+      function doAnimate(setter, start, end, duration, ease) {
+          return new Promise((resolve) => {
+              const animationStarted = Date.now();
+
+              function step() {
+                  const pct = (Date.now() - animationStarted) / duration; // The percentage of the way through the animation (between 0<start> and 1<end>)
+                  const pos = ease(pct); // The eased percentage (between 0<start> and 1<end>)
+                  const value = start + (end - start) * pos; // The current value of the animation
+
+                  setter(value, pos); // Run the setter function with the current value and position
+
+                  if(pct < 1) { // If we're not done yet, request the next frame
+                      requestAnimationFrame(step);
+                  } else { // If we are done, run the setter one more time and resolve the promise
+                      setter(end, 1);
+                      resolve();
+                  }
+              }
+
+              requestAnimationFrame(step);
+          });
+      }
+
+
+      // Animates the height of a rectangle from its current height to a new height
+      function changeHeightTo(rect, toHeight, duration) {
+          const fromHeight = parseFloat(rect.getAttribute('height'));
+          return doAnimate((height) => {
+              rect.setAttribute('height', height);
+          }, fromHeight, toHeight, duration, easeOutQuad);
+      }
+
+      // Animates the movement of a circle to a new location
+      function moveCircleTo(circle, x, y, duration) {
+          const fromX = parseFloat(circle.getAttribute('cx')); // The current x coordinate of the circle
+          const fromY = parseFloat(circle.getAttribute('cy')); // The current y coordinate of the circle
+
+          // Since we need to animate *two* attributes, we animate from 0 to 1 and calculate the new position based on that
+          return doAnimate((_, pos) => {
+              circle.setAttribute('cx', fromX + (x - fromX) * pos); // The new x coordinate of the circle
+              circle.setAttribute('cy', fromY + (y - fromY) * pos); // The new y coordinate of the circle
+          }, 0, 1, duration, easeInQuad);
+      };
+
+      function animateOpacityTo(element, toOpacity, duration) {
+          const fromOpacity = parseFloat(element.getAttribute('opacity') || 1);
+          return doAnimate((opacity) => {
+              element.setAttribute('opacity', opacity);
+          }, fromOpacity, toOpacity, duration, linear);
+      }
+
+      function linear(t)      { return t; } // Linear easing
+      function easeOutQuad(t) { return t*(2-t); } // An easing function that starts fast and slows down
+      function easeInQuad(t)  { return t*t; } // An easing function that starts slow and speeds up
+
+      /**
+       * Returns the binomial probability of getting k successes in n trials with probability p
+       *
+       * @param {number} n The number of trials
+       * @param {number} k The number of successes
+       * @param {number} p The probability of success
+       * @returns The binomial probability of getting k successes in n trials with probability p
+       * @see https://en.wikipedia.org/wiki/Binomial_distribution
+       */
+
+      function getBinomialProbability(n, k, p) {
+          return combinations(n, k) * Math.pow(p, k) * Math.pow(1-p, n-k);
+      }
+
+
+      /**
+       * Translates a column and row into a pixel location
+       *
+       * @param {number} col The column of the peg (0 is the leftmost peg)
+       * @param {number} row The row of the peg (0 is the topmost peg)
+       * @returns {Object} An object with x and y properties representing the location of the peg in pixels
+       */
+      function getGraphicLocation(col, row) {
+          return {
+              x: PADDING + col * (X_MOVEMENT/2),
+              y: PADDING + row *  Y_MOVEMENT
+          };
+      }
+
+      /**
+       * Returns a promise that resolves after the given number of milliseconds
+       *
+       * @param {number} ms The number of milliseconds to pause
+       * @returns A promise that resolves after the given number of milliseconds
+       */
+      function pause(ms) {
+          return new Promise(resolve => setTimeout(resolve, ms));
+      }
+
+      /**
+       * Creates a rectangle and appends it to the parent SVG element
+       *
+       * @param {number} x The x coordinate of the top left corner of the rectangle
+       * @param {number} y The y coordinate of the top left corner of the rectangle
+       * @param {number} width The width of the rectangle
+       * @param {number} height The height of the rectangle
+       * @param {string} fill The fill color of the rectangle
+       * @param {string} stroke The stroke color of the rectangle
+       * @param {SVGElement} parent The parent SVG element
+       * @returns
+       */
+      function createRect(x, y, width, height, fill, stroke, parent) {
+          // Create a new rectangle element using the SVG namespace
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', x);
+          rect.setAttribute('y', y);
+          rect.setAttribute('width', width);
+          rect.setAttribute('height', height);
+          rect.setAttribute('fill', fill);
+          rect.setAttribute('stroke', stroke);
+          parent.append(rect);
+          return rect;
+      }
+
+      /**
+       * Creates a circle and appends it to the parent SVG element
+       *
+       * @param {number} cx The x coordinate of the center of the circle
+       * @param {number} cy The y coordinate of the center of the circle
+       * @param {number} r The radius of the circle
+       * @param {string} fill The fill color of the circle
+       * @param {string} stroke The stroke color of the circle
+       * @param {SVGElement} parent The parent SVG element
+       * @returns A new circle element
+       */
+      function createCircle(cx, cy, r, fill, stroke, parent) {
+          // Create a new circle element using the SVG namespace
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', cx);
+          circle.setAttribute('cy', cy);
+          circle.setAttribute('r', r);
+          circle.setAttribute('fill', fill);
+          circle.setAttribute('stroke', stroke);
+          parent.append(circle);
+          return circle;
+      }
+
+      // When we change any of the parameter inputs, redraw the board
+      numLevelsInput.addEventListener('input', redrawBoard);
+      probRightInput.addEventListener('input', redrawBoard);
+      ballCountInput.addEventListener('input', redrawBoard);
+
+      let clearBoard = drawBoard(); // Draw the board initially (and store the cleanup function)
+      /**
+       * Redraws the board (by calling the cleanup function and then drawing the board again)
+       */
+      function redrawBoard() {
+          clearBoard(); // Clean up the old board
+          clearBoard = drawBoard(); // Draw the new board (and store the cleanup function)
+      }
+    </script>
+  </body>
+</html>

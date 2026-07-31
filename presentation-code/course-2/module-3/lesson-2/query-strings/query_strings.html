@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <input id="search_q" />
+        <button id="search">Search</button>
+        <ul id="output"></ul>
+        <script>
+            const inp = document.querySelector("#search_q");
+            const btn = document.querySelector("#search");
+            const outp = document.querySelector("#output");
+
+            const BASE_URL = "https://api.datamuse.com/words?";
+
+            btn.addEventListener("click", () => {
+                const search_term = inp.value;
+                const params = new URLSearchParams({
+                    ml: search_term
+                });
+                const fullURL = BASE_URL + params.toString();
+                fetch(fullURL).then(res => res.json())
+                                .then((result) => {
+                                    outp.innerHTML = "";
+                                    for(const r of result) {
+                                        const word = r.word;
+                                        const li = document.createElement("li");
+                                        li.textContent = word;
+                                        outp.append(li);
+                                    }
+                                });
+            });
+        </script>
+    </body>
+</html>

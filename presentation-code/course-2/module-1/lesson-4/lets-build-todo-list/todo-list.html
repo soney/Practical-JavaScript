@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <!-- Todo list -->
+         <ul id="todo-list"></ul>
+         <input type="text" id="description" />
+         <button id="add">Add</button>
+
+<script>
+
+const list = document.querySelector("ul#todo-list");
+const descInput = document.querySelector("input#description");
+const addButton = document.querySelector("button#add");
+
+function addTask() {
+    const description = descInput.value;
+
+    const taskItem = document.createElement("li");
+    taskItem.textContent = description;
+    list.append(taskItem);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Done";
+    taskItem.append(removeBtn);
+
+    descInput.value = "";
+    descInput.focus();
+    function removeThisTask() {
+        taskItem.remove();
+    }
+    removeBtn.addEventListener("click", removeThisTask);
+}
+
+addButton.addEventListener("click", addTask);
+
+</script>
+    </body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <script src="setx.js" defer></script>
+        <script src="fullfpsanimation.js" defer></script>
+    </head>
+    <body>
+        <button id="run"><code>animateWithDuration()</code></button>
+        FPS: <input id="num_inp" type="number" value="30" />
+        Duration: <input id="duration" type="number" value="2" />
+        from: <input id="fromx" type="number" value="0" />
+        to: <input id="tox" type="number" value="500" />
+        <div id="block" />
+        <script>
+            const runButton = document.querySelector("#run");
+            runButton.addEventListener("click", () => {
+                const fps = document.querySelector("#num_inp").value;
+                const duration = parseFloat(document.querySelector("#duration").value)*1000;
+                const fromx = parseFloat(document.querySelector("#fromx").value);
+                const tox = parseFloat(document.querySelector("#tox").value);
+                fullFPSAnimation(parseInt(fps), duration, fromx, tox);
+            });
+        </script>
+    </body>
+</html>

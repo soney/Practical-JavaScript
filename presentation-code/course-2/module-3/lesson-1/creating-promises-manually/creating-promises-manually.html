@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+
+const myFirstPromise = Promise.resolve("hello");
+console.log(myFirstPromise);
+
+const mySecondPromise = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        resolve("whatever i pass in");
+    }, 5000);
+});
+console.log(mySecondPromise);
+
+</script>
+</body>
+</html>

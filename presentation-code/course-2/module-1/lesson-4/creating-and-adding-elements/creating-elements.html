@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <ul id="comments-container">
+        </ul>
+        <script>
+            const ul = document.querySelector("ul");
+            const comments = [
+                "Very helpful; thanks!",
+                "Yay! That solved my problem",
+                "Could you explain a little more?"
+            ];
+            let commentNumber = 1;
+            for(const comment of comments) {
+                const li = document.createElement("li");
+                li.textContent = comment;
+                li.prepend("Comment ", commentNumber, ": ");
+                ul.append(li);
+                commentNumber++;
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>CSS Animations and the Animation API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 520px;
+        margin: 20px auto;
+        color: #222;
+      }
+      .row {
+        margin: 20px 0;
+      }
+
+      /* 1) Transition: animates a property when it changes. */
+      .swatch {
+        width: 80px;
+        height: 80px;
+        background: #2a6fb5;
+        transition: background-color 0.4s, transform 0.4s;
+      }
+      .swatch:hover {
+        background-color: #c0392b;
+        transform: scale(1.2);
+      }
+
+      /* 2) Keyframe animation: a repeating, multi-step animation. */
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 5px solid #ddd;
+        border-top-color: #2a6fb5;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      /* 3) A box we will animate from JavaScript with the Web Animations API. */
+      #mover {
+        width: 40px;
+        height: 40px;
+        background: #27ae60;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Three Ways to Animate</h1>
+
+    <div class="row">
+      <p>1. CSS transition (hover over the square):</p>
+      <div class="swatch"></div>
+    </div>
+
+    <div class="row">
+      <p>2. CSS keyframe animation (always running):</p>
+      <div class="spinner"></div>
+    </div>
+
+    <div class="row">
+      <p>3. The Web Animations API, controlled from JavaScript:</p>
+      <div id="mover"></div>
+      <button id="play">Play</button>
+      <button id="pause">Pause</button>
+    </div>
+
+    <script>
+      const mover = document.querySelector("#mover");
+
+      // element.animate(keyframes, options) returns an Animation object.
+      const animation = mover.animate(
+        [
+          { transform: "translateX(0px)", background: "#27ae60" },
+          { transform: "translateX(300px)", background: "#8e44ad" },
+        ],
+        {
+          duration: 1500,
+          iterations: Infinity,
+          direction: "alternate",
+          easing: "ease-in-out",
+        }
+      );
+
+      // We can start, pause, and inspect the animation from code.
+      document.querySelector("#play").addEventListener("click", function () {
+        animation.play();
+      });
+      document.querySelector("#pause").addEventListener("click", function () {
+        animation.pause();
+      });
+    </script>
+  </body>
+</html>

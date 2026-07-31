@@ -1,0 +1,147 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: linear-gradient(160deg, #fffde7 0%, #fff3a0 55%, #ffe066 100%);
+    color: #5b531f;
+}
+
+#root {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.app {
+    width: 100%;
+    max-width: 360px;
+    padding: 28px 26px 32px;
+    background: #ffffff;
+    border-radius: 22px;
+    text-align: center;
+    box-shadow: 0 18px 40px rgba(190, 160, 20, 0.25);
+}
+
+.app-title {
+    margin: 0 0 18px;
+    font-size: 1.6em;
+    color: #4a4320;
+}
+
+/* Phase badge */
+.phase-badge {
+    display: inline-block;
+    padding: 5px 16px;
+    border-radius: 999px;
+    font-size: 0.8em;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: #eceff1;
+    color: #607d8b;
+}
+
+.phase-badge.phase-work {
+    background: #fff3c4;
+    color: #b58a00;
+}
+
+.phase-badge.phase-break {
+    background: #d7f0e0;
+    color: #2e8b57;
+}
+
+/* Earned lemons */
+.lemons {
+    margin: 18px 0;
+    min-height: 1.6em;
+    font-size: 1.8em;
+    line-height: 1;
+}
+
+.lemon {
+    display: inline-block;
+    transition: opacity 0.2s ease;
+}
+
+/* Countdown readout */
+.display-timer {
+    margin: 8px 0 20px;
+    text-align: center;
+    font-size: 2.6em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: #4a4320;
+}
+
+/* Start button */
+.start-btn {
+    border: none;
+    cursor: pointer;
+    padding: 13px 22px;
+    font-size: 1em;
+    font-weight: 700;
+    color: #5b4a00;
+    background: linear-gradient(135deg, #ffe066, #ffcf33);
+    border-radius: 14px;
+    box-shadow: 0 6px 14px rgba(220, 180, 0, 0.4);
+    transition: transform 0.1s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.start-btn:hover {
+    filter: brightness(1.04);
+    box-shadow: 0 8px 18px rgba(220, 180, 0, 0.5);
+}
+
+.start-btn:active {
+    transform: translateY(1px);
+}
+
+.divider {
+    border: none;
+    border-top: 1px solid #f0e6b0;
+    margin: 26px 0 18px;
+}
+
+/* Work / break settings */
+.settings {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 0.9em;
+    font-weight: 600;
+    color: #6b6230;
+}
+
+.setting input {
+    width: 80px;
+    padding: 8px 10px;
+    font-size: 1em;
+    text-align: center;
+    color: #4a4320;
+    background: #fffdf2;
+    border: 1.5px solid #f0df8a;
+    border-radius: 10px;
+}
+
+.setting input:focus {
+    outline: none;
+    border-color: #ffcf33;
+    box-shadow: 0 0 0 3px rgba(255, 224, 102, 0.45);
+}

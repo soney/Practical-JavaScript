@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <script src="setx.js" defer></script>
+        <script src="animatewithduration.js" defer></script>
+    </head>
+    <body>
+        <button id="run"><code>animateWithDuration()</code></button>
+        FPS: <input id="num_inp" type="number" value="30" />
+        Duration: <input id="duration" type="number" value="2" />
+        <div id="block" />
+        <script>
+            const runButton = document.querySelector("#run");
+            runButton.addEventListener("click", () => {
+                const fps = document.querySelector("#num_inp").value;
+                const duration = parseFloat(document.querySelector("#duration").value)*1000;
+                animateWithDuration(parseInt(fps), duration);
+            });
+        </script>
+    </body>
+</html>

@@ -1,0 +1,19 @@
+#block, #comparison-block {
+    position: fixed;
+    border: 2px solid black;
+    width: 150px;
+    height: 150px;
+    background-color: red;
+    border-radius: 5px;
+    left: 0px;
+}
+
+#comparison-block {
+    opacity: 0.5;
+    top: 250px;
+    left: 0px;
+    border: 2px dashed black;
+    font-size: xx-large;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}

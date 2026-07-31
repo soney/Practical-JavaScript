@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <button id="timer">Start 3s timer</button>
+        <div id="feedback"></div>
+        <button id="stopwatch">Start stopwatch</button>
+        <div id="stopwatch-feedback"></div>
+        <script>
+            const stopwatchButton = document.querySelector("button#stopwatch");
+            const stopwatchFeedback = document.querySelector("#stopwatch-feedback");
+
+            function onClickStopwatch() {
+                let secondsPassed = 0;
+                function onInterval() {
+                    secondsPassed++;
+                    stopwatchFeedback.textContent = secondsPassed;
+                }
+                setInterval(onInterval, 1000);
+            }
+            stopwatchButton.addEventListener("click", onClickStopwatch);
+
+            const timerButton = document.querySelector("button#timer");
+            const timerFeedback = document.querySelector("#feedback");
+            function onClickTimer() {
+                function timerDone() {
+                    timerFeedback.textContent = "Timer done!";
+                }
+                timerFeedback.textContent = "Started timer";
+                setTimeout(timerDone, 3000);
+            }
+            timerButton.addEventListener("click", onClickTimer);
+        </script>
+    </body>
+</html>

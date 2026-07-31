@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    #outer {
+        background-color: #AAA;
+        padding: 10px;
+    }
+    #inner {
+        background-color: #CCC;
+        padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="outer">
+    Outer
+    <div id="inner">
+      Inner
+      <button>Click me</button>
+      <a href="https://goblue.com">Go blue!</a>
+    </div>
+  </div>
+  <script>
+    const outer = document.querySelector("#outer");
+    const inner = document.querySelector("#inner");
+    const btn   = document.querySelector("button");
+    const a     = document.querySelector("a");
+
+    a.addEventListener("click", (event) => {
+        console.log("Link, bubbling");
+    });
+
+    outer.addEventListener("click", () => {
+        console.log("Outer, capture");
+    }, true);
+    inner.addEventListener("click", (event) => {
+        console.log("Inner, capture");
+        event.preventDefault();
+    }, true);
+    btn.addEventListener("click", (event) => {
+        console.log("Button, capture");
+    }, true);
+    btn.addEventListener("click", () => {
+        console.log("Button, bubbling");
+    });
+    inner.addEventListener("click", () => {
+        console.log("Inner, bubbling");
+    });
+    outer.addEventListener("click", () => {
+        console.log("Outer, bubbling");
+    });
+  </script>
+</body>
+</html>

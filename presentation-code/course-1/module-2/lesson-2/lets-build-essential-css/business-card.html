@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Business Card</title>
+    <style>
+      /* Type selector: every <body> on the page. */
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #eef1f5;
+      }
+
+      /* ID selector: the one element with id="card". */
+      #card {
+        width: 300px;
+        margin: 40px auto;
+        padding: 20px;
+        background-color: white;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+
+      /* Class selector: every element with class="name". */
+      .name {
+        font-size: 22px;
+        color: #1a3c6e;
+        margin: 0;
+      }
+
+      /* Class selector for the job title. */
+      .title {
+        color: #666;
+        margin-top: 4px;
+      }
+
+      /* Descendant selector: <li> elements inside #card. */
+      #card li {
+        list-style: none;
+        margin-bottom: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="card">
+      <p class="name">Grace Hopper</p>
+      <p class="title">Computer Scientist</p>
+      <ul>
+        <li>grace@example.com</li>
+        <li>(555) 010-1942</li>
+        <li>New York, NY</li>
+      </ul>
+    </div>
+  </body>
+</html>

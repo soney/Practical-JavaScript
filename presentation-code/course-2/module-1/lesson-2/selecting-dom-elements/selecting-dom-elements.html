@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .highlight {
+      background-color: yellow;
+    }
+    .box {
+      border: 1px solid black;
+      padding: 10px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+
+  <p class="box">Paragraph with class "box"</p>
+
+  <div id="main_panel">
+    <ul id="list">
+      <li>Item 1</li>
+      <li class="highlight">Item 2</li>
+      <li>Item 3</li>
+      <li class="highlight">Item 4</li>
+    </ul>
+    <div class="box">Box inside main panel</div>
+  </div>
+
+  <div class="highlight">Standalone highlight div</div>
+
+  <script>
+    // Select the first element with the class "highlight"
+    const firstHighlight = document.querySelector(".highlight");
+    console.log("First .highlight element:", firstHighlight);
+
+    // Select all elements with the class "highlight"
+    const allHighlights = document.querySelectorAll(".highlight");
+    console.log("All .highlight elements:", allHighlights);
+
+    // Select using a more specific selector
+    const listHighlights = document.querySelectorAll("ul .highlight");
+
+    // Select element that doesn't exist
+    const noMatch = document.querySelector(".no_match");
+    console.log("No match:", noMatch); // Should log null
+
+    // Select by ID
+    const mainPanel = document.querySelector("#main_panel");
+    console.log("Main panel div:", mainPanel);
+
+    // Timing: this works because script runs after the DOM is fully parsed
+    const p = document.querySelector("p");
+    console.log("Paragraph element:", p);
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            @keyframes myanimation {
+                0%  { background-color: red; }
+                15% { background-color: orange; }
+                30% { background-color: yellow; }
+                50% { background-color: green; }
+                65% { background-color: blue; }
+                85% { background-color: purple; }
+            }
+            .box {
+                position: absolute;
+                width: 200px;
+                height: 200px;
+                background-color: red;
+                animation: myanimation 2s linear infinite;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="box"></div>
+    </body>
+</html>

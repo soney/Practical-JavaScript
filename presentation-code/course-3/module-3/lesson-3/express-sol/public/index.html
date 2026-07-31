@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <input id="query" placeholder="Search groceries" />
+        <input id="maxPrice" placeholder="Max Price" type="number" step="0.01" />
+        <button id="search-btn">Search</button>
+        <ul id="results"></ul>
+        <script>
+            const queryEl = document.querySelector("#query");
+            const maxPriceEl = document.querySelector("#maxPrice");
+            const searchBtn = document.querySelector("#search-btn");
+            const resultsEl = document.querySelector("#results");
+
+            searchBtn.addEventListener("click", () => {
+                const params = new URLSearchParams({
+                    query: queryEl.value,
+                    maxPrice: maxPriceEl.value
+                });
+                fetch("/search?" + params.toString())
+                    .then(res => res.json())
+                    .then((data) => {
+                        resultsEl.innerHTML = "";
+                        if(data.results.length === 0) {
+                            const li = document.createElement("li");
+                            li.textContent = "No matching groceries found";
+                            resultsEl.appendChild(li);
+                        } else {
+                            for(const name of data.results) {
+                                const li = document.createElement("li");
+                                li.textContent = name;
+                                resultsEl.appendChild(li);
+                            }
+                        }
+                    });
+            });
+        </script>
+    </body>
+</html>

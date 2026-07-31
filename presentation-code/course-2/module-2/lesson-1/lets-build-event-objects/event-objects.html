@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <input type="text" />
+        <button>Submit</button>
+        <script>
+            const inp = document.querySelector("input");
+            const btn = document.querySelector("button");
+            function onKeyDown(event) {
+                if(event.key === "Enter") {
+                    onSubmit();
+                }
+            }
+            function onSubmit() {
+                console.log("We submitted");
+                console.log(inp.value);
+            }
+            btn.addEventListener("click", onSubmit);
+            inp.addEventListener("keydown", onKeyDown);
+        </script>
+    </body>
+</html>

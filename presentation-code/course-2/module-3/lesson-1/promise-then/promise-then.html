@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<body>
+<script>
+
+const myPromise = new Promise((resolve, reject) => {
+    setTimeout(() => {
+        reject(500);
+    }, 3000);
+});
+
+myPromise.then((val) => {
+    console.log("The promise was fulfilled!");
+    console.log(val);
+}, (err) => {
+    console.log("SOMETHING WENT WRONG!");
+    console.log(err);
+})
+
+</script>
+</body>
+</html>

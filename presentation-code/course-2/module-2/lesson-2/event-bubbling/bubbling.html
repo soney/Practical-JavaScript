@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    #outer {
+        background-color: #AAA;
+        padding: 10px;
+    }
+    #inner {
+        background-color: #CCC;
+        padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="outer">
+    Outer
+    <div id="inner">
+      Inner
+      <button>Click me</button>
+      <button>!</button>
+    </div>
+  </div>
+  <script>
+    const outer = document.querySelector("#outer");
+    const inner = document.querySelector("#inner");
+    const btn   = document.querySelector("button");
+
+    outer.addEventListener("click", () => {console.log("Outer, bubbling"); });
+    outer.addEventListener("click", () => {console.log("Outer, capture"); }, true);
+    inner.addEventListener("click", () => {console.log("Inner, bubbling"); });
+    inner.addEventListener("click", () => {console.log("Inner, capture"); }, true);
+    btn.addEventListener("click", () => {console.log("Button, bubbling"); });
+    btn.addEventListener("click", () => {console.log("Button, capture"); }, true);
+  </script>
+</body>
+</html>

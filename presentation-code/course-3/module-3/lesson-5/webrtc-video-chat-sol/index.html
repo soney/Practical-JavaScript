@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style>
+        .video-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        video {
+            background-color: #000;
+            width: 400px;
+            height: 300px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <button id="startButton" disabled>Start Call</button>
+    </div>
+
+    <div class="video-container">
+        <div>
+            <h3>Local Video</h3>
+            <video id="localVideo" autoplay playsinline muted></video>
+        </div>
+        <div>
+            <h3>Remote Video</h3>
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+</body>
+
+</html>

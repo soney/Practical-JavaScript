@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body>
+        <button type="button" onclick="runColorAnimation()">Run animation</button>
+
+        <span style="display: inline-block; width: 50px">From:</span>
+        <label for="from_r">R: </label><input style="width: 50px" id="from_r" type="number" value="255" min="0" max="255" />
+        <label for="from_g">G: </label><input style="width: 50px" id="from_g" type="number" value="0" min="0" max="255" />
+        <label for="from_b">B: </label><input style="width: 50px" id="from_b" type="number" value="0" min="0" max="255" />
+        </div>
+        <div>
+        <span style="display: inline-block; width: 50px">To:</span>
+        <label for="to_r">R: </label><input style="width: 50px" id="to_r" type="number" value="0" min="0" max="255" />
+        <label for="to_g">G: </label><input style="width: 50px" id="to_g" type="number" value="0" min="0" max="255" />
+        <label for="to_b">B: </label><input style="width: 50px" id="to_b" type="number" value="255" min="0" max="255" />
+        </div>
+
+        <label for="dur7">Duration (seconds): </label><input id="dur7" type="number" value="2" />
+        <div style="overflow: auto; height: 160px;" >
+        <div id="block7" style="position: absolute; border: 1px solid black; width: 150px; height: 150px;"></div>
+        </div>
+        <span id="pct7"></span>
+        <script>
+        window.runColorAnimation = function() {
+            const [from_r, from_g, from_b] = getFromColor();
+            const [to_r, to_g, to_b]       = getToColor();
+
+            function setBlockColor(r, g, b) {
+                document.getElementById('block7').style.setProperty('background-color', `rgb(${r}, ${g}, ${b})`)
+            }
+
+            const duration = parseInt(document.getElementById('dur7').value) * 1000; // duration in milliseconds
+
+
+            const animationStarted = performance.now(); //  timestamp when we first started
+
+            function step() {
+                const currentTime = performance.now();
+                
+                const pct = (currentTime - animationStarted) / duration; // number from 0 (just started) to 1 (complete)
+
+                const r = from_r + pct * (to_r - from_r);
+                const g = from_g + pct * (to_g - from_g);
+                const b = from_b + pct * (to_b - from_b);
+
+                setBlockColor(r, g, b);
+
+                if(currentTime < animationStarted + duration) { requestAnimationFrame(step); }
+
+                document.getElementById('pct7').textContent = (100 * pct).toFixed(2)+'%'; // display the percentage
+            }
+
+            requestAnimationFrame(step);
+            function getFromColor() {
+                return [
+                    parseInt(document.getElementById('from_r').value),
+                    parseInt(document.getElementById('from_g').value),
+                    parseInt(document.getElementById('from_b').value),
+                ];
+            }
+            function getToColor() {
+                return [
+                    parseInt(document.getElementById('to_r').value),
+                    parseInt(document.getElementById('to_g').value),
+                    parseInt(document.getElementById('to_b').value),
+                ];
+            }
+        }
+        </script>
+    </body>
+</html>

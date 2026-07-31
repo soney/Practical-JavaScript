@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            input#guess {
+                font-size: 1.5em;
+                display: block;
+                margin: auto;
+            }
+            .guess-feedback {
+                font-size: 2.5em;
+                text-align: center;
+            }
+            .guess-feedback * {
+                color: white;
+                width: 50px;
+                height: 50px;
+                display: inline-block;
+                margin: 2px;
+                text-align: center;
+            }
+            .guess-feedback .correct-place {
+                background-color: #538d4e;
+            }
+
+            .guess-feedback .incorrect-place {
+                background-color: #b59f3b;
+            }
+
+            .guess-feedback .not-in-word {
+                background-color: #3a3a3c;
+            }
+        </style>
+    </head>
+    <body>
+        <input id="guess" />
+        <script>
+            const answerPromise = getRandomAnswer();
+            const inputEl = document.querySelector("#guess");
+
+            function tryGuess(guess, answer) {
+                inputEl.value = "";
+                if(guess === answer) {
+                    console.log("You guessed correctly!");
+                } else {
+                    const guessFeedback = document.createElement("div");
+                    guessFeedback.classList.add("guess-feedback");
+                    for(let i = 0; i<guess.length; i++) {
+                        const letterFeedback = document.createElement("span");
+                        letterFeedback.textContent = guess[i];
+                        guessFeedback.append(letterFeedback);
+                        if(i < answer.length && guess[i].toLowerCase() === answer[i].toLowerCase()) {
+                            // this letter is in the correct place
+                            console.log("correct place: ", guess[i]);
+                            letterFeedback.classList.add("correct-place");
+                        } else if(answer.toLowerCase().includes(guess[i].toLowerCase())) {
+                            // this letter is in the answer but in a different place
+                            console.log("incorrect place: ", guess[i]);
+                            letterFeedback.classList.add("incorrect-place");
+                        } else {
+                            console.log("not in word: ", guess[i]);
+                            letterFeedback.classList.add("not-in-word");
+                        }
+                    }
+                    document.body.append(guessFeedback);
+                    console.log("Try again");
+                }
+            }
+
+            inputEl.addEventListener("keydown", (e) => {
+                if(e.key === "Enter") {
+                    const guess = inputEl.value;
+                    answerPromise.then((answer) => {
+                        tryGuess(guess, answer);
+                    });
+                }
+            });
+
+
+
+            function getRandomAnswer() {
+                return fetch("answerlist.txt").then((r) => {
+                    return r.text();
+                }).then((text) => {
+                    const lines = text.split("\n");
+                    const randomIndex = Math.floor(Math.random() * lines.length);
+                    return lines[randomIndex];
+                });
+            }
+        </script>
+    </body>
+</html>

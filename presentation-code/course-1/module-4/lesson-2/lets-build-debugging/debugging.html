@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Find the Bug</title>
+  </head>
+  <body>
+    <h1>Find the Bug</h1>
+    <p id="result">Average will appear here.</p>
+    <button id="run">Run</button>
+
+    <script>
+      // This code is meant to average three scores, but it has a bug.
+      // Use the console, breakpoints, and the call stack to find it.
+
+      function sumScores(scores) {
+        let total = 0;
+        for (let i = 0; i <= scores.length; i = i + 1) {
+          // BUG: i <= scores.length reads one past the end of the array.
+          // Add a breakpoint on the next line and watch the value of total.
+          console.log("Adding index " + i + ":", scores[i]);
+          total = total + scores[i];
+        }
+        return total;
+      }
+
+      function averageScores(scores) {
+        const total = sumScores(scores);
+        return total / scores.length;
+      }
+
+      document.querySelector("#run").addEventListener("click", function () {
+        const result = averageScores([90, 80, 100]);
+        // Open the console: the buggy version logs NaN.
+        console.log("Average:", result);
+        document.querySelector("#result").textContent = "Average: " + result;
+      });
+
+      // Fix: change i <= scores.length to i < scores.length.
+    </script>
+  </body>
+</html>

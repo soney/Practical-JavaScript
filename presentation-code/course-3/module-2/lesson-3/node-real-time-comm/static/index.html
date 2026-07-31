@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <strong>Home: </strong> <span id="home">0</span>
+        <strong>Away: </strong> <span id="away">0</span>
+    <script>
+        const eventSource = new EventSource("/score");
+        eventSource.addEventListener("message", (event) => {
+            const data = JSON.parse(event.data);
+            document.querySelector("#home").textContent = data.home;
+            document.querySelector("#away").textContent = data.away;
+        });
+    </script>
+    </body>
+</html>

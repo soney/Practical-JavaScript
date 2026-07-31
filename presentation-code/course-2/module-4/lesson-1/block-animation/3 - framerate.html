@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <script src="setx.js" defer></script>
+        <script src="animatewithframerate.js" defer></script>
+    </head>
+    <body>
+        <button id="run"><code>animateWithFramerate()</code></button>
+        FPS: <input id="num_inp" type="number" value="30" />
+        <div id="block" />
+        <script>
+            const runButton = document.querySelector("#run");
+            runButton.addEventListener("click", () => {
+                const fps = document.querySelector("#num_inp").value;
+                animateWithFramerate(parseInt(fps));
+            });
+        </script>
+    </body>
+</html>

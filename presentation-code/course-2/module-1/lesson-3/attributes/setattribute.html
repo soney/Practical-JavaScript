@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            img#animal {
+                width: 80%;
+            }
+        </style>
+    </head>
+    <body>
+        <img id="animal" src="cat.jpg">
+        <button>I like dogs</button>
+        <script>
+            const img = document.querySelector("img#animal");
+            const btn = document.querySelector("button");
+
+            function changeToDog() {
+                img.setAttribute("src", "dog.jpg");
+                btn.setAttribute("disabled", "");
+            }
+            btn.addEventListener("click", changeToDog);
+        </script>
+    </body>
+</html>

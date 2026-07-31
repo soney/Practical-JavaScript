@@ -1,0 +1,18 @@
+/* Shared stylesheet for every page in the site. */
+
+body {
+  font-family: Arial, sans-serif;
+  max-width: 600px;
+  margin: 20px auto;
+  color: #222;
+}
+
+nav {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 8px;
+}
+
+nav a {
+  margin-right: 12px;
+}

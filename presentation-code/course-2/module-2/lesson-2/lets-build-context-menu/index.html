@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      ul#contextmenu {
+        list-style: none;
+        position: absolute;
+        display: none;
+        padding: 0px;
+        margin: 0px;
+      }
+      ul#contextmenu li {
+        border: 1px solid grey;
+        cursor: pointer;
+        background-color: white;
+      }
+    </style>
+  </head>
+  <body>
+    <ul id="contextmenu">
+      <li id="share">Share</li>
+      <li id="translate">Translate</li>
+      <li id="store">Store</li>
+    </ul>
+    <p>This is some example content</p>
+    <script>
+      const contextMenu = document.querySelector("#contextmenu");
+      const shareItem = contextMenu.querySelector("#share");
+
+      shareItem.addEventListener("mousedown", (e) => {
+        console.log("SHARE", getSelectedText());
+        e.preventDefault();
+      });
+
+      document.addEventListener("contextmenu", (e) => {
+        const selection = getSelectedText();
+        if(selection) {
+          e.preventDefault();
+          console.log("something is selected");
+          contextMenu.style.display = "block";
+          contextMenu.style.left = e.pageX+'px';
+          contextMenu.style.top = e.pageY+'px';
+        } else {
+          console.log("nothing is selected");
+          contextMenu.style.display = "none";
+        }
+      });
+
+      document.addEventListener("click", () => {
+          contextMenu.style.display = "none";
+      });
+
+      // This is any text that the user has selected
+      function getSelectedText() {
+        return window.getSelection().toString();
+      }
+    </script>
+  </body>
+</html>

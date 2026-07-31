@@ -1,0 +1,42 @@
+
+<!DOCTYPE html>
+<html>
+    <body>
+        <button>Fetch</button>
+        <script>
+            const MY_SECRET_OMDB_API_KEY = "YOUR_OMDB_API_KEY";
+        </script>
+
+
+
+
+
+        <script>
+            const btn = document.querySelector("button");
+            const search_term = "star";
+            const timeout_ms = 50;
+
+            const OMDB_BASE_URL = "http://www.omdbapi.com/?" 
+            const omdb_params = new URLSearchParams({
+                apikey: MY_SECRET_OMDB_API_KEY,
+                t: search_term
+            });
+            const OMDB_URL = OMDB_BASE_URL + omdb_params.toString()
+
+            const timeoutPromise = new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    reject("Timed out");
+                }, timeout_ms);
+            });
+            Promise.race([fetch(OMDB_URL), timeoutPromise])
+                .then(r => r.json())
+                .then((data) => {
+                    console.log("GOT data from the OMDB API");
+                    console.log(data);
+                })
+                .catch((err) => {
+                    console.log(err);
+                })
+        </script>
+    </body>
+</html>

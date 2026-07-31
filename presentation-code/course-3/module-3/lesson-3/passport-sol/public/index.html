@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <div id="guest-nav" style="display:none">
+            <ul>
+                <li><a href="register.html">Register</a></li>
+                <li><a href="login.html">Log In</a></li>
+            </ul>
+        </div>
+        <div id="user-info" style="display:none">
+            <p>Welcome, <span id="user-email"></span>!</p>
+            <button id="logout">Log out</button>
+        </div>
+        <script>
+            async function checkSession() {
+                const response = await fetch("/me");
+                if(response.ok) {
+                    const user = await response.json();
+                    document.querySelector("#user-email").textContent = user.email;
+                    document.querySelector("#user-info").style.display = 'block';
+                } else {
+                    document.querySelector("#guest-nav").style.display = 'block';
+                }
+            }
+            checkSession();
+            const logoutButton = document.querySelector("button#logout");
+            logoutButton.addEventListener('click', async () => {
+                await fetch('/logout', { method: 'POST' });
+                window.location.reload();
+            });
+        </script>
+    </body>
+</html>

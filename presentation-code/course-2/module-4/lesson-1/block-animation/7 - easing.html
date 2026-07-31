@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="style.css" />
+        <script src="setx.js" defer></script>
+        <script src="easingfunc.js" defer></script>
+    </head>
+    <body>
+        <button id="run"><code>animateWithEasing()</code></button>
+        Duration: <input id="duration" type="number" value="2" />
+        from: <input id="fromx" type="number" value="0" />
+        to: <input id="tox" type="number" value="500" />
+        easing function: <select>
+            <option value="linear">linear</option>
+            <option value="easeInQuad">easeInQuad</option>
+            <option value="easeOutQuad">easeOutQuad</option>
+            <option value="easeInOutQuad">easeInOutQuad</option>
+            <option value="easeInCubic">easeInCubic</option>
+            <option value="easeOutCubic">easeOutCubic</option>
+            <option value="easeInOutCubic">easeInOutCubic</option>
+            <option value="easeInQuart">easeInQuart</option>
+            <option value="easeOutQuart">easeOutQuart</option>
+            <option value="easeInOutQuart">easeInOutQuart</option>
+            <option value="easeInQuint">easeInQuint</option>
+            <option value="easeOutQuint">easeOutQuint</option>
+            <option value="easeInOutQuint">easeInOutQuint</option>
+            <option value="easeInOutBounce">easeInOutBounce</option>
+            <option value="easeInBounce">easeInBounce</option>
+            <option value="easeOutBounce">easeOutBounce</option>
+        </select>
+        <div id="block"></div>
+        <div id="comparison-block">Linear</div>
+        <script>
+            const block = document.querySelector("#block");
+            const comparisonBlock = document.querySelector("#comparison-block");
+            const runButton = document.querySelector("#run");
+            runButton.addEventListener("click", () => {
+                const duration = parseFloat(document.querySelector("#duration").value)*1000;
+                const fromx = parseFloat(document.querySelector("#fromx").value);
+                const tox = parseFloat(document.querySelector("#tox").value);
+                const easing = document.querySelector("select").value;
+                animate(duration, fromx, tox, easing, block);
+                animate(duration, fromx, tox, "linear", comparisonBlock);
+            });
+        </script>
+    </body>
+</html>

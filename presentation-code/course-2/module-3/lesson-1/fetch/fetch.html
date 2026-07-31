@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <button>Get Book</button>
+    <div id="output"></div>
+    <script>
+      const btn = document.querySelector("button");
+      const outp = document.querySelector("#output");
+      btn.addEventListener("click", () => {
+        fetch("book.txt").then(r => r.text())
+          .then((bookText) => {
+            outp.textContent = bookText;
+          }).catch((err) => {
+            outp.textContent = "Sorry, no connection detected. Try in a few minutes.";
+          }).finally(() => {
+            console.log("Operation finished")
+          });
+      });
+    </script>
+  </body>
+</html>

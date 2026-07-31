@@ -1,0 +1,36 @@
+<html>
+    <head>
+    </head>
+    <body>
+        <!--
+        Goal: allow users to select their favorite teams
+        -->
+        <ul>
+            <li><label><input type="checkbox">Northport Thunderhawks</label></li>
+            <li><label><input type="checkbox">Crescent Ridge Maulers</label></li>
+            <li><label><input type="checkbox">Lakeshore Phantoms</label></li>
+            <li><label><input type="checkbox">Twin Mesa Outlaws</label></li>
+            <li><label><input type="checkbox">Stonevale Rovers</label></li>
+            <li><label><input type="checkbox">Black Hollow United</label></li>
+            <li><label><input type="checkbox">Port Caldera Wanderers</label></li>
+            <li><label><input type="checkbox">Veridian Heights Pulse</label></li>
+            <li><label><input type="checkbox">Frostmoor Blizzards</label></li>
+        </ul>
+        <button>Add to favorites</button>
+        <script>
+            const btn = document.querySelector("button");
+            function onClickButton() {
+                const checkedInputs = document.querySelectorAll("input:checked"); // get the <input> elements that are checked
+
+                console.log("-------");
+                for(const inp of checkedInputs) {
+                    const parent = inp.parentNode;
+                    console.log(parent.textContent);
+                }
+                console.log("-------");
+            }
+            // when the user clicks the button, run onClickButton
+            btn.addEventListener("click", onClickButton);
+        </script>
+    </body>
+</html>

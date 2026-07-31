@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Chat</h1>
+    <ul id="messages"></ul>
+    <form id="form">
+        <input id="input" placeholder="Message" />
+        <button>Send</button>
+    </form>
+    <script>
+        const ws = new WebSocket(`ws://${location.host}`);
+        const messageEl = document.querySelector("#input");
+        const messages = document.querySelector("#messages");
+        const form = document.querySelector("#form");
+
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+            ws.send(messageEl.value);
+            messageEl.value = "";
+        });
+
+        ws.addEventListener("message", (event) => {
+            const data = event.data;
+            const li = document.createElement("li");
+            li.innerText = data;
+            messages.append(li);
+        });
+    </script>
+  </body>
+</html>

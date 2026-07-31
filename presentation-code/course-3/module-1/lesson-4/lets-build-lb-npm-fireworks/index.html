@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <h1>My Example Vite Page</h1>
+        <div id="container"></div>
+        <script type="module">
+            import { Fireworks } from 'fireworks-js';
+            const container = document.querySelector("#container");
+            const fireworks = new Fireworks(container, { /* options */ });
+            fireworks.start();
+        </script>
+    </body>
+</html>

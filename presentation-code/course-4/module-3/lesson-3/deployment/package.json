@@ -1,0 +1,32 @@
+{
+  "name": "react-router-demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "webpack.config.js",
+  "homepage": "https://soney.github.io/sample-react",
+  "scripts": {
+    "start": "./node_modules/.bin/webpack serve --mode development",
+    "dev": "./node_modules/.bin/webpack serve --mode development",
+    "build": "./node_modules/.bin/webpack --mode production"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.2",
+    "@babel/preset-react": "^7.28.5",
+    "babel-loader": "^10.1.1",
+    "css-loader": "^7.1.4",
+    "html-webpack-plugin": "^5.6.6",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router": "^7.0.0",
+    "style-loader": "^4.0.0",
+    "webpack-dev-server": "^5.2.3"
+  },
+  "devDependencies": {
+    "webpack": "^5.107.2",
+    "webpack-cli": "^7.0.3"
+  }
+}

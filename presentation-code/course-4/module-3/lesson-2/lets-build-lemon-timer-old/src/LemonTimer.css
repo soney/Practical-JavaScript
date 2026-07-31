@@ -1,0 +1,100 @@
+:root {
+    --lemon: #f6d743;
+    --lemon-dark: #e0b400;
+    --ink: #3a3a2a;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: linear-gradient(160deg, #fffbe6 0%, #fdeea0 100%);
+    color: var(--ink);
+}
+
+.app {
+    max-width: 480px;
+    margin: 60px auto;
+    padding: 32px;
+    text-align: center;
+    background: #fffefa;
+    border: 3px solid var(--lemon);
+    border-radius: 18px;
+    box-shadow: 0 12px 30px rgba(224, 180, 0, 0.25);
+}
+
+.app h1 {
+    margin-top: 0;
+    font-size: 2rem;
+}
+
+.lemons {
+    min-height: 2rem;
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+}
+
+.lemon {
+    transition: opacity 0.25s ease;
+}
+
+.hint {
+    font-size: 0.9rem;
+    color: #998a3a;
+}
+
+.panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    margin-top: 16px;
+}
+
+.panel label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+}
+
+.panel input {
+    width: 70px;
+    padding: 6px 8px;
+    font-size: 1rem;
+    border: 2px solid var(--lemon-dark);
+    border-radius: 8px;
+    text-align: center;
+}
+
+.countdown {
+    font-size: 3.4rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    letter-spacing: 2px;
+}
+
+button {
+    padding: 10px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #efe8c8;
+    color: var(--ink);
+    transition: filter 0.15s ease;
+}
+
+button:hover {
+    filter: brightness(0.95);
+}
+
+button.primary {
+    background: var(--lemon);
+    color: var(--ink);
+}
+
+button.danger {
+    background: #ef6f6f;
+    color: #fff;
+}

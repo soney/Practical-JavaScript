@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <script src="script.js" defer></script>
+    <img id="animal" src="cat.jpg">
+    <button>I like dogs</button>
+    <footer>This page has been visitied <span id="count">0</span> times</footer>
+
+    <script>
+        fetch("/gethitcount").then(res => res.text())
+            .then(content => {
+                document.querySelector("#count").textContent = content;
+            });
+    </script>
+</body>
+
+</html>

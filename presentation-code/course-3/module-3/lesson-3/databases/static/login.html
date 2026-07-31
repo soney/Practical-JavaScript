@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <h1>Log In to your account</h1>
+
+        <form id="loginForm">
+            <input type="email" id="email" placeholder="E-Mail" />
+            <input type="password" id="password" placeholder="Password" />
+            <button type="submit">Log In</button>
+            <div id="status"></div>
+        </form>
+
+        <script>
+            const form = document.querySelector("form#loginForm");
+            const emailInput = document.querySelector("input#email");
+            const passwordInput = document.querySelector("input#password");
+            const status = document.querySelector("#status");
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                const response = await fetch("/login", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                const text = await response.text();
+                status.textContent = text;
+            });
+        </script>
+    </body>
+</html>

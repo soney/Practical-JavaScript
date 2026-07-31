@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+    <body>
+        <button>Start timer</button>
+        <div id="feedback"></div>
+        <script>
+            const btn = document.querySelector("button");
+            const feedback = document.querySelector("#feedback");
+            const delay = 5000;
+            function getPromiseThatResolvesAfterDelay(delay) {
+                return new Promise((resolve, reject) => {
+                    setTimeout(resolve, delay);
+                });
+            }
+            btn.addEventListener("click", async () => {
+                feedback.textContent = "Started Timer";
+                await getPromiseThatResolvesAfterDelay(delay);
+                feedback.textContent = "Timer done!";
+            });
+        </script>
+    </body>
+</html>

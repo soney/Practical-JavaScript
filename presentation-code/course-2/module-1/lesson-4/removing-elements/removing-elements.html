@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            p#banner {
+                background-color: red;
+                color: white;
+            }
+        </style>
+    </head>
+    <body>
+        <p id="banner">
+            Welcome to my website!
+            <button id="dismiss">Dismiss</button>
+        </p>
+        <script>
+            const banner = document.querySelector("p#banner");
+            const btn = document.querySelector("#dismiss");
+
+            function removeBanner() {
+                banner.remove();
+            }
+            btn.addEventListener("click", removeBanner);
+        </script>
+    </body>
+</html>

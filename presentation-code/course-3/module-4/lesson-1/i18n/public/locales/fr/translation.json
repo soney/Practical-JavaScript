@@ -1,0 +1,15 @@
+{
+  "header": {
+    "title": "Bienvenue sur i18next"
+  },
+  "main": {
+    "description": "Ceci est une démonstration de l'utilisation de i18next dans une application web.",
+    "dynamic": "Vous avez {{count}} nouveaux messages."
+  },
+  "card": {
+    "title": "Contenu Dynamique"
+  },
+  "footer": {
+    "text": "© 2026 Démo i18next"
+  }
+}

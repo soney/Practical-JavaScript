@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="A demonstration of an accessibility issue where color alone is used to convey meaning.">
+    <title>Spice Safari Menu</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>Spice Safari</h1>
+            <p class="subtitle">Experience the wild flavors</p>
+            <div class="legend">
+                <span class="legend-item"><span class="color-dot red"></span> means spicy</span>
+            </div>
+        </header>
+
+        <main class="menu-grid">
+            <div class="menu-category">
+                <h2>Starters</h2>
+                <ul class="menu-list">
+                    <!-- Other item (white text) -->
+                    <li class="menu-item white">
+                        <div class="item-header">
+                            <h3>Garlic Bread</h3>
+                            <span class="price">$5.99</span>
+                        </div>
+                        <p>Freshly baked bread with garlic butter and herbs.</p>
+                    </li>
+                    <!-- Spicy item (red text) -->
+                    <li class="menu-item red">
+                        <div class="item-header">
+                            <h3>Volcano Poppers</h3>
+                            <span class="price">$7.99</span>
+                        </div>
+                        <p>Jalapeños stuffed with cheese and deep-fried.</p>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="menu-category">
+                <h2>Mains</h2>
+                <ul class="menu-list">
+                    <!-- Other item (white text) -->
+                    <li class="menu-item white">
+                        <div class="item-header">
+                            <h3>Herb Roast Chicken</h3>
+                            <span class="price">$18.99</span>
+                        </div>
+                        <p>Half chicken roasted with rosemary and thyme.</p>
+                    </li>
+                    <!-- Spicy item (red text) -->
+                    <li class="menu-item red">
+                        <div class="item-header">
+                            <h3>Dragon Noodle Bowl</h3>
+                            <span class="price">$16.99</span>
+                        </div>
+                        <p>Stir-fried noodles in our signature blazing chili sauce.</p>
+                    </li>
+                    <!-- Spicy item (red text) -->
+                    <li class="menu-item red">
+                        <div class="item-header">
+                            <h3>Inferno Curry</h3>
+                            <span class="price">$19.99</span>
+                        </div>
+                        <p>A rich, bubbling curry that packs a serious punch.</p>
+                    </li>
+                </ul>
+            </div>
+        </main>
+    </div>
+</body>
+
+</html>
