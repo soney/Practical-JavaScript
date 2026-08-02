@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Persistent To-Do List</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; }
+        .controls { display: flex; gap: 10px; margin-bottom: 20px; }
+        #todo-input { flex: 1; padding: 10px; font-size: 16px; }
+        button { padding: 10px 16px; font-size: 16px; cursor: pointer; }
+        ul { list-style: none; padding: 0; }
+        li { padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; }
+    </style>
+</head>
+<body>
+
+    <h1>My To-Do List</h1>
+    <p>Your tasks are saved in your browser, so they are still here when you come back.</p>
+
+    <div class="controls">
+        <input type="text" id="todo-input" placeholder="Add a new task..." />
+        <button id="add-button">Add</button>
+    </div>
+
+    <ul id="todo-list"></ul>
+
+    <script src="main-3.js"></script>
+</body>
+</html>

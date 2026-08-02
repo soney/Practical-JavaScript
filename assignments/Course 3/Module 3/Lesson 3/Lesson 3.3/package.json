@@ -1,0 +1,10 @@
+{
+  "name": "session-cookies-practice",
+  "version": "1.0.0",
+  "description": "Add session cookies for login and logout to an Express server.",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

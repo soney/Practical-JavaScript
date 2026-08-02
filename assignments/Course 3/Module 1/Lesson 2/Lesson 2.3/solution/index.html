@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>External Libraries - Rendering Markdown</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; line-height: 1.6; }
+        #output { border: 1px solid #dddddd; border-radius: 6px; padding: 10px 20px; }
+    </style>
+    <!-- SOLUTION: the learner adds this <script> tag to load the marked library -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@4.3.0/marked.min.js" defer></script>
+    <script src="main-3.js" defer></script>
+</head>
+<body>
+    <p>The Markdown below is rendered to HTML by the marked library:</p>
+    <div id="output"></div>
+</body>
+</html>

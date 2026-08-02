@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-1.js INSTEAD. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Problem 1</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      text-align: center;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #333;
+    }
+    #search-container {
+      margin: 20px 0;
+    }
+    input {
+      padding: 10px;
+      font-size: 16px;
+      width: 200px;
+      border: 2px solid #ddd;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    button:hover {
+      background-color: #c0392b;
+    }
+    #pokemon-card {
+      background-color: white;
+      padding: 30px;
+      border-radius: 6px;
+      margin: 20px 0;
+    }
+    #pokemon-name {
+      font-size: 32px;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 10px 0;
+    }
+    #pokemon-type {
+      font-size: 20px;
+      color: #3498db;
+      padding: 8px 16px;
+      background-color: #ecf0f1;
+      border-radius: 6px;
+      display: inline-block;
+      margin-top: 10px;
+    }
+  </style>
+  <script src="cached-fetch.js"></script>
+  <script>
+    function handleSearch() {
+      const input = document.querySelector('#pokemon-input');
+      if (input.value && window.searchPokemon) {
+        window.searchPokemon(input.value);
+      }
+    }
+    window.handleSearch = handleSearch;
+  </script>
+</head>
+<body>
+  <h1>Pokemon Finder</h1>
+  <div id="search-container">
+    <input type="text" id="pokemon-input" placeholder="Enter Pokemon name">
+    <button onclick="handleSearch()">Search</button>
+  </div>
+  <div id="pokemon-card">
+    <div id="pokemon-name">???</div>
+    <div id="pokemon-type">Type</div>
+  </div>
+  <script src="main-1.js"></script>
+</body>
+</html>

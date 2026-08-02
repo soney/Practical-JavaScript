@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-1.js INSTEAD. -->
+<!-- Book text from Project Gutenberg (public domain): https://www.gutenberg.org/ebooks/11 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Book Word Counter</title>
+  <style>
+    body {
+      font-family: Georgia, 'Times New Roman', serif;
+      background: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      padding-top: 60px;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 40px;
+      border-radius: 6px;
+      width: 480px;
+      text-align: center;
+    }
+    h1 { color: #333; margin-bottom: 6px; }
+    .subtitle { color: #666; font-style: italic; margin-top: 0; }
+    #result {
+      font-size: 22px;
+      color: #2c3e50;
+      font-weight: bold;
+      margin: 30px 0;
+      min-height: 1.4em;
+    }
+    .info {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Book Word Counter</h1>
+    <p class="subtitle">Alice's Adventures in Wonderland, by Lewis Carroll</p>
+
+    <p id="result">Loading book...</p>
+
+    <div class="info">
+      <strong>Note:</strong> This page fetches a plain text file with <code>fetch()</code> and <code>response.text()</code>, then counts the words.
+    </div>
+  </div>
+
+  <script src="main-1.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof countBookWords === 'function') {
+        countBookWords();
+      }
+    });
+  </script>
+</body>
+</html>

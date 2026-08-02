@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<!-- Edit the CSS in the <style> block below. The JavaScript is in main-3.js and is already written for you. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Problem 3</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #box {
+            width: 120px;
+            height: 120px;
+            background-color: #3498db;
+            border-radius: 8px;
+            /* TODO: add a CSS transition here so that changes to the box
+               (its size, color, and shape) animate smoothly over about
+               0.5 seconds using ease-in-out timing. Tip: you can transition
+               several properties at once with the "all" keyword. */
+        }
+
+        #box.active {
+            width: 260px;
+            height: 200px;
+            background-color: #e74c3c;
+            border-radius: 50%;
+        }
+
+        button {
+            margin-top: 30px;
+            padding: 12px 30px;
+            font-size: 16px;
+            background-color: #2ecc71;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #27ae60;
+        }
+    </style>
+</head>
+<body>
+    <h1>Expanding Card</h1>
+    <div id="box"></div>
+    <button id="toggleBtn">Toggle</button>
+    <script src="main-3.js"></script>
+</body>
+</html>

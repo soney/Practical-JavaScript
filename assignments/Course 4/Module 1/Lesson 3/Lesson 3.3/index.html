@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Course 4 Lesson 3.3</title>
+    <link rel="stylesheet" href="react/course4.css">
+    <style>
+      /* The archive status starts as a neutral "pending" banner and turns into
+         a green "done" banner once archiveItem() adds the is-archived class, so
+         the effect of clicking Confirm Archive is obvious at a glance. */
+      .archive-status {
+        margin: 1rem 0 0;
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 1px solid #d9dee8;
+        background: #eef1f5;
+        color: #5c6675;
+        font-weight: 700;
+      }
+      .archive-status.is-archived {
+        border-color: #9cccae;
+        background: #e8f7ed;
+        color: #206238;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="react/react.development.js"></script>
+    <script src="react/react-dom.development.js"></script>
+    <script src="react/jsx.min.js"></script>
+    <script type="text/babel" data-presets="react" src="main-3.jsx"></script>
+  </body>
+</html>

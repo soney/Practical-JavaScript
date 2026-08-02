@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-1.js INSTEAD. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 2.1</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .search-container {
+      margin: 20px 0;
+    }
+
+    input {
+      width: 70%;
+      padding: 10px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 25%;
+      padding: 10px;
+      font-size: 16px;
+      cursor: pointer;
+      box-sizing: border-box;
+    }
+
+    #weatherDisplay {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #ccc;
+    }
+
+    #cityName {
+      font-weight: bold;
+      font-size: 20px;
+    }
+
+    p {
+      margin: 10px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Weather Dashboard</h1>
+
+  <div class="search-container">
+    <input type="text" id="cityInput" placeholder="Enter a city name">
+    <button id="searchButton">Search</button>
+  </div>
+
+  <div id="weatherDisplay">
+    <p id="cityName"></p>
+    <p id="temperature"></p>
+    <p id="conditions"></p>
+  </div>
+
+  <script src="main-1.js"></script>
+</body>
+</html>

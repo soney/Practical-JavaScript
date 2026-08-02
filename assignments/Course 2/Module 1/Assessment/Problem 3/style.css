@@ -1,0 +1,24 @@
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+#notification-banner {
+  background-color: #2196F3;
+  color: white;
+  padding: 15px;
+  text-align: center;
+  font-size: 16px;
+}
+.content {
+  max-width: 600px;
+  margin: 50px auto;
+  padding: 20px;
+}
+h1 {
+  color: #333;
+}
+p {
+  color: #666;
+  line-height: 1.6;
+}

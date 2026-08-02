@@ -10,17 +10,29 @@ videos. 192 folders across 4 courses; 172 of them are code
 typed on camera during a specific video, and each folder's lesson README names
 that video and links to it.
 
-Paths follow the course structure:
+[`assignments/`](assignments/) - the 180 assignment problems, across
+59 Coursera assignments. Every problem folder holds the starter code you are
+given in the course lab and its description as that folder's README. The
+44 practice assignments also publish their solutions; the
+15 graded ones do not, and no autograder tests are published.
+
+Paths in both follow the course structure:
 
 ```
 presentation-code/course-<n>/module-<n>/lesson-<n>/<sample>/
+assignments/Course <n>/Module <n>/<assignment>/<problem>/
 ```
 
 so `presentation-code/course-1/module-1/lesson-2/introduction-to-html/` is the
-code from Course 1, Module 1, Lesson 2.
+code from Course 1, Module 1, Lesson 2, and
+`assignments/Course 1/Module 1/Lesson 2/Lesson 2.1/` is the first problem of
+that lesson's practice assignment. The assignment paths are the ones you see in
+the course lab, unchanged, so a description that says "Edit
+`Lesson 2.1/index.html`" names the folder it is sitting in.
 
-Start at the [index](presentation-code/README.md) to browse everything in course order,
-or open the README in any lesson folder to see which video its samples came from.
+Start at the [code index](presentation-code/README.md) or the
+[assignment index](assignments/README.md) to browse everything in course
+order.
 
 ## Running the samples
 

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-1.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 1</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background-color: #f0f0f0;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        #svgCanvas {
+            background-color: white;
+            border: 2px solid #333;
+            margin: 20px 0;
+        }
+        
+        #status {
+            color: #666;
+            font-size: 18px;
+            margin-top: 10px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>SVG Shape Creator</h1>
+    <svg id="svgCanvas" width="300" height="200"></svg>
+    <button id="createBtn">Create Circle</button>
+    <div id="status">Ready</div>
+    <script src="main-1.js"></script>
+    <script>
+        // Add button click handlers when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('#createBtn').addEventListener('click', () => {
+                if (window.createCircle) {
+                    window.createCircle(170, 85, 40);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

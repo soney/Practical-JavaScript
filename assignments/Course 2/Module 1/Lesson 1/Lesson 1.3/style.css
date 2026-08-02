@@ -1,0 +1,13 @@
+body {
+  min-height: 100vh;
+}
+
+body.light {
+  background-color: white;
+  color: black;
+}
+
+body.dark {
+  background-color: black;
+  color: white;
+}

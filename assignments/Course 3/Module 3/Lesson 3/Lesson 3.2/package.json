@@ -1,0 +1,11 @@
+{
+  "name": "hash-passwords-bcryptjs-practice",
+  "version": "1.0.0",
+  "description": "Hash and verify passwords with bcryptjs in an Express server.",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2"
+  }
+}

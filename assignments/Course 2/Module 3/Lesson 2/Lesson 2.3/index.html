@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-3.js INSTEAD. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 1 - API Dashboard</title>
+  <script src="cached-fetch.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Georgia', serif;
+      background: #f4f4f4;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 20px;
+    }
+    .container {
+      background: white;
+      border-radius: 6px;
+      padding: 50px 40px;
+      max-width: 700px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 { color: #00274c; margin-bottom: 10px; font-size: 36px; }
+    .subtitle { color: #666; margin-bottom: 40px; font-size: 16px; }
+    #loadingMessage { color: #999; font-size: 18px; font-style: italic; margin: 20px 0; }
+    #eventList { list-style: none; padding: 0; margin: 20px auto; max-width: 480px; text-align: left; }
+    #eventList li { background: #f0f4f8; border-left: 4px solid #00274c; padding: 12px 16px; margin-bottom: 10px; border-radius: 4px; color: #333; font-size: 16px; }
+    .info {
+      margin-top: 30px;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>U-M Event Tracker</h1>
+    <p class="subtitle">Fetching event data from University of Michigan</p>
+
+    <p id="loadingMessage">Loading events...</p>
+
+    <ul id="eventList"></ul>
+
+    <div class="info">
+      <strong>Note:</strong> This exercise demonstrates the two-step <code>fetch()</code> process: first getting the Response, then parsing the JSON body.
+    </div>
+  </div>
+
+  <script src="main-3.js"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', () => {
+      if (typeof window.getUMichEvents === 'function') {
+        window.getUMichEvents();
+      }
+    });
+  </script>
+</body>
+</html>

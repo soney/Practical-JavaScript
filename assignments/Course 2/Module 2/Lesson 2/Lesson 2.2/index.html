@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-2.js INSTEAD. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 2.2 - Photo Card</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+
+    .hint {
+      color: #555;
+      font-size: 14px;
+    }
+
+    .card {
+      border: 2px solid #ccc;
+      border-radius: 8px;
+      padding: 20px;
+      cursor: pointer;
+    }
+
+    .card.selected {
+      border-color: #2196F3;
+      background-color: #e3f2fd;
+    }
+
+    .card h3 {
+      margin-top: 0;
+    }
+
+    .card .photo {
+      width: 100%;
+      border-radius: 4px;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    /* The detailed description is hidden until the card has the show-details class */
+    .card .details {
+      display: none;
+      color: #444;
+    }
+
+    .card.show-details .details {
+      display: block;
+    }
+
+    #detailsBtn {
+      padding: 8px 16px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Photo Library</h1>
+  <p class="hint">Click a photo to select it. Click "Details" to show or hide the description without selecting. Shift-click "Details" to do both.</p>
+
+  <div id="card" class="card">
+    <img class="photo" src="north-campus.jpg" alt="University of Michigan North Campus">
+    <h3>North Campus</h3>
+    <p class="details">North Campus is home to the College of Engineering, the School of Music, Theatre &amp; Dance, and the Stamps School of Art &amp; Design.</p>
+    <button id="detailsBtn">Details</button>
+  </div>
+
+  <script src="main-2.js"></script>
+</body>
+</html>

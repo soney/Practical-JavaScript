@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT server.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create an Account</title>
+    <style>
+        body { font-family: sans-serif; max-width: 400px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        label { display: block; margin: 12px 0 4px; color: #333; }
+        input { width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .buttons { display: flex; gap: 8px; margin-top: 16px; }
+        button { flex: 1; padding: 10px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f4f4f4; }
+        button:hover { background: #e8e8e8; }
+        #status { margin-top: 16px; padding: 10px; border-radius: 4px; display: none; }
+        #status.ok { display: block; background: #e6f4e6; border: 1px solid #b8dcb8; }
+        #status.error { display: block; background: #fbeaea; border: 1px solid #e5b8b8; }
+    </style>
+</head>
+<body>
+    <h1>Create an Account</h1>
+    <label for="email">Email</label>
+    <input id="email" type="email" autocomplete="off">
+    <label for="password">Password</label>
+    <input id="password" type="password">
+    <div class="buttons">
+        <button id="register-btn">Register</button>
+        <button id="login-btn">Log In</button>
+    </div>
+    <p id="status"></p>
+
+    <script src="client.js"></script>
+</body>
+</html>

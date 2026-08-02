@@ -1,0 +1,10 @@
+{
+  "name": "score-keeper-practice",
+  "version": "1.0.0",
+  "description": "Practice updating lowdb records.",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "lowdb": "^7.0.1"
+  }
+}

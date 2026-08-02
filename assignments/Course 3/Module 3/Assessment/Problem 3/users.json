@@ -1,0 +1,14 @@
+{
+  "alice": {
+    "name": "Alice Nguyen",
+    "passwordHash": "$2a$10$Qo4dqq0HwH.LhC7AQ/9i9uY3MBu5zB8NKaE9TRWia4PMkm2tqk8.i"
+  },
+  "bob": {
+    "name": "Bob Ramirez",
+    "passwordHash": "$2a$10$AQ1CthDJ13SEREwQ9LTZseFTlMdqd..WIEFAt31Xg5A1yxoWyP5ZO"
+  },
+  "carol": {
+    "name": "Carol Diaz",
+    "passwordHash": "$2a$10$XCKPdCVABpg63pfdBMlI/.o8j7YNjCJXvQeerBgtTyBYqVTXS7L6e"
+  }
+}

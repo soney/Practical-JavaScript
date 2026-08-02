@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Counter</title>
+    <!-- The page styles are provided in style.css. You do not need to edit it. -->
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!--
+      YOUR TASK: make the markup below accessible by editing this file.
+      The styles (style.css) and the updateSeats() behavior (main-2.js) are
+      provided for you; do not edit those files.
+
+      TODO: (accessibility) this markup is not accessible yet.
+      1. Wrap the widget content in a <main> element.
+      2. Turn the ".heading" <div> into a real <h1> (keep the "Flight 712" text).
+      3. Add aria-live="polite" and aria-atomic="true" to #seat-count.
+      4. Give the button id="refresh-btn" and
+         aria-label="Refresh live seat availability".
+    -->
+    <div class="counter-container">
+      <div class="heading">Flight 712: Available Seats</div>
+
+      <div id="seat-count">15 seats remaining</div>
+
+      <button type="button" onclick="updateSeats()">
+        Check for Updates
+      </button>
+    </div>
+
+    <script src="main-2.js"></script>
+  </body>
+</html>

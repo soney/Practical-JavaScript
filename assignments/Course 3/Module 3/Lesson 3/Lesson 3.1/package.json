@@ -1,0 +1,10 @@
+{
+  "name": "user-registration-login-practice",
+  "version": "1.0.0",
+  "description": "Add registration and login routes to an Express server.",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

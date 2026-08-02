@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Localization Workshop</title>
+    <style>
+      body { font-family: system-ui; padding: 2rem; background: #f4f4f9; }
+      .dashboard {
+        background: white;
+        padding: 2rem;
+        border-radius: 6px;
+        max-width: 450px;
+      }
+      hr { border: 0; border-top: 1px solid #eee; margin: 1.5rem 0; }
+      button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #007bff;
+        background: white;
+        color: #007bff;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover { background: #007bff; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard">
+  <h1 id="welcome">Loading...</h1>
+  <p id="tagline"></p>
+  <p id="points-label"></p>
+
+  <hr>
+  <strong>Switch Language:</strong><br><br>
+  <button onclick="changeLanguage('en-US')">English (US)</button>
+  <button onclick="changeLanguage('de-DE')">Deutsch (DE)</button>
+  <button onclick="changeLanguage('es-ES')">Espanol (ES)</button>
+  <button onclick="changeLanguage('fr-FR')">Francais (FR)</button>
+  <button onclick="changeLanguage('ja-JP')">Nihongo (JP)</button>
+</div>
+
+<script src="i18next.min.js"></script>
+<script src="main-1.js"></script>
+</body>
+</html>

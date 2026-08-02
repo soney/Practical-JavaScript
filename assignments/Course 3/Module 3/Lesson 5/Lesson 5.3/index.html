@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-3.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shared Note</title>
+    <style>
+        body { font-family: sans-serif; max-width: 640px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        .panes { display: flex; gap: 16px; }
+        .pane { flex: 1; border: 1px solid #ddd; border-radius: 4px; padding: 16px; }
+        .pane h2 { font-size: 16px; margin: 0 0 8px; }
+        .display { font-family: monospace; font-size: 14px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px; padding: 10px; min-height: 40px; white-space: pre-wrap; word-break: break-all; }
+        .control { display: flex; gap: 8px; margin-top: 12px; }
+        input { flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 12px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f4f4f4; }
+        button:hover { background: #e8e8e8; }
+        .hint { color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h1>Shared Note</h1>
+    <p class="hint">Both panes read the same shared text type, like two users sharing one Yjs document. Appending from either side must update both.</p>
+    <div class="panes">
+        <div class="pane">
+            <h2>User A</h2>
+            <div id="display-a" class="display"></div>
+            <div class="control">
+                <input id="input-a" placeholder="Text to append">
+                <button id="append-a-btn">Append</button>
+            </div>
+        </div>
+        <div class="pane">
+            <h2>User B</h2>
+            <div id="display-b" class="display"></div>
+            <div class="control">
+                <input id="input-b" placeholder="Text to append">
+                <button id="append-b-btn">Append</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="main-3.js"></script>
+</body>
+</html>

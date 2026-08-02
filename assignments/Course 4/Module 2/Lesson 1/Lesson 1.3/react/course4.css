@@ -1,0 +1,244 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: #f6f7f9;
+  color: #20242a;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body.dark-mode,
+.preview-panel.dark {
+  background: #20242a;
+  color: #f6f7f9;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 6px;
+  background: #2457c5;
+  color: white;
+  cursor: pointer;
+  padding: 0.65rem 0.9rem;
+}
+
+button.secondary {
+  background: #e4e8f0;
+  color: #20242a;
+}
+
+button.danger {
+  background: #9b2c2c;
+}
+
+button.active {
+  background: #113a88;
+}
+
+button:focus,
+input:focus,
+textarea:focus {
+  outline: 3px solid #9bb7ff;
+  outline-offset: 2px;
+}
+
+input,
+textarea {
+  border: 1px solid #b8c0cc;
+  border-radius: 6px;
+  padding: 0.65rem;
+  width: 100%;
+}
+
+/* Radios and checkboxes are small native controls: size them to their content
+   instead of stretching them to the full field width. */
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: #2457c5;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  width: auto;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.assignment-shell {
+  margin: 0 auto;
+  max-width: 920px;
+  padding: 2rem;
+}
+
+.assignment-shell h1 {
+  font-size: 2rem;
+  margin: 0 0 1rem;
+}
+
+.assignment-shell h2 {
+  margin: 0 0 0.5rem;
+}
+
+.subtle {
+  color: #5c6675;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.card,
+.profile-card,
+.lesson-item,
+.project-card,
+.panel,
+.preview-panel {
+  background: white;
+  border: 1px solid #d9dee8;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.profile-card h2,
+.project-card h2,
+.lesson-item h2 {
+  font-size: 1.2rem;
+}
+
+.pill,
+.chip {
+  border-radius: 999px;
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.25rem 0.55rem;
+}
+
+.pill {
+  background: #e8f1ff;
+  color: #16419b;
+}
+
+.chip {
+  background: #edf1f7;
+  color: #303844;
+  margin: 0.2rem 0.25rem 0.2rem 0;
+}
+
+.required .pill {
+  background: #e8f7ed;
+  color: #206238;
+}
+
+.controls,
+.button-row,
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin: 1rem 0;
+}
+
+.lesson-list,
+.message-list,
+.results-list {
+  list-style: none;
+  margin: 1rem 0;
+  padding: 0;
+}
+
+.lesson-list,
+.results-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.counter-value {
+  font-size: 3rem;
+  font-weight: 700;
+  margin: 1rem 0;
+}
+
+.field-stack {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 560px;
+}
+
+/* Lay a checkbox or radio button on the same line as its label text, aligned
+   and evenly spaced, rather than stacking the control above the words. */
+.field-stack label:has(> input[type="radio"]),
+.field-stack label:has(> input[type="checkbox"]) {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Lay a group of related choices (e.g. Attending / Not attending) side by side
+   on one line instead of stacking them, wrapping only if the row runs out of room. */
+.radio-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* Dim a choice whose control is disabled (e.g. "Meal needed" when not attending). */
+.field-stack label:has(> input:disabled) {
+  color: #98a1af;
+  cursor: not-allowed;
+}
+
+.status-line,
+.empty-state {
+  background: #fff8df;
+  border: 1px solid #ecd27a;
+  border-radius: 8px;
+  margin: 1rem 0;
+  padding: 0.75rem;
+}
+
+.message-list li {
+  background: white;
+  border: 1px solid #d9dee8;
+  border-radius: 8px;
+  margin: 0.5rem 0;
+  padding: 0.75rem;
+}
+
+.preview-panel {
+  margin-top: 1rem;
+  min-height: 140px;
+}
+
+.preview-panel.compact {
+  font-size: 0.88rem;
+  min-height: auto;
+  padding: 0.65rem;
+}
+
+.nav {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0;
+}
+
+.route-panel {
+  min-height: 160px;
+}
+
+.selected-panel {
+  border-left: 5px solid #2457c5;
+}

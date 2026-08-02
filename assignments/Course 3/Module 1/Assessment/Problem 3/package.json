@@ -1,0 +1,14 @@
+{
+  "name": "install-and-use-lodash",
+  "version": "1.0.0",
+  "description": "Install lodash with npm and use it in a webpack bundle.",
+  "private": true,
+  "scripts": {
+    "build": "webpack --config webpack.config.js"
+  },
+  "devDependencies": {
+    "html-webpack-plugin": "^5.6.3",
+    "webpack": "^5.106.2",
+    "webpack-cli": "^5.1.4"
+  }
+}

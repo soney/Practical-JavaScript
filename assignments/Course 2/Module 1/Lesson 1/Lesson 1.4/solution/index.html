@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 1.4</title>
+</head>
+<body>
+
+  <h1 id="status">Status: Stopped</h1>
+
+  <button id="start-btn">Start</button>
+  <button id="pause-btn">Pause</button>
+  <button id="stop-btn">Stop</button>
+
+  <script>
+
+    // SOLUTION: learner writes the script below (starter had only a stub)
+    const statusHeading = document.querySelector("#status");
+    const startButton = document.querySelector("#start-btn");
+    const pauseButton = document.querySelector("#pause-btn");
+    const stopButton = document.querySelector("#stop-btn");
+
+    function setStart() {
+      statusHeading.textContent = "Status: Started";
+    }
+
+    function setPause() {
+      statusHeading.textContent = "Status: Paused";
+    }
+
+    function setStop() {
+      statusHeading.textContent = "Status: Stopped";
+    }
+
+    startButton.addEventListener("click", setStart);
+    pauseButton.addEventListener("click", setPause);
+    stopButton.addEventListener("click", setStop);
+  </script>
+
+</body>
+</html>

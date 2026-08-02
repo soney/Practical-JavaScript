@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-3.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dynamic Fade - Web Animation API</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f0f4f8;
+      margin: 0;
+    }
+    #notification {
+      padding: 15px 25px;
+      background-color: #2d3436;
+      color: white;
+      border-radius: 8px;
+      opacity: 0; /* Hidden by default */
+      pointer-events: none;
+      font-weight: 500;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 24px;
+      background-color: #0984e3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: background 0.2s;
+    }
+    button:hover { background-color: #74b9ff; }
+  </style>
+</head>
+<body>
+
+  <div id="notification">Message Sent Successfully!</div>
+  <button id="notifyBtn">Show Notification</button>
+
+  <script type="module">
+    import { setupNotificationDemo } from './main-3.js';
+    window.addEventListener('DOMContentLoaded', setupNotificationDemo);
+  </script>
+</body>
+</html>

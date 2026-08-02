@@ -1,0 +1,25 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+.blog-post {
+    margin-bottom: 30px;
+}
+h1 {
+    color: #333;
+}
+.comment {
+    background-color: #f5f5f5;
+    padding: 10px;
+    margin: 10px 0;
+    border-left: 3px solid #007bff;
+}
+#comments-container {
+    margin-top: 20px;
+}
+h2 {
+    color: #555;
+    margin-top: 30px;
+}

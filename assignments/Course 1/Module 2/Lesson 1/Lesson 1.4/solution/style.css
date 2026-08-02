@@ -1,0 +1,10 @@
+h1 {
+    color: blue;
+}
+
+/* SOLUTION: learner-added p rule (lives in the external stylesheet) */
+p {
+    background-color: red;
+    color: white;
+    padding: 10px;
+}

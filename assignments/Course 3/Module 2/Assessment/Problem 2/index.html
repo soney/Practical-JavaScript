@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Starlight Cinema</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; line-height: 1.6; }
+        section { border: 1px solid #ddd; padding: 1.5rem; margin-bottom: 2rem; border-radius: 8px; }
+        h2 { margin-top: 0; color: #333; }
+        button { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #0056b3; }
+        .output { background: #f8f9fa; padding: 1rem; border-radius: 4px; min-height: 40px; margin-top: 1rem; }
+        ul { margin: 0; padding-left: 1.25rem; }
+    </style>
+</head>
+<body>
+
+    <h1>Starlight Cinema</h1>
+
+    <section>
+        <h2>Now Showing</h2>
+        <button onclick="loadMovies()">Show Movies</button>
+        <div id="movies" class="output">Click the button to see today's movies.</div>
+    </section>
+
+    <section>
+        <h2>Box Office Hours</h2>
+        <button onclick="loadHours()">Show Hours</button>
+        <div id="hours" class="output">Click the button to see our hours.</div>
+    </section>
+
+    <script>
+        // Ask the server for the movie list (GET /movies) and show it on the page.
+        async function loadMovies() {
+            const moviesDiv = document.querySelector('#movies');
+            try {
+                const response = await fetch('/movies');
+                const movies = await response.json();
+                moviesDiv.innerHTML = '<ul>' + movies.map(function (movie) {
+                    return '<li>' + movie.title + ' - ' + movie.time + '</li>';
+                }).join('') + '</ul>';
+            } catch (err) {
+                moviesDiv.textContent = 'Could not load movies.';
+            }
+        }
+
+        // Ask the server for the box office hours (GET /hours) and show them on the page.
+        async function loadHours() {
+            const hoursDiv = document.querySelector('#hours');
+            try {
+                const response = await fetch('/hours');
+                const text = await response.text();
+                hoursDiv.textContent = text;
+            } catch (err) {
+                hoursDiv.textContent = 'Could not load hours.';
+            }
+        }
+    </script>
+</body>
+</html>

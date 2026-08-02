@@ -1,0 +1,13 @@
+{
+  "name": "sharedb-counter-practice",
+  "version": "1.0.0",
+  "description": "Practice setting up a ShareDB document on a server.",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@teamwork/websocket-json-stream": "^2.0.0",
+    "express": "^4.18.2",
+    "sharedb": "^5.2.2",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time Shared Notepad</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #f4f4f9; }
+        h2 { color: #333; }
+        #notepad {
+            width: 100%;
+            height: 400px;
+            padding: 15px;
+            font-size: 1.2rem;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            outline: none;
+        }
+        #notepad:focus { border-color: #007bff; }
+        .status { color: #666; font-size: 0.9rem; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+    <h2>Collaborative Notepad</h2>
+    <p class="status">Type below to sync with other users in real time.</p>
+
+    <textarea id="notepad" placeholder="Start collaborating..."></textarea>
+
+    <script>
+        // This browser code is already written for you: you only edit main.js.
+        // It opens a WebSocket to the server, sends the notepad text whenever
+        // you type, and replaces the notepad text whenever the server
+        // broadcasts an update from another user.
+
+        // notepadSocketReady lets the automated tests wait until the socket is
+        // connected before they start sending messages.
+        window.notepadSocketReady = false;
+
+        // The address is built from the page's own address, so the connection
+        // works whether the page was served over http:// or https://. A page on
+        // https:// must use wss://, the secure form of ws://.
+        const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const socket = new WebSocket(`${wsProtocol}//${location.host}${location.pathname}`);
+        const notepad = document.querySelector('#notepad');
+
+        // A WebSocket message can arrive as text or as binary data, and some
+        // networks forward text as binary, so decode it back to text either way.
+        socket.binaryType = 'arraybuffer';
+
+        function messageText(event) {
+            return typeof event.data === 'string'
+                ? event.data
+                : new TextDecoder().decode(event.data);
+        }
+
+        socket.addEventListener('open', () => {
+            window.notepadSocketReady = true;
+        });
+
+        // Send what you typed to the server.
+        notepad.addEventListener('input', () => {
+            if (socket.readyState === WebSocket.OPEN) {
+                socket.send(notepad.value);
+            }
+        });
+
+        // Apply an update that the server broadcast from another user.
+        socket.addEventListener('message', (event) => {
+            notepad.value = messageText(event);
+        });
+    </script>
+</body>
+</html>

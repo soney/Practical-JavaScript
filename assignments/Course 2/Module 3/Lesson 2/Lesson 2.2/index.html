@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-2.js INSTEAD. -->
+<!-- Quote data adapted from a public compilation by nasrulhazim: https://gist.github.com/nasrulhazim/54b659e43b1035215cd0ba1d4577ee80 -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Inspiration</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f9;
+      display: flex;
+      justify-content: center;
+      padding-top: 50px;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 6px;
+      width: 480px;
+      text-align: center;
+    }
+    .subtitle {
+      color: #666;
+      margin-top: 0;
+    }
+    #loadingMessage {
+      color: #888;
+      font-style: italic;
+      min-height: 1.2em;
+    }
+    #quoteContainer {
+      display: none;
+      margin: 20px 0;
+    }
+    #quoteContainer.show {
+      display: block;
+    }
+    #quoteText {
+      font-size: 20px;
+      color: #333;
+    }
+    #quoteAuthor {
+      color: #666;
+      font-style: italic;
+      margin-top: 8px;
+    }
+    #getQuoteButton {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .info {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Daily Inspiration</h1>
+    <p class="subtitle">Get motivated with inspiring quotes</p>
+
+    <p id="loadingMessage"></p>
+
+    <div id="quoteContainer">
+      <p id="quoteText"></p>
+      <p id="quoteAuthor"></p>
+    </div>
+
+    <button id="getQuoteButton">Get New Quote</button>
+
+    <div class="info">
+      <strong>Tip:</strong> Click the button to fetch a new inspirational quote. This demonstrates real-world use of Promises and the Fetch API.
+    </div>
+  </div>
+
+  <script src="main-2.js"></script>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT server.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Quiz Score Keeper</title>
+    <style>
+        body { font-family: sans-serif; max-width: 540px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        ul { list-style: none; padding: 0; }
+        li { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid #eee; }
+        .name { flex: 1; }
+        .score { font-weight: bold; min-width: 32px; text-align: right; }
+        button { padding: 6px 12px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f4f4f4; }
+        button:hover { background: #e8e8e8; }
+        #status { color: #666; }
+        .hint { color: #666; font-size: 14px; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <h1>Quiz Score Keeper</h1>
+    <ul id="players-list"></ul>
+    <p id="status"></p>
+    <p class="hint">Scores are saved in db.json on the server, so they survive a server restart.</p>
+
+    <script src="client.js"></script>
+</body>
+</html>

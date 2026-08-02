@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<!-- Edit the CSS in the <style> block below. The JavaScript is in main-2.js and is already written for you. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pulsing Loading Spinner</title>
+
+  <style>
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      height: 100vh;
+      background: whitesmoke;
+      margin: 0;
+    }
+
+    /* The box itself (provided). */
+    #loadingElement {
+      width: 110px;
+      height: 70px;
+      border-radius: 10px;
+      background-color: navy;
+    }
+
+    /* The spinner class turns on the animation (provided). */
+    .spinner {
+      animation: pulse-rotate 2s linear infinite;
+    }
+
+    /* SOLUTION: the @keyframes rule below is what the learner writes. */
+    @keyframes pulse-rotate {
+      0% {
+        transform: rotate(0deg);
+        background-color: navy;
+        width: 110px;
+        height: 70px;
+      }
+
+      50% {
+        transform: rotate(180deg);
+        background-color: gold;
+        width: 160px;
+        height: 100px;
+      }
+
+      100% {
+        transform: rotate(360deg);
+        background-color: navy;
+        width: 110px;
+        height: 70px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div id="loadingElement"></div>
+  <button id="toggleBtn">Start Spinner</button>
+
+  <script src="main-2.js"></script>
+</body>
+</html>

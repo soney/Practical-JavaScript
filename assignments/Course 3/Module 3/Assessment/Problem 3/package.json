@@ -1,0 +1,11 @@
+{
+  "name": "password-hash-login-assessment",
+  "version": "1.0.0",
+  "description": "Check a submitted password against a stored bcrypt hash in an Express login server.",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.18.2"
+  }
+}

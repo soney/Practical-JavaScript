@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+
+DO NOT MODIFY THIS FILE.
+EDIT main-1.js INSTEAD.
+
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Lesson 1.1</title>
+    <script type="module">
+      import main from './main-1.js';
+
+      for (const key in main) {
+        if (!window.hasOwnProperty(key)) {
+          window[key] = main[key];
+        }
+      }
+
+      const { windowWidth } = main;
+
+      window.windowWidth = windowWidth;
+
+      const pre = document.createElement('pre');
+      pre.append('Call windowWidth() in the browser console to get the width.');
+      document.body.append(pre);
+    </script>
+  </head>
+  <body></body>
+</html>

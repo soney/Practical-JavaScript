@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+
+DO NOT MODIFY THIS FILE.
+EDIT main-1.js INSTEAD.
+
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 4.1</title>
+    <style>
+    .align-right {
+        text-align: right;
+    }
+    .variable-name {
+        font-family: monospace;
+        text-align: right;
+    }
+    .variable-value {
+        font-family: monospace;
+        width: 100%;
+    }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <article>
+            <h1>Results</h1>
+            <p>These values come from <code>main-1.js</code></p>
+            <table class="striped" aria-label="Variable values">
+                <thead>
+                    <tr>
+                        <th class="align-right">Variable</th>
+                        <th>Value</th>
+                    </tr>
+                </thead>
+                <tbody id="variable-values-table">
+                </tbody>
+            </table>
+        </article>
+    </main>
+
+    <script type="module">
+        import main from './main-1.js';
+
+        for (const key in main) {
+            if (!window.hasOwnProperty(key)) {
+                window[key] = main[key];
+            }
+        }
+
+        function formatValue(value) {
+            if (value === undefined) {
+                return 'undefined';
+            }
+
+            if (value === null) {
+                return 'null';
+            }
+
+            if (typeof value === 'string') {
+                return JSON.stringify(value);
+            }
+
+            if (typeof value === 'object') {
+                return JSON.stringify(value);
+            }
+
+            return String(value);
+        }
+
+        function printVariableValues(valuesToPrint) {
+            return valuesToPrint.map(([label, getValue]) => {
+                const item = document.createElement('tr');
+                const labelElement = document.createElement('td');
+                labelElement.classList.add('variable-name');
+                const valueElement = document.createElement('td');
+                valueElement.classList.add('variable-value');
+
+                let value;
+                try {
+                    value = getValue();
+                } catch (error) {
+                    value = undefined;
+                }
+
+                labelElement.textContent = label;
+                valueElement.textContent = formatValue(value);
+                item.append(labelElement, valueElement);
+
+                return item;
+            });
+        }
+
+        const output = document.querySelector('#variable-values-table');
+        const variableValueItems = printVariableValues([
+            ['numbers', () => window.numbers],
+            ['total', () => window.total],
+        ]);
+
+        output.append(...variableValueItems);
+    </script>
+</body>
+</html>

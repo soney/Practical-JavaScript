@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 1</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+  <body>
+    <h1>Choose a background color</h1>
+    <div id="color-buttons">
+      <button id="red-btn">red</button>
+      <button id="blue-btn">blue</button>
+    </div>
+
+    <script>
+      // SOLUTION: learner writes the script below (starter had only a stub)
+      const redButton = document.querySelector('#red-btn');
+      const blueButton = document.querySelector('#blue-btn');
+
+      function setRedBackground() {
+        document.body.classList.remove('blue');
+        document.body.classList.add('red');
+      }
+
+      function setBlueBackground() {
+        document.body.classList.remove('red');
+        document.body.classList.add('blue');
+      }
+
+      redButton.addEventListener('click', setRedBackground);
+      blueButton.addEventListener('click', setBlueBackground);
+    </script>
+  </body>
+</html>

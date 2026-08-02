@@ -1,0 +1,5 @@
+{
+  "new york": { "city": "New York", "temperature": 72, "conditions": "Partly Cloudy" },
+  "los angeles": { "city": "Los Angeles", "temperature": 85, "conditions": "Sunny" },
+  "chicago": { "city": "Chicago", "temperature": 68, "conditions": "Cloudy" }
+}

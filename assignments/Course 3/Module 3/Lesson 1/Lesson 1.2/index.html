@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>The Consent Gatekeeper</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 40px; text-align: center; }
+        .button-group { margin-top: 20px; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; border-radius: 5px; border: 1px solid #ccc; }
+        .btn-accept { background-color: #4CAF50; color: white; border: none; }
+        .btn-decline { background-color: #f44336; color: white; border: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Privacy Consent Demo</h1>
+    <p>Check your browser console (F12) to see if analytics are running.</p>
+
+    <div class="button-group">
+        <!-- TODO: Add the button that grants full consent here.
+             Its label should read Accept All Cookies, and clicking it should
+             call setConsent('full') (setConsent is defined below). -->
+        <button class="btn-decline" onclick="setConsent('minimal')">Essential Only</button>
+        <button onclick="setConsent(null)">Clear Consent (Reset)</button>
+    </div>
+
+    <script src="main-2.js"></script>
+
+    <script>
+        function setConsent(level) {
+            if (level === null) {
+                localStorage.removeItem('user_consent_level');
+            } else {
+                localStorage.setItem('user_consent_level', level);
+            }
+            // Reload the page to see the gatekeeper in action with the new setting
+            window.location.reload();
+        }
+    </script>
+</body>
+</html>

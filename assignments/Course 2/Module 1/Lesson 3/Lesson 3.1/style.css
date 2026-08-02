@@ -1,0 +1,36 @@
+body {
+  max-width: 500px;
+  margin: 20px auto;
+}
+
+h1 {
+  text-align: center;
+}
+
+.subtitle {
+  text-align: center;
+}
+
+#taskInput {
+  width: 70%;
+  padding: 5px;
+}
+
+#addButton {
+  padding: 5px 10px;
+}
+
+#todoList {
+  list-style: none;
+  padding: 0;
+}
+
+#todoList li {
+  padding: 10px;
+  margin-bottom: 5px;
+  border: 1px solid #ccc;
+}
+
+#todoList li button {
+  float: right;
+}

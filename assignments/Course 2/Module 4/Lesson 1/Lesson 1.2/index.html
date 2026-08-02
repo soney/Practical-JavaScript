@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-2.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 1.2</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #f4f4f9;
+      margin: 0;
+    }
+    .stage {
+      width: 500px;
+      height: 150px;
+      border-bottom: 2px solid #333;
+      position: relative;
+      background: white;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    #box {
+      width: 50px;
+      height: 50px;
+      background-color: #ff4757;
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      border-radius: 4px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      background-color: #2f3542;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    button:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+
+  <div class="stage">
+    <div id="box"></div>
+  </div>
+  
+  <button id="startBtn">Start Animation</button>
+
+  <script src="main-2.js"></script>
+</body>
+</html>

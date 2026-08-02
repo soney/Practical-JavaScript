@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Lesson 1.2</title>
+    </head>
+
+    <body>
+        <button id="blueChant">Chant "Go Blue!"</button>
+
+        <script>
+            // SOLUTION: learner-added JavaScript (goBlueChant function + click event listener)
+            function goBlueChant() {
+                console.log('Go Blue!');
+            }
+
+            const chantButton = document.querySelector('#blueChant');
+            chantButton.addEventListener('click', goBlueChant);
+        </script>
+    </body>
+</html>

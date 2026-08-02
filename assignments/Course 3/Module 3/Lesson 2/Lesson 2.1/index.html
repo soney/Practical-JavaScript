@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT server.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Class Post Board</title>
+    <style>
+        body { font-family: sans-serif; max-width: 540px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        form { display: flex; gap: 8px; margin: 16px 0; }
+        input { flex: 1; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 16px; font-size: 16px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f4f4f4; }
+        button:hover { background: #e8e8e8; }
+        ul { padding-left: 20px; }
+        li { margin: 6px 0; }
+        #status { color: #666; }
+        .hint { color: #666; font-size: 14px; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <h1>Class Post Board</h1>
+    <form id="post-form">
+        <input id="post-input" type="text" placeholder="Write a post..." autocomplete="off">
+        <button id="post-btn" type="submit">Post</button>
+    </form>
+    <ul id="posts-list"></ul>
+    <p id="status"></p>
+    <p class="hint">Posts are saved in db.json on the server, so they survive a server restart.</p>
+
+    <script src="client.js"></script>
+</body>
+</html>

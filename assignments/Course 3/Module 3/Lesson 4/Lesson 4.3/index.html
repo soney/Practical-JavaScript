@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-3.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shared To-Do List</title>
+    <style>
+        body { font-family: sans-serif; max-width: 540px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        ul { padding-left: 20px; }
+        li { margin: 6px 0; }
+        .simulate { border: 1px solid #ddd; border-radius: 4px; padding: 16px; margin-top: 24px; }
+        .simulate h2 { font-size: 16px; margin: 0 0 8px; }
+        .control { display: flex; gap: 8px; margin-top: 8px; }
+        input { flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 12px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f4f4f4; }
+        button:hover { background: #e8e8e8; }
+        #last-op { font-family: monospace; font-size: 13px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-top: 16px; min-height: 18px; word-break: break-all; }
+        .hint { color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h1>Shared To-Do List</h1>
+    <ul id="todos-list"></ul>
+
+    <div class="simulate">
+        <h2>Simulate another user</h2>
+        <p class="hint">These buttons emit the same "op" events a ShareDB doc emits when a remote user edits the list.</p>
+        <div class="control">
+            <input id="remote-input" placeholder="New to-do, for example: Water plants">
+            <button id="remote-add-btn">Remote add</button>
+        </div>
+        <div class="control">
+            <button id="remote-remove-btn">Remote remove first item</button>
+        </div>
+    </div>
+
+    <p class="hint">Last operation received:</p>
+    <div id="last-op"></div>
+
+    <script src="fake-doc-3.js"></script>
+    <script src="main-3.js"></script>
+</body>
+</html>

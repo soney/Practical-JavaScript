@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-3.js INSTEAD. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Problem 3</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 700px;
+      margin: 50px auto;
+      padding: 20px;
+      background-color: #fff3e0;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    #image-container {
+      background-color: white;
+      padding: 30px;
+      border-radius: 6px;
+      margin: 20px 0;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    #dog-image {
+      max-width: 100%;
+      max-height: 400px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+    #status-message {
+      font-size: 18px;
+      color: #666;
+      margin-top: 15px;
+      font-style: italic;
+    }
+    button {
+      padding: 12px 30px;
+      font-size: 16px;
+      background-color: #FF9800;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #F57C00;
+    }
+  </style>
+  <script src="cached-fetch.js"></script>
+</head>
+<body>
+  <h1>Random Dog Gallery</h1>
+  <div id="image-container">
+    <img id="dog-image" src="" alt="Random dog">
+    <div id="status-message">Click the button to see a dog!</div>
+  </div>
+  <button onclick="loadDogImage()">Load New Dog</button>
+  <script src="main-3.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT server.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Member Directory</title>
+    <style>
+        body { font-family: sans-serif; max-width: 540px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { text-align: left; padding: 8px; border-bottom: 1px solid #eee; }
+        th { color: #666; font-weight: normal; font-size: 14px; }
+        #status { color: #666; }
+        .hint { color: #666; font-size: 14px; margin-top: 24px; }
+    </style>
+</head>
+<body>
+    <h1>Member Directory</h1>
+    <table>
+        <thead>
+            <tr><th>ID</th><th>Email</th></tr>
+        </thead>
+        <tbody id="members-list"></tbody>
+    </table>
+    <p id="status"></p>
+    <p class="hint">This page only needs each member's ID and email. The server should not send anything else.</p>
+
+    <script src="client.js"></script>
+</body>
+</html>

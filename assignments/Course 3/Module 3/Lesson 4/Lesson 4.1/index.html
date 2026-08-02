@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<!-- DO NOT MODIFY THIS FILE. EDIT main-1.js INSTEAD. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Team Profile Operations</title>
+    <style>
+        body { font-family: sans-serif; max-width: 540px; margin: 40px auto; padding: 0 16px; }
+        h1 { font-size: 24px; }
+        .card { border: 1px solid #ddd; border-radius: 4px; padding: 16px; }
+        .row { margin: 8px 0; }
+        .label { color: #666; }
+        #points, #status-value { font-weight: bold; }
+        ul { margin: 4px 0 0; padding-left: 20px; }
+        .controls { margin-top: 16px; display: grid; gap: 8px; }
+        .control { display: flex; gap: 8px; }
+        input { flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 12px; font-size: 14px; cursor: pointer; border: 1px solid #ccc; border-radius: 4px; background: #f4f4f4; }
+        button:hover { background: #e8e8e8; }
+        #last-op { font-family: monospace; font-size: 13px; background: #f7f7f7; border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-top: 16px; min-height: 18px; word-break: break-all; }
+        .hint { color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <h1>Team Profile Operations</h1>
+    <div class="card">
+        <div class="row"><span class="label">Points:</span> <span id="points"></span></div>
+        <div class="row"><span class="label">Status:</span> <span id="status-value"></span></div>
+        <div class="row"><span class="label">Badges:</span><ul id="badges-list"></ul></div>
+    </div>
+
+    <div class="controls">
+        <div class="control">
+            <button id="add-points-btn">Add 5 points</button>
+        </div>
+        <div class="control">
+            <input id="status-input" placeholder="New status, for example: Away">
+            <button id="set-status-btn">Set status</button>
+        </div>
+        <div class="control">
+            <input id="badge-input" placeholder="New badge, for example: Helper">
+            <button id="add-badge-btn">Add badge</button>
+        </div>
+    </div>
+
+    <p class="hint">Last submitted operation:</p>
+    <div id="last-op"></div>
+
+    <script src="main-1.js"></script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+/* Provided styles for the Live Seat Counter. You do not need to edit this file. */
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.counter-container {
+    background: #ffffff;
+    padding: 2.5rem;
+    border-radius: 6px;
+    text-align: center;
+    width: 350px;
+    border-top: 6px solid #005a9c;
+}
+
+.heading,
+h1 {
+    font-size: 1.2rem;
+    color: #333;
+    margin-bottom: 1rem;
+}
+
+.status-box {
+    background-color: #e7f3ff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+#seat-count {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #005a9c; /* High contrast ratio (Level AA) */
+    margin: 0;
+}
+
+button {
+    padding: 12px 24px;
+    background-color: #005a9c;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: background 0.2s;
+}
+
+/* Keyboard users must be able to see where they are */
+button:focus {
+    outline: 4px solid #ffbf47;
+    outline-offset: 2px;
+}
+
+button:hover {
+    background-color: #003d6b;
+}
+
+button:active {
+    transform: translateY(1px);
+}

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<!-- Edit the CSS in the <style> block below. The JavaScript is in main-1.js and is already written for you. -->
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lesson 2.1</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        #colorBox {
+            width: 200px;
+            height: 200px;
+            background-color: blue;
+            cursor: pointer;
+            border-radius: 8px;
+            /* TODO: add a CSS transition here so that a change to background-color
+               animates smoothly over 1 second using ease-in-out timing. */
+        }
+
+        p {
+            margin-top: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Interactive Color Box</h1>
+    <div id="colorBox"></div>
+    <p>Click the box to change its color!</p>
+    <script src="main-1.js"></script>
+</body>
+</html>

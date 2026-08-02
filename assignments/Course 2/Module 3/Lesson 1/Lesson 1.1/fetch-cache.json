@@ -1,0 +1,151 @@
+{
+  "https://pokeapi.co/api/v2/pokemon/pikachu": {
+    "name": "pikachu",
+    "types": [
+      {
+        "type": {
+          "name": "electric"
+        }
+      }
+    ]
+  },
+  "https://pokeapi.co/api/v2/pokemon/charizard": {
+    "name": "charizard",
+    "types": [
+      {
+        "type": {
+          "name": "fire"
+        }
+      },
+      {
+        "type": {
+          "name": "flying"
+        }
+      }
+    ]
+  },
+  "https://pokeapi.co/api/v2/pokemon/bulbasaur": {
+    "name": "bulbasaur",
+    "types": [
+      {
+        "type": {
+          "name": "grass"
+        }
+      },
+      {
+        "type": {
+          "name": "poison"
+        }
+      }
+    ]
+  },
+  "https://pokeapi.co/api/v2/pokemon/squirtle": {
+    "name": "squirtle",
+    "types": [
+      {
+        "type": {
+          "name": "water"
+        }
+      }
+    ]
+  },
+  "https://api.open-meteo.com/v1/forecast?latitude=42.28&longitude=-83.74&current_weather=true": {
+    "latitude": 42.28,
+    "longitude": -83.74,
+    "current_weather": {
+      "temperature": 18.5,
+      "windspeed": 11.2,
+      "winddirection": 270,
+      "weathercode": 1,
+      "time": "2027-02-06T12:00"
+    }
+  },
+  "https://api.open-meteo.com/v1/forecast?latitude=40.71&longitude=-74.01&current_weather=true": {
+    "latitude": 40.71,
+    "longitude": -74.01,
+    "current_weather": {
+      "temperature": 22.1,
+      "windspeed": 9.4,
+      "winddirection": 200,
+      "weathercode": 2,
+      "time": "2027-02-06T12:00"
+    }
+  },
+  "https://api.open-meteo.com/v1/forecast?latitude=51.51&longitude=-0.13&current_weather=true": {
+    "latitude": 51.51,
+    "longitude": -0.13,
+    "current_weather": {
+      "temperature": 14.3,
+      "windspeed": 15.3,
+      "winddirection": 240,
+      "weathercode": 3,
+      "time": "2027-02-06T12:00"
+    }
+  },
+  "https://api.open-meteo.com/v1/forecast?latitude=35.68&longitude=139.69&current_weather=true": {
+    "latitude": 35.68,
+    "longitude": 139.69,
+    "current_weather": {
+      "temperature": 27.8,
+      "windspeed": 6.5,
+      "winddirection": 90,
+      "weathercode": 0,
+      "time": "2027-02-06T12:00"
+    }
+  },
+  "https://api.open-meteo.com/v1/forecast?latitude=-33.87&longitude=151.21&current_weather=true": {
+    "latitude": -33.87,
+    "longitude": 151.21,
+    "current_weather": {
+      "temperature": 20.2,
+      "windspeed": 18.7,
+      "winddirection": 150,
+      "weathercode": 2,
+      "time": "2027-02-06T12:00"
+    }
+  },
+  "https://dog.ceo/api/breeds/image/random": {
+    "delay": 200,
+    "body": {
+      "message": "entlebucher.jpg",
+      "status": "success"
+    }
+  },
+  "https://events.umich.edu/day/json?v=2": {
+    "2027-02-06": {
+      "title": "Intro to JavaScript Study Session"
+    },
+    "2027-02-07": {
+      "title": "Campus Web Development Meetup"
+    },
+    "2027-02-08": {
+      "title": "Data Science Guest Lecture"
+    },
+    "2027-02-09": {
+      "title": "Robotics Club Open House"
+    }
+  },
+  "https://jsonplaceholder.typicode.com/users/1?id=1&theme=dark": {
+    "id": 1,
+    "name": "Leanne Graham",
+    "email": "leanne@example.com"
+  },
+  "https://jsonplaceholder.typicode.com/users/2?id=2&theme=colorful": {
+    "id": 2,
+    "name": "Ervin Howell",
+    "email": "ervin@example.com"
+  },
+  "https://jsonplaceholder.typicode.com/users/3?id=3&theme=light": [
+    {
+      "id": 3,
+      "name": "Clementine Bauch",
+      "email": "clementine@example.com"
+    }
+  ],
+  "https://jsonplaceholder.typicode.com/users/999?id=999&theme=light": {
+    "status": 404,
+    "body": {
+      "message": "Not Found"
+    }
+  }
+}

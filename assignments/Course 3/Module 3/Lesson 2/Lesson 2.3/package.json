@@ -1,0 +1,10 @@
+{
+  "name": "member-directory-practice",
+  "version": "1.0.0",
+  "description": "Practice sending only public data from a database.",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "lowdb": "^7.0.1"
+  }
+}
