@@ -1,0 +1,87 @@
+# Semantic HTML and Appearances
+
+Recall that HTML elements have [meaning](https://developer.mozilla.org/en-US/docs/Glossary/Semantics#semantics_in_html) and that using the **correct** element helps make your page **understandable** (for other people, for assistive technology, and for search engines).
+
+But now we have learned CSS, and we know we can style elements to look however we want. So here is a question: if you want an element to *appear* a certain way, say large like a heading, is it better to use the HTML element that is meant for that role, or to take a generic element and style it with CSS?
+
+For example, suppose we want the title of a page to look like a large, bold heading. We could use an `<h1>` element, or we could take a `<div>` and give it a class that applies the same styling:
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            .header {
+                font-size: 2em;
+                font-weight: bold;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>This was styled using an h1</h1>
+        <div class="header">This was styled using CSS</div>
+    </body>
+</html>
+```
+
+On screen, these two lines look essentially identical. One is a real `<h1>` element; the other is a `<div>` that we styled to *look* like an `<h1>`. So which should we use? Use the element that is **most semantically appropriate**, which here is the **`<h1>`**.
+
+## Why the Element Matters, Not the Appearance
+
+A `<div>` styled to look like a heading carries no meaning. It looks like a heading to a sighted person, but to software reading the page it is a generic box of text and nothing more. A real `<h1>` element, on the other hand, tells every tool that this text *is* a top-level heading.
+
+For example, screen readers (software that reads the content of a page aloud) can navigate by heading. A sighted person can skim a page by looking at the headings, and a screen reader user can do the same by jumping from heading to heading. But if the headings are really just styled `<div>`s, the screen reader cannot find them, and the user is forced to listen through all the content in order to reach the section they wanted.
+
+Screen readers are one example, but other software depends on semantic elements too. Search engines like Google rely on heading elements (especially `<h1>`) to understand which parts of a page are most important, so a styled `<div>` may not be given the same weight or prominence in search results. In short, choosing the meaningful element helps both the people using your page and the machines reading it.
+
+Once again, however, in this specialization: we are **not** focusing on learning every HTML element, so you will see us reach for generic `<div>` and `<span>` containers fairly often, perhaps more than we ideally should. That is fine for our purposes here. But when you have the time and inclination, it is worth reaching for the element that actually fits the job, because appearance alone does not carry meaning.
+
+## Exercises
+
+1. If two elements can be styled to look the same, which should you choose?
+
+    ```{mcq}
+    If a heading can be made with either `<h1>` or `<div class="header">` with CSS that makes them look the same, which is usually better?
+    correct: Correct! Use the element with the most appropriate meaning.
+    wrong: Think about meaning, not just appearance.
+    [x] The element that is most semantically appropriate.
+    [ ] Whichever element has the shortest tag name.
+    [ ] Always a `<div>`, because CSS can style anything.
+    [ ] Always a `<span>`, because it is more flexible.
+    ```
+
+2. Styling versus meaning
+
+    ```{mcq}
+    A `<div>` has been styled with CSS so that it looks exactly like a heading. Which of the following is true?
+    correct: Correct. CSS controls how an element looks; the element you choose is what carries the meaning.
+    wrong: Not quite. Think about what a tool that reads the page, rather than looking at it, can tell about each element.
+    [x] The styled `<div>` looks like a heading, but only a real `<h1>` tells software that the text *is* a heading.
+      correct: Right: appearance comes from the CSS, meaning comes from the element.
+      wrong: This is the true one. The CSS changed how the `<div>` looks, but it did not make it a heading.
+    [ ] Once a `<div>` is styled to look like a heading, software treats it as a heading.
+      wrong: Styling only changes appearance. To any tool reading the page, the `<div>` is still a generic container.
+    [ ] Naming the class `header` is what gives the element its heading meaning.
+      wrong: Class names are there for selecting and styling elements. You can name a class anything you like, and the name means nothing to software.
+    [ ] Screen readers work out which text is a heading from its font size and weight.
+      wrong: A screen reader reads the elements in the page, not the way they are drawn on the screen.
+    ```
+
+3. Why is semantic HTML helpful even when CSS can make a `<div>` look exactly like a heading?
+
+    ```{mcq}
+    A screen reader lets its user jump from heading to heading. What happens on a page whose "headings" are really just styled `<div>`s?
+    correct: Correct! Without real heading elements, the screen reader reports "heading not found" and the user cannot navigate by heading.
+    wrong: Remember that a styled div looks like a heading but carries no heading meaning.
+    [x] The screen reader finds no headings, so the user cannot navigate by heading and must go through all the content in order.
+    [ ] The screen reader still finds the headings, because they look bold and large.
+    [ ] CSS automatically adds heading meaning to any styled element.
+    [ ] Screen readers ignore CSS, so both pages sound exactly the same.
+    ```
+
+## Resources
+
+- [MDN: Semantics in HTML](https://developer.mozilla.org/en-US/docs/Glossary/Semantics#semantics_in_html)
+- [MDN: HTML: A good basis for accessibility](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Accessibility/HTML)
+- [MDN: The Section Heading elements (h1-h6)](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/Heading_Elements)
+- [MDN: Document and website structure](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Structuring_documents)

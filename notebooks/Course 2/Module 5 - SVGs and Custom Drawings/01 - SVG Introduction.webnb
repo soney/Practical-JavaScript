@@ -1,0 +1,133 @@
+# SVG Introduction
+
+In this lesson we learn how to create **custom drawings**: shapes we describe ourselves rather than images we load. That opens the door to drawings that are dynamic and reactive, changing in response to data or to what the user does, which is where we are heading by the end of the module.
+
+The tool for this is **SVG**, which stands for **Scalable Vector Graphics**.
+
+## Vectors, Not Pixels
+
+An ordinary image file such as a JPEG or a PNG is a grid of **pixels**. It records a color for every point, and that is all it knows. Enlarge it and there is no extra detail to draw, so the browser has to stretch what it has, and the result is blurry or blocky.
+
+SVG describes an image as **shapes and paths**: "a circle of radius 40 centered here, filled red". That is a description rather than a grid, so the browser can draw it at any size and it is always crisp.
+
+That gives SVG four useful properties:
+
+- **Scalability.** The same file looks sharp on a small phone and on a large high-resolution display.
+- **Editability.** An SVG is text, so you can write and change it by hand in any editor, and it works well with version control.
+- **Interactivity and animation.** SVG shapes are DOM elements, so everything we already know applies: you can select them, style them with CSS, animate them, and attach event listeners to them.
+- **Accessibility.** Because the shapes are real elements, you can include text and labels a screen reader can read, which is impossible inside a JPEG.
+
+That third point is the one that matters most here. **An SVG shape is a DOM element like any other.**
+
+## The Basic Structure
+
+An SVG is written as markup, and it can sit directly inside your HTML:
+
+```{html autorun}
+<svg width="100" height="100">
+  <circle cx="50" cy="50" r="40" fill="red"></circle>
+</svg>
+```
+
+- The **`<svg>`** element is the canvas, and its `width` and `height` say how big that canvas is.
+- The **`<circle>`** element draws a circle. `cx` and `cy` are the coordinates of its center, `r` is its radius, and `fill` is its color.
+
+Coordinates inside an SVG work the way screen coordinates did in the animation module: `(0, 0)` is the **top-left** of the canvas, `x` grows to the right, and `y` grows **downward**.
+
+Try changing `cx` to `20` and running the cell again. The circle moves left, and part of it disappears, because anything outside the canvas is clipped.
+
+## They Really Are DOM Elements
+
+Here is the proof, and the reason SVG is in this course at all:
+
+```html id=page1
+<svg width="150" height="150">
+  <circle cx="75" cy="75" r="60" fill="red"></circle>
+</svg>
+```
+
+```{javascript autorun}
+const circle = document.querySelector('circle');
+
+console.log(circle.tagName);
+
+circle.addEventListener('click', () => {
+  circle.setAttribute('fill', 'blue');
+  circle.setAttribute('r', '20');
+});
+```
+```+id=page1
+```
+
+Click the circle. `querySelector`, `addEventListener`, and `setAttribute` all work on it exactly as they do on a `<div>`. There is no separate API for manipulating SVG; it is the DOM work from Module 1 applied to shapes.
+
+That is what makes drawings *dynamic*. A chart whose bars come from fetched data, a diagram that highlights whichever piece you hover over, a drawing built entirely from JavaScript: all of it is `createElement` and `setAttribute` on shapes instead of on paragraphs.
+
+## Exercises
+
+1. Create an SVG canvas `120` by `120` containing a red circle centered at `(60, 60)` with a radius of `50`.
+
+    ```{html}
+    <!-- Write your SVG here -->
+    ```
+    ```+solution
+    <svg width="120" height="120">
+      <circle cx="60" cy="60" r="50" fill="red"></circle>
+    </svg>
+    ```
+    ```+test
+    assert('svg').should('exist').run('Create an `svg` element', 'Created the canvas');
+    assert('circle').should('exist').run('Put a `circle` element inside it', 'Created the circle');
+    wrap(document.querySelector('circle').getAttribute('r')).should('equal', '50').run('The circle should have a radius `r` of `50`', 'Set the radius');
+    wrap(document.querySelector('circle').getAttribute('cx')).should('equal', '60').run('The circle should be centered at `cx="60"`', 'Centered it horizontally');
+    wrap(document.querySelector('circle').getAttribute('fill')).should('equal', 'red').run('Fill the circle with `red`', 'Filled it red');
+    ```
+
+2. Using only the DOM methods you already know, move this circle to be centered at `(40, 40)`, shrink its radius to `25`, and make it `purple`.
+
+    ```html id=page2
+    <svg width="150" height="150">
+      <circle cx="75" cy="75" r="60" fill="green"></circle>
+    </svg>
+    ```
+
+    ```{javascript}
+    const circle = document.querySelector('circle');
+
+    // Write your code here
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const circle = document.querySelector('circle');
+
+    circle.setAttribute('cx', '40');
+    circle.setAttribute('cy', '40');
+    circle.setAttribute('r', '25');
+    circle.setAttribute('fill', 'purple');
+    ```
+    ```+test
+    wrap(circle.getAttribute('cx')).should('equal', '40').run('Set `cx` to `40` with `setAttribute`', 'Moved it horizontally');
+    wrap(circle.getAttribute('cy')).should('equal', '40').run('Set `cy` to `40`', 'Moved it vertically');
+    wrap(circle.getAttribute('r')).should('equal', '25').run('Set `r` to `25`', 'Shrank the radius');
+    wrap(circle.getAttribute('fill')).should('equal', 'purple').run('Set `fill` to `purple`', 'Changed the color');
+    ```
+
+3. Why does an SVG stay sharp when it is enlarged, while a PNG does not?
+
+    ```{mcq}
+    What is the difference that makes SVG scale cleanly?
+    correct: Correct! An SVG stores a description of shapes, so the browser redraws them at whatever size is needed. A PNG stores a fixed grid of pixels, and enlarging it means inventing detail that was never recorded.
+    wrong: Look back at "Vectors, Not Pixels".
+    [x] SVG describes shapes and paths, while a PNG stores a fixed grid of pixels
+    [ ] SVG files are larger, so they contain more detail
+    [ ] SVG images are re-downloaded at each size
+    [ ] PNG files cannot be resized at all
+    ```
+
+## Resources
+
+- [MDN: SVG](https://developer.mozilla.org/en-US/docs/Web/SVG)
+- [MDN: The svg element](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/svg)
+- [MDN: The circle element](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/circle)
+- [MDN: SVG tutorial](https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch)

@@ -1,0 +1,171 @@
+# Detecting Common Problems with Strict Mode
+
+React Strict Mode is a development tool that helps us find problems in our components earlier. It does not render anything visible on the page, and it does not change the production build that you actually deploy. Instead, it turns on extra checks during development by running some of your code more than once, so you can see whether it behaves correctly when repeated.
+
+## Wrapping an App
+
+To use Strict Mode, import `StrictMode` from React and wrap your app (or any part of it) in a `<StrictMode>` component:
+
+```jsx
+import { StrictMode } from 'react';
+
+<StrictMode>
+  <App />
+</StrictMode>
+```
+
+- `StrictMode` renders no UI of its own; it only wraps the components inside it.
+- The checks it enables run only in development. Your production build renders normally, with each component and effect running once.
+- Because it changes nothing you can see, its whole job is to make hidden bugs show up.
+
+The key behavior to remember: in development, Strict Mode intentionally **double-invokes** certain code, including component render functions and effect setup. If your code is written correctly, running it twice makes no difference. If it has a bug like mutating shared data or forgetting to clean up, running it twice makes the bug visible.
+
+## How Double-Invocation Surfaces a Bug: Mutating a Prop
+
+Suppose an `App` holds a list of items in state and passes it to an `ItemList` component. Inside `ItemList`, we want to show one extra item, `orange`, so we push it onto the array:
+
+```jsx
+function ItemList({ items }) {
+  items.push('orange'); // bug: mutating a prop during render
+  return (
+    <ul>
+      {items.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
+function App() {
+  const [items] = useState(['apple', 'banana', 'cherry']);
+  return <ItemList items={items} />;
+}
+```
+
+Without Strict Mode this looks like it works: you see `apple`, `banana`, `cherry`, `orange`. But wrap the app in `<StrictMode>` and `orange` appears **twice**. Strict Mode rendered `ItemList` two times, and each render pushed another `orange` onto the same array.
+
+The duplicate is the symptom; the real bug is that we mutated `items`, which is a prop, during render. Components should be pure: rendering should not change values that were passed in. The fix is to build a new array instead of mutating the existing one:
+
+```{react}
+function ItemList({ items }) {
+  const newItems = [...items, 'orange'];
+  return (
+    <ul>
+      {newItems.map((item) => (
+        <li key={item}>{item}</li>
+      ))}
+    </ul>
+  );
+}
+
+function App() {
+  const items = ['apple', 'banana', 'cherry'];
+  return <ItemList items={items} />;
+}
+
+renderReact(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);
+```
+
+Now `[...items, 'orange']` copies the original and adds `orange` to the copy, so the prop is never changed. Even though Strict Mode still renders twice, `orange` appears exactly once because rendering no longer mutates anything.
+
+## How Double-Invocation Surfaces a Bug: A Missing Effect Cleanup
+
+Strict Mode also double-invokes effects. Consider an effect that adds a `click` listener to the window and increments a counter, but never removes the listener:
+
+```jsx
+function Clicker() {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    function handleClick() {
+      setCount((c) => c + 1);
+    }
+    window.addEventListener('click', handleClick);
+    // bug: no cleanup, so the listener is never removed
+  }, []);
+
+  return <h1>Clicked {count} times</h1>;
+}
+```
+
+Without Strict Mode this seems fine: each click adds one. But under Strict Mode the effect runs twice, so two `handleClick` listeners are attached, and every click increments `count` by two. That doubling is the signal that the effect needs cleanup. An effect that sets something up should return a function that tears it down:
+
+```jsx
+useEffect(() => {
+  function handleClick() {
+    setCount((c) => c + 1);
+  }
+  window.addEventListener('click', handleClick);
+  return () => {
+    window.removeEventListener('click', handleClick);
+  };
+}, []);
+```
+
+Now each setup is paired with a cleanup, so no matter how many times the effect runs, only one listener stays attached and each click adds one.
+
+## Seeing Code Run Twice
+
+Because Strict Mode double-invokes render, side effects you put in render will appear to happen twice. For example, a `console.log('App rendered')` at the top level of a component logs `App rendered` two times in development. This is expected, not a bug. In the production build the component still renders once. If double-logging surprises you, it is a reminder that render should be pure and that anything with side effects belongs in an effect, not in render.
+
+## Exercises
+
+1. Fixing the mutation bug means producing the extended list without changing the original. Write a function `addOrange(items)` that returns a **new** array containing everything in `items` followed by `'orange'`, and does not modify the array it was given.
+
+   ```{javascript}
+   function addOrange(items) {
+     // Return a new array: the original items plus 'orange' at the end.
+     // Do not change the array that was passed in.
+   }
+
+   const original = ['apple', 'banana', 'cherry'];
+   const result = addOrange(original);
+   ```
+   ```+solution
+   function addOrange(items) {
+     return [...items, 'orange'];
+   }
+
+   const original = ['apple', 'banana', 'cherry'];
+   const result = addOrange(original);
+   ```
+   ```+test
+   wrap(Array.isArray(result)).should('equal', true).run('`addOrange` should return an array', 'Returned an array');
+   wrap(result.join(',')).should('equal', 'apple,banana,cherry,orange').run('Result should end with `orange`', 'Added `orange` to a copy');
+   wrap(original.join(',')).should('equal', 'apple,banana,cherry').run('Do not mutate the original array', 'Left the original array unchanged');
+   ```
+
+2. Under Strict Mode, an effect that adds a window `click` listener causes `count` to increase by two on every click. What does that doubling tell you?
+
+   ```{mcq}
+   Under Strict Mode, an effect that adds a `click` listener makes the counter increase by two per click. What does that indicate?
+   correct: Correct. The effect was invoked twice and never removed its listener, so two listeners are attached. The fix is to return a cleanup function that calls `removeEventListener`.
+   wrong: Think about what Strict Mode does to effects and what a returned cleanup function is for.
+   [ ] Strict Mode is broken and should be removed.
+   [x] The effect is missing a cleanup function to remove the listener.
+   [ ] The counter must start at two instead of zero.
+   [ ] `addEventListener` cannot be used inside `useEffect`.
+   ```
+
+3. Which statement about React Strict Mode is accurate?
+
+   ```{mcq}
+   Which statement about React Strict Mode is accurate?
+   correct: Correct. Strict Mode only affects development. It runs extra checks by invoking some code twice, and it does not change the deployed production build.
+   wrong: Recall that Strict Mode is a development-only tool and think about what it renders and when its extra checks run.
+   [ ] It renders a visible warning banner on the deployed page.
+   [ ] It makes the production build render every component twice.
+   [x] It is a development-only tool that double-invokes some code to surface bugs.
+   [ ] It replaces the need for writing tests.
+   ```
+
+## Resources
+
+- [React Docs: `StrictMode`](https://react.dev/reference/react/StrictMode)
+- [React Docs: Keeping components pure](https://react.dev/learn/keeping-components-pure)
+- [React Docs: Synchronizing with effects (cleanup)](https://react.dev/learn/synchronizing-with-effects#how-to-handle-the-effect-firing-twice-in-development)
+- [MDN: EventTarget.removeEventListener](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener)

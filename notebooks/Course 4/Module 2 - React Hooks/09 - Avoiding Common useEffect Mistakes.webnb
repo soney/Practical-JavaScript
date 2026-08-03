@@ -1,0 +1,258 @@
+# Avoiding Common useEffect Mistakes
+
+`useEffect` is powerful, but it is common to reach for it too often or to wire it up in ways that cause subtle bugs. React only re-runs an effect when a value in its dependency array changes, and it decides "changed" by comparing each dependency to its previous value. Most `useEffect` mistakes come from misunderstanding that comparison, or from using an effect for work that does not belong in one.
+
+In this lesson we walk through the most common mistakes and the fix for each:
+
+- using an effect for a value you can calculate during render,
+- leaving needed values out of the dependency array,
+- depending on an unstable object or array that is re-created every render,
+- mutating state instead of creating a new object,
+- writing an `async` effect function,
+- accidentally creating an infinite loop,
+- forgetting cleanup, or putting event-specific logic in an effect.
+
+## You Might Not Need an Effect
+
+If a value can be calculated from props or state, calculate it during render. There is no reason to store it in state and sync it with an effect.
+
+```{react}
+function FullName({ firstName, lastName }) {
+  const fullName = firstName + ' ' + lastName;
+
+  return <p>{fullName}</p>;
+}
+
+renderReact(<FullName firstName="Ada" lastName="Lovelace" />);
+```
+
+- `fullName` is derived directly from the two props, so we compute it inline.
+- No `useState` and no `useEffect` are involved, which means there is nothing to keep in sync and no extra render.
+
+## Include the Values Your Effect Uses
+
+If your effect reads a prop, a state variable, or a value derived from them, that value belongs in the dependency array. Leaving it out means the effect keeps using a stale value.
+
+```jsx
+React.useEffect(() => {
+  console.log(count);
+}, [count]); // count is used inside, so it must be listed
+```
+
+You do not need to list every identifier you reference. Values that never change between renders, like `console`, do not belong in the array. The rule of thumb is: list the props, state, and derived values that the effect actually reads.
+
+## Watch Out for Unstable Dependencies
+
+A more subtle version of the same problem is depending on a value that is a brand-new object or array on every render. Objects and arrays are compared by reference, so even if the contents are identical, React sees a different object each render and re-runs the effect every time.
+
+```jsx
+function Search({ query }) {
+  const options = { query }; // a NEW object on every render
+
+  React.useEffect(() => {
+    runSearch(options);
+  }, [options]); // React thinks this changed every render
+}
+```
+
+Because `options` is created fresh each render, `[options]` behaves as if it always changed. The fix is to depend on the primitive value inside it and build the object where you need it:
+
+```jsx
+function Search({ query }) {
+  React.useEffect(() => {
+    const options = { query }; // build it inside the effect
+    runSearch(options);
+  }, [query]); // depend on the stable primitive
+}
+```
+
+Now the effect only re-runs when `query` actually changes, because strings are compared by value.
+
+## Update State Immutably, Do Not Mutate It
+
+The mirror image of an unstable dependency is a dependency that never looks changed even when it should. This happens when you mutate an existing object instead of creating a new one.
+
+```jsx
+function Clicker() {
+  const [stats, setStats] = React.useState({ clicks: 0 });
+
+  function handleClick() {
+    stats.clicks++;   // mutates the same object
+    setStats(stats);  // same reference, so React bails out
+  }
+
+  React.useEffect(() => {
+    console.log('clicks changed', stats.clicks);
+  }, [stats]);
+}
+```
+
+Incrementing `stats.clicks` changes a property but keeps the same object reference. When you call `setStats(stats)`, React compares the new value to the old value, sees the same object, and decides nothing changed, so it neither re-renders nor re-runs the effect. The fix is to return a brand-new object:
+
+```jsx
+setStats((prev) => ({ ...prev, clicks: prev.clicks + 1 }));
+```
+
+The functional updater receives the previous state and returns a new object that copies `prev` with `...prev` and overwrites `clicks`. Because it is a new object, React detects the change and runs the effect.
+
+## Effect Functions Cannot Be async
+
+It is tempting to make an effect function `async` so you can `await` a `fetch`, but an effect function must return either nothing or a cleanup function. An `async` function always returns a promise, which React would misinterpret as a cleanup function.
+
+```jsx
+// Wrong: the effect function itself is async
+React.useEffect(async () => {
+  const response = await fetch('/api/data');
+  const data = await response.json();
+  setData(data);
+}, []);
+```
+
+The fix is to declare an `async` function inside the effect and call it:
+
+```jsx
+React.useEffect(() => {
+  async function load() {
+    const response = await fetch('/api/data');
+    const data = await response.json();
+    setData(data);
+  }
+  load();
+}, []);
+```
+
+The effect function itself stays synchronous and returns nothing, while the awaiting happens inside `load`.
+
+## Avoid Accidental Infinite Loops
+
+If an effect updates a state variable that is also in its dependency array, you can create an infinite loop: the effect runs, changes the state, which triggers a re-render, which runs the effect again, and so on.
+
+```jsx
+// Infinite loop: count changes -> effect runs -> count changes ...
+React.useEffect(() => {
+  setCount(count + 1);
+}, [count]);
+```
+
+When the update only depends on the previous value, use a functional update and drop the dependency so the effect runs once:
+
+```jsx
+React.useEffect(() => {
+  setCount((prev) => prev + 1);
+}, []); // runs once; no dependency on count
+```
+
+## Clean Up and Keep Event Logic in Events
+
+Two more habits round out the list:
+
+- When an effect subscribes to something outside React (an event listener, a timer, a socket), return a cleanup function that tears it down so it does not leak when the component unmounts.
+- If work happens because the user clicked a button, put that logic in the click handler, not in an effect. Effects are for synchronizing with systems outside React, not for responding to specific user events.
+
+## Exercises
+
+1. Which value probably does not need an effect?
+
+   ```{mcq}
+   Which value probably does not need an effect?
+   correct: Correct. A full name can be calculated during render from props.
+   wrong: Think about values derived directly from props or state.
+   [x] `firstName + ' ' + lastName`
+   [ ] A WebSocket subscription.
+   [ ] A timer that needs cleanup.
+   [ ] Updating `document.title`.
+   ```
+
+2. Remove the unnecessary effect by calculating `fullName` during render.
+
+   ```{react}
+   function FullName({ firstName, lastName }) {
+     const [fullName, setFullName] = React.useState('');
+
+     React.useEffect(() => {
+       setFullName(firstName + ' ' + lastName);
+     }, [firstName, lastName]);
+
+     return <p>{fullName}</p>;
+   }
+
+   renderReact(<FullName firstName="Ada" lastName="Lovelace" />);
+   ```
+   ```+solution
+   function FullName({ firstName, lastName }) {
+     const fullName = firstName + ' ' + lastName;
+
+     return <p>{fullName}</p>;
+   }
+
+   renderReact(<FullName firstName="Ada" lastName="Lovelace" />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('React.useEffect')).should('equal', false).run('Do not use an effect for derived render data', 'Removed the unnecessary effect');
+     assert('p').should('have.text', 'Ada Lovelace').run('Render the full name', 'Rendered the full name');
+   }, 50);
+   ```
+
+3. The counter below mutates its state object, so React never notices a change and the display stays at `Clicks: 0`. Fix `handleClick` to update state immutably with a functional updater so each click increments the count.
+
+   ```{react}
+   function Clicker() {
+     const [stats, setStats] = React.useState({ clicks: 0 });
+
+     function handleClick() {
+       stats.clicks++;
+       setStats(stats);
+     }
+
+     return <button onClick={handleClick}>Clicks: {stats.clicks}</button>;
+   }
+
+   renderReact(<Clicker />);
+   ```
+   ```+solution
+   function Clicker() {
+     const [stats, setStats] = React.useState({ clicks: 0 });
+
+     function handleClick() {
+       setStats((prev) => ({ ...prev, clicks: prev.clicks + 1 }));
+     }
+
+     return <button onClick={handleClick}>Clicks: {stats.clicks}</button>;
+   }
+
+   renderReact(<Clicker />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('=>') && source.includes('...')).should('equal', true).run('Return a new object with a functional updater', 'Updated state immutably');
+     assert('button').click().run('Click the counter', 'Clicked the counter');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('button').should('have.text', 'Clicks: 1').run('Increment clicks to 1', 'Incremented the count');
+     }, 50);
+   }, 50);
+   ```
+
+4. An effect runs `setCount(count + 1)` with `count` in its dependency array. What happens, and what is the fix?
+
+   ```{mcq}
+   An effect calls setCount(count + 1) with count in its dependency array. What is the problem and fix?
+   correct: Correct. The effect re-triggers itself endlessly; a functional update with no dependency runs it once.
+   wrong: Think about what re-runs the effect after count changes.
+   [x] It creates an infinite loop; use `setCount((prev) => prev + 1)` and remove `count` from the dependencies.
+   [ ] Nothing is wrong; this is the standard way to increment in an effect.
+   [ ] It runs only once; add more dependencies to make it loop.
+   [ ] The effect function should be marked `async` to fix it.
+   ```
+
+## Resources
+
+- [React Docs: You Might Not Need an Effect](https://react.dev/learn/you-might-not-need-an-effect)
+- [React Docs: Removing Effect Dependencies](https://react.dev/learn/removing-effect-dependencies)
+- [React Docs: Synchronizing with Effects](https://react.dev/learn/synchronizing-with-effects)
+- [MDN: Object spread syntax](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)

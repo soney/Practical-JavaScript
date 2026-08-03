@@ -1,0 +1,239 @@
+# Rendering Lists With Map
+
+React often renders lists by using JavaScript's `map(...)` method.
+
+`map(...)` takes an array and returns a new array. In React, that new array can contain JSX elements.
+
+## What `map` Hands Your Function
+
+`map` calls your function once per item, and passes it **two things you will use**: the item's **value** and its **index** in the array.
+
+```{javascript autorun}
+const todos = ['Read', 'Practice', 'Check'];
+
+const labeled = todos.map((todo, index) => index + ': ' + todo);
+
+console.log(labeled);
+```
+
+Most of the time you only need the value, so most `map` callbacks take one parameter. The index is there when you need it, and it is worth knowing about before the next reading, which is about why the index is usually the *wrong* thing to use as a `key`.
+
+One rule to carry into everything below: **each element produced by `map` needs a `key`**. React uses it to tell the items apart between renders. Leaving it out produces a console warning, and the next reading explains what goes wrong.
+
+## Rendering Items
+
+```{react}
+function TodoList() {
+  const todos = ['Read', 'Practice', 'Check'];
+
+  return (
+    <ul>
+      {todos.map((todo) => (
+        <li key={todo}>{todo}</li>
+      ))}
+    </ul>
+  );
+}
+
+renderReact(<TodoList />);
+```
+
+Each string becomes one `li` element.
+
+## Filtering Lists
+
+Sometimes we only want to render *some* of the items. JavaScript's `filter(...)` method takes an array and returns a new array containing only the items for which the callback returns `true`. The original array is unchanged.
+
+```js
+const scores = [82, 45, 97, 60];
+const passing = scores.filter((score) => score >= 60);
+// passing is [82, 97, 60]
+```
+
+Because `filter(...)` returns an array, we can chain `map(...)` right after it. Filtering and then mapping is the standard React pattern for rendering a subset of a list:
+
+```{react}
+function ShortTodos() {
+  const todos = ['Read', 'Practice', 'Check', 'Celebrate'];
+
+  return (
+    <ul>
+      {todos.filter((todo) => todo.length <= 5).map((todo) => (
+        <li key={todo}>{todo}</li>
+      ))}
+    </ul>
+  );
+}
+
+renderReact(<ShortTodos />);
+```
+
+Only `Read`, `Check`, and the other short titles render; `Practice` and `Celebrate` are filtered out before `map(...)` runs.
+
+## Matching Text Regardless of Case
+
+A very common reason to filter is a search box. Text comparisons in JavaScript are case-sensitive: `'Hooks'.includes('hook')` is `false` because of the capital `H`. Users do not think about capitalization when they search, so search filters usually lowercase **both** sides with `toLowerCase()` before comparing:
+
+```js
+const title = 'React Hooks';
+const query = 'hook';
+
+title.includes(query);                             // false: 'H' vs 'h'
+title.toLowerCase().includes(query.toLowerCase()); // true
+```
+
+Inside a filter, the pattern looks like this:
+
+```js
+const matches = titles.filter((title) =>
+  title.toLowerCase().includes(query.toLowerCase())
+);
+```
+
+This case-insensitive `filter` + `toLowerCase()` + `includes()` combination is the idiom to reach for whenever you build a search feature.
+
+## The Key Prop
+
+When rendering a list, React expects each item to have a stable `key`. We will look more closely at keys in the next lesson.
+
+## Exercises
+
+1. What does `map(...)` help with in React?
+
+   ```{mcq}
+   What does `map(...)` help with in React?
+   correct: Correct. `map(...)` can turn an array of data into an array of JSX elements.
+   wrong: Think about rendering one list item for each array item.
+   [x] Turning an array of data into JSX elements.
+   [ ] Opening a database connection.
+   [ ] Replacing every prop.
+   [ ] Deleting all list items.
+   ```
+
+2. Render a list item for each item in `tasks`.
+
+   ```{react}
+   function TaskList() {
+     const tasks = ['Plan', 'Build', 'Review'];
+
+     return (
+       <ul>
+         <li>Change me</li>
+       </ul>
+     );
+   }
+
+   renderReact(<TaskList />);
+   ```
+   ```+solution
+   function TaskList() {
+     const tasks = ['Plan', 'Build', 'Review'];
+
+     return (
+       <ul>
+         {tasks.map((task) => (
+           <li key={task}>{task}</li>
+         ))}
+       </ul>
+     );
+   }
+
+   renderReact(<TaskList />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('tasks.map')).should('equal', true).run('Use `tasks.map(...)` to render the list', 'Used map');
+     assert('li').should('exist').run('Render list items', 'Rendered list items');
+     wrap(document.querySelectorAll('li').length).should('equal', 3).run('Render three list items', 'Rendered three list items');
+   }, 50);
+   ```
+
+3. What should each rendered list item usually include?
+
+   ```{mcq}
+   What should each rendered list item usually include?
+   correct: Correct. Each rendered list item should usually include a stable `key`.
+   wrong: Think about what React uses to track list item identity.
+   [x] A stable `key`.
+   [ ] A database password.
+   [ ] A browser cookie for every item.
+   [ ] A CSS file path only.
+   ```
+
+4. Render only the languages whose name contains `query`, ignoring capitalization. Use `filter(...)` with `toLowerCase()` before `map(...)`. Two languages should appear.
+
+   ```{react}
+   function SearchResults() {
+     const languages = ['JavaScript', 'Java', 'Python', 'TypeScript'];
+     const query = 'Script';
+
+     return (
+       <ul>
+         {languages.map((language) => (
+           <li key={language}>{language}</li>
+         ))}
+       </ul>
+     );
+   }
+
+   renderReact(<SearchResults />);
+   ```
+   ```+solution
+   function SearchResults() {
+     const languages = ['JavaScript', 'Java', 'Python', 'TypeScript'];
+     const query = 'Script';
+
+     return (
+       <ul>
+         {languages
+           .filter((language) => language.toLowerCase().includes(query.toLowerCase()))
+           .map((language) => (
+             <li key={language}>{language}</li>
+           ))}
+       </ul>
+     );
+   }
+
+   renderReact(<SearchResults />);
+   ```
+   ```+test
+   wrap(source.includes('.filter(')).should('equal', true).run('Use `filter(...)` to narrow the list', 'Used filter');
+   wrap(source.includes('toLowerCase()')).should('equal', true).run('Use `toLowerCase()` so the match ignores capitalization', 'Used toLowerCase');
+   // React commits its render asynchronously, so this DOM check runs on a later tick.
+   setTimeout(function () {
+     wrap(document.querySelectorAll('li').length).should('equal', 2).run('Only JavaScript and TypeScript should render', 'Rendered the two matching languages');
+   }, 50);
+   ```
+
+5. What two arguments does `map` pass to your callback?
+
+   ```{mcq}
+   Your callback can take up to two useful parameters. What are they?
+   correct: Correct! The value first, then its index. Most callbacks only declare the first, and the index is available when you need it.
+   wrong: Look at the `labeled` example near the top of this reading.
+   [x] The current item's value, and its index in the array
+   [ ] The array's length, and the item's value
+   [ ] The previous item and the next item
+   [ ] The item's value, and the array's name
+   ```
+
+6. When rendering a list with `map`, what does each rendered element need?
+
+   ```{mcq}
+   What has to be on each element `map` produces?
+   correct: Correct! A `key` that is unique among its siblings, so React can match each element with the same item on the next render.
+   wrong: Look at the `li` elements in the examples above. What do they all carry that a hand-written `li` would not need?
+   [x] A unique `key` attribute
+   [ ] An `id` attribute matching the array index
+   [ ] An `onClick` handler
+   [ ] A `className` for styling
+   ```
+
+## Resources
+
+- [React Docs: Rendering lists](https://react.dev/learn/rendering-lists)
+- [MDN: Array.prototype.map()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map)
+- [MDN: Array.prototype.filter()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter)
+- [MDN: String.prototype.toLowerCase()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase)

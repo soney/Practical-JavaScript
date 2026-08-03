@@ -1,0 +1,308 @@
+# Handling Multiple WebSockets
+
+In the last reading, one client and one server exchanged messages. The interesting version is **many clients**, with the server passing messages between them. That is a chat room, and it is what this reading builds: the same shape of server as before, a page worth typing into, and one loop added on the server.
+
+Remember the arrangement from two readings ago: clients never talk to each other directly. Every message goes from a client to the server, and the server sends it onward.
+
+## The Chat Page
+
+The demo is `ws-demo/chat-server.js` and its page in `ws-demo/chat-page/`, next to this notebook. The video builds the page first:
+
+```{walkthrough}
+title: The chat page
+step: The markup
+file: ws-demo/chat-page/index.html
+region: markup
+A minimalist chat: a list of messages, and a form for sending one.
+@"ul id=": Empty on purpose. Every message this list ever shows will arrive over the WebSocket.
+@"placeholder": Where a message is typed.
+@"<button": Submits the form, which also makes the Enter key send from inside the input, the way people expect chat to work.
+
+step: The connection and the references
+file: ws-demo/chat-page/index.html
+region: references
+The script opens with the familiar connection lines, then grabs the three elements it will need.
+@"new WebSocket(": The same connection line as the last two readings: connect back to wherever the page came from, over `wss:` if the page itself arrived over `https:`.
+@"binaryType": Also from the last reading: ask for binary messages in a form that decodes back to text.
+@"querySelector('#input')": The input to read messages out of, the list to add them to, and the form to listen to.
+
+step: Sending on submit
+file: ws-demo/chat-page/index.html
+region: outgoing
+@"addEventListener('submit'": Runs when the button is clicked or Enter is pressed. The listener's argument is the submit event.
+@"preventDefault": A form's default submit behavior is to navigate to a new page. That would throw away this page and the open WebSocket with it, so the first thing the listener does is turn the default off.
+@"ws.send(messageEl.value)": Whatever was typed goes to the server. Notice what does not happen here: nothing is added to the list on screen.
+@"messageEl.value = ''": Clear the input so the next message can be typed straight away.
+```
+
+## The Broadcast
+
+Now the server. A message arrives on *one* socket and has to reach *all* of them. The `ws` library keeps the set of connections for us, as **`wss.clients`**:
+
+```{walkthrough}
+title: The broadcast, and what comes back
+step: Forwarding to every client
+file: ws-demo/chat-server.js
+region: broadcast
+This is the whole difference between the echo server and a chat room.
+@"addEventListener('message'": The same message listener as the last reading. What changed is what the callback does with the message.
+@"for (const client of wss.clients)": Not `socket.send`. The message is forwarded to every connected client, and `wss.clients` is the server's own, always-current set of them.
+@"readyState": The state of one connection. A socket in the set may still be mid-handshake, or may have closed a moment ago; only `WebSocket.OPEN` can receive, so every other state is skipped.
+@"data.toString()": Makes certain what goes out is a string, whichever form it arrived in.
+
+step: Showing what comes back
+file: ws-demo/chat-page/index.html
+region: incoming
+Back on the page, the client's message listener, which hears every message in the room, including the ones this same page sent.
+@"typeof messageEvent.data": Reads the payload whether it arrived as text or as binary, the pattern from the last reading.
+@"createElement": DOM work from Course 2: build a new `li`, fill it, and append it.
+@"innerText": The message text becomes the list item's text.
+@"messages.append": The video's first version of this listener was a `console.log(data)`; once the plumbing worked, it was upgraded to put messages on the page.
+```
+
+## Why the Loop Looks the Way It Does
+
+Three decisions in those few server lines, each deliberate.
+
+**Replying on `socket` would have been wrong.** Inside the `message` listener, `socket` is the one client who sent the message. `socket.send(...)` answers the sender, which is what the echo server did, and an echo is not a chat room. Broadcasting means going through `wss.clients`, the whole set.
+
+**`client.readyState === WebSocket.OPEN` is the safety check.** A connection has a lifecycle: `CONNECTING`, then `OPEN`, then `CLOSING` and `CLOSED`. Only an open socket can receive, and sending to one in any other state is an error. The set can genuinely contain the others, such as a client mid-handshake, or one that vanished a moment ago when somebody shut a laptop.
+
+**The sender is included.** They sit in `wss.clients` like everyone else, so their own message comes back to them from the server. That is deliberate: every message on every screen arrived the same way, through the server, and no client special-cases its own.
+
+That last point answers a fair objection. For a single browser, none of this looks necessary: the submit handler could have appended the message straight to the list, no server involved, and the page would seem to work. It would also be a private notepad. What makes it a chat room is that everything you see took the round trip through the server, because that is the same trip everyone else's messages take.
+
+## The Broadcast, Running
+
+The loop and its safety check can run right here, with stand-ins for the sockets the `ws` library would hand us:
+
+```{node autorun}
+// Stand-ins for the sockets the ws library would hand us.
+const OPEN = 1;
+const CONNECTING = 0;
+const CLOSED = 3;
+
+function makeClient(name, readyState) {
+  const client = { name: name, readyState: readyState, received: [] };
+
+  client.send = function (message) {
+    client.received.push(message);
+  };
+
+  return client;
+}
+
+const clients = [
+  makeClient('ada', OPEN),
+  makeClient('grace', OPEN),
+  makeClient('lin', CONNECTING),
+  makeClient('alan', CLOSED)
+];
+
+function broadcast(message) {
+  for (const client of clients) {
+    if (client.readyState === OPEN) {
+      client.send(message);
+    }
+  }
+}
+
+broadcast('hello from browser 1');
+
+for (const client of clients) {
+  console.log(client.name + ' received ' + client.received.length + ' message(s)');
+}
+```
+
+Two of the four got the message. The one still connecting and the one already gone were skipped, which is exactly what the `readyState` check is for. Try changing `lin`'s state to `OPEN` and running the cell again.
+
+## Run It Yourself
+
+This is the demo to actually run, because a chat room only exists between windows. Start it (run `npm install` inside `ws-demo` first if you have not):
+
+```
+$ cd "ws-demo"
+$ node chat-server.js
+Listening on port 3000
+```
+
+Open `http://localhost:3000` in **two** browser windows side by side, and type a message into one:
+
+1. It appears in both windows at the same moment. It shows up in the sender's own window because the server sent it back, not because the page added it locally.
+2. Open a third window and send from there; all three show it. The video's browsers happened to be on one computer, but nothing in the code knows that, and remote machines would behave identically.
+3. In the Network tab of any window, the `101` request's **Messages** pane shows the same broadcasts arriving.
+4. Close one window and keep chatting in the others. The `readyState` check is what lets the loop walk past a connection that has gone away.
+
+Stop the server with `Ctrl+C` when you are done.
+
+## Exercises
+
+1. Complete `broadcast` so every open client receives the message and no closed or connecting one does.
+
+    ```{node}
+    const OPEN = 1;
+    const CONNECTING = 0;
+    const CLOSED = 3;
+
+    function makeClient(name, readyState) {
+      const client = { name: name, readyState: readyState, received: [] };
+
+      client.send = function (message) {
+        client.received.push(message);
+      };
+
+      return client;
+    }
+
+    const clients = [
+      makeClient('ada', OPEN),
+      makeClient('grace', OPEN),
+      makeClient('lin', CONNECTING),
+      makeClient('alan', CLOSED)
+    ];
+
+    function broadcast(rawData) {
+      // TODO: send rawData, as a string, to every client whose readyState is OPEN
+    }
+
+    broadcast('hello everyone');
+
+    console.log(clients[0].received, clients[3].received);
+    ```
+    ```+solution
+    const OPEN = 1;
+    const CONNECTING = 0;
+    const CLOSED = 3;
+
+    function makeClient(name, readyState) {
+      const client = { name: name, readyState: readyState, received: [] };
+
+      client.send = function (message) {
+        client.received.push(message);
+      };
+
+      return client;
+    }
+
+    const clients = [
+      makeClient('ada', OPEN),
+      makeClient('grace', OPEN),
+      makeClient('lin', CONNECTING),
+      makeClient('alan', CLOSED)
+    ];
+
+    function broadcast(rawData) {
+      for (const client of clients) {
+        if (client.readyState === OPEN) {
+          client.send(rawData.toString());
+        }
+      }
+    }
+
+    broadcast('hello everyone');
+
+    console.log(clients[0].received, clients[3].received);
+    ```
+    ```+test
+    wrap(clients[0].received[0]).should('equal', 'hello everyone').run('The first open client should receive the message', 'Reached the first open client');
+    wrap(clients[1].received[0]).should('equal', 'hello everyone').run('Every open client should receive it, not only the first. Loop over all of them', 'Reached every open client');
+    wrap(clients[2].received.length).should('equal', 0).run('A client that is still connecting should be skipped. Compare its `readyState` with `OPEN`', 'Skipped the connecting client');
+    wrap(clients[3].received.length).should('equal', 0).run('A client that has closed should be skipped too, since sending to it is an error', 'Skipped the closed client');
+    ```
+
+2. Complete the submit handler so sending a message does not reload the page, and the input is cleared afterwards.
+
+    ```{node}
+    // Stand-ins for the page and the socket.
+    let prevented = false;
+    const submitEvent = { preventDefault: function () { prevented = true; } };
+
+    const messageEl = { value: 'hello everyone' };
+
+    const sent = [];
+    const ws = { send: function (data) { sent.push(data); } };
+
+    function handleSubmit(submitEvent) {
+      // TODO: stop the form from navigating, send the input's value
+      // over the socket, then clear the input
+    }
+
+    handleSubmit(submitEvent);
+
+    console.log(prevented, sent, messageEl.value);
+    ```
+    ```+solution
+    // Stand-ins for the page and the socket.
+    let prevented = false;
+    const submitEvent = { preventDefault: function () { prevented = true; } };
+
+    const messageEl = { value: 'hello everyone' };
+
+    const sent = [];
+    const ws = { send: function (data) { sent.push(data); } };
+
+    function handleSubmit(submitEvent) {
+      submitEvent.preventDefault();
+
+      ws.send(messageEl.value);
+
+      messageEl.value = '';
+    }
+
+    handleSubmit(submitEvent);
+
+    console.log(prevented, sent, messageEl.value);
+    ```
+    ```+test
+    wrap(prevented).should('equal', true).run('Call `submitEvent.preventDefault()`, or submitting the form navigates away and takes the WebSocket with it', 'Prevented the default submit');
+    wrap(sent[0]).should('equal', 'hello everyone').run('Send the input\'s `value` over the socket', 'Sent the message');
+    wrap(messageEl.value).should('equal', '').run('Clear the input afterwards by setting its `value` to an empty string', 'Cleared the input');
+    wrap(sent.length).should('equal', 1).run('Send exactly one message per submit', 'Sent it once');
+    ```
+
+3. An echo where a chat should be
+
+    ```{mcq}
+    A first attempt at the chat server answers each message like this, and testers report that everyone sees only their own messages.
+
+    ~~~js
+    socket.addEventListener('message', (messageEvent) => {
+      socket.send(messageEvent.data);
+    });
+    ~~~
+
+    What is the fix?
+    correct: Correct! `socket` is only the sender, so this code answers the one person who already had the message. Broadcasting means looping over `wss.clients`, the server's set of every connection, and sending to each open one.
+    wrong: The message does reach the server, and it does come back. Ask who `socket` refers to inside this listener, and who never hears anything.
+    [x] Loop over `wss.clients` and send to every open connection, instead of only to `socket`
+    [ ] Call `socket.send` once per connected user, passing each user's name as a second argument
+    [ ] Replace `addEventListener` with `on`, which delivers the reply to every client
+    [ ] Have each client forward the messages it receives on to the other clients
+    ```
+
+4. The missing safety check
+
+    ```{mcq}
+    A version of the broadcast leaves out one line, and now the server can crash when someone closes a window at the wrong moment and another message is sent.
+
+    ~~~js
+    for (const client of wss.clients) {
+      client.send(data.toString());
+    }
+    ~~~
+
+    Which line is missing?
+    correct: Correct! `wss.clients` can contain connections that are still opening or have already closed, and sending to either is an error. Checking `client.readyState === WebSocket.OPEN` skips them.
+    wrong: Every entry in `wss.clients` really is a connection, but not every connection is in a state that can receive. Which line checked for that?
+    [x] `if (client.readyState === WebSocket.OPEN)` around the send
+    [ ] `submitEvent.preventDefault()` before the loop
+    [ ] `const data = messageEvent.data` above the loop
+    [ ] `client.send(data)` without the `toString()`
+    ```
+
+## Resources
+
+- [MDN: WebSocket.readyState](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/readyState)
+- [MDN: Event.preventDefault()](https://developer.mozilla.org/en-US/docs/Web/API/Event/preventDefault)
+- [ws: server.clients](https://github.com/websockets/ws/blob/master/doc/ws.md#serverclients)
+- [MDN: the WebSockets API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)

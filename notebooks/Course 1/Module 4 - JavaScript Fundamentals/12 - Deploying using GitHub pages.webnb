@@ -1,0 +1,214 @@
+# Deploying using GitHub Pages
+
+We have written some web applications. Now let's talk about **deploying** them, so that other people can see and use them. Everything we have built so far lives only on our own machine, and the whole point of the web is to share.
+
+I am going to use GitHub and GitHub Pages, because it is free and one of the most popular hosts out there. The steps for any other hosting provider are analogous.
+
+## What Deployment Needs
+
+Two things, roughly.
+
+First, a computer willing to serve your page to the world. Could that be your laptop? Technically yes, but you probably do not want to leave it switched on every hour of every day, handle whatever traffic arrives, and worry about people attacking it. So we use a dedicated computer called a **server**, which is built to be on all the time, handle many visitors, and stay secure.
+
+Second, a findable address, so people can type something into a browser and reach your page. That is what **domain names** are for: a human-readable name that maps to a server, the way `google.com` maps to the servers behind Google's homepage.
+
+Plenty of services sell you both. GitHub Pages gives you both for free, which is why we will use it.
+
+## Step 1: A GitHub Account and a Repository
+
+Sign up for a GitHub account if you do not have one. Accounts are free, and there are educational discounts on the premium features.
+
+Then create a **New repository**. A repository is roughly a project folder that GitHub keeps a copy of. Give it any name you like; I will use `my-website`. You can add a description, leave everything else on its defaults, and click **Create repository**.
+
+The name matters later, because it becomes part of your site's address.
+
+## Step 2: Getting Your Files Onto GitHub
+
+There are two ways to do this, and the second is much better.
+
+### The Manual Way
+
+On the empty repository page, click **Upload an existing file**, then **choose your files**, pick the files from your computer, and click **Commit changes**. Your files are now on GitHub.
+
+This works, and it gets old fast. Every change means downloading, editing, and re-uploading by hand. It also handles directories poorly: if your project has an `images` folder with a picture in it, uploading that structure through the browser is fiddly.
+
+### The Better Way: Publish From VS Code
+
+In VS Code, look at the left-hand activity bar for the **Source Control** icon, which looks like a small branch. Click it, and you should see a **Publish to GitHub** button.
+
+- Click it. VS Code will prompt you to sign in to GitHub. Click Allow.
+- It gives you a code, and an option to copy it and continue to your browser. You may need to allow pop-ups.
+- Paste the code, and authorize Visual Studio Code to have access.
+
+Now VS Code is signed in. It asks for a project name, and whether to publish to a **public** or a **private** repository. Choose, select the files to include, and it uploads everything, directories and all, with no manual work.
+
+## Step 3: Turning On GitHub Pages
+
+Having your files on GitHub is not the same as having them served. GitHub Pages is a separate service that turns a repository into a website.
+
+- In your repository, open **Settings**.
+- Scroll down to **Pages**.
+
+![A screenshot of the Pages section of a GitHub repository's settings, showing the Build and deployment options](images/gh_pages_section.png)
+
+- Under **Source**, choose **Deploy from a branch**, then select the **main** branch and the `/ (root)` folder, and click **Save**.
+
+![A screenshot of the GitHub Pages branch settings, with the main branch and the root folder selected](images/gh_pages_config.png)
+
+Deployment takes a little while. Back on the repository page you will see a small dot next to your latest commit; hovering it says **pending**. When GitHub finishes, that turns into a green check mark.
+
+To find the address, look under **Deployments** and then **github-pages**, or return to the Pages settings, where it says "Your site is live at...".
+
+![A screenshot of the GitHub Pages settings showing the message "Your site is live at" followed by the site URL](images/site_live_at.png)
+
+If you own a domain, GitHub's documentation explains how to point it here. By default, though, your site is at:
+
+```text
+https://YOUR-USERNAME.github.io/YOUR-REPOSITORY/
+```
+
+So the `my-website` repository belonging to `me` is served at `https://me.github.io/my-website/`. Send that URL to anyone and they see your page.
+
+Notice that extra `/my-website/` segment. That is exactly the situation from the Paths lesson: your relative directory locally is not the same as your relative directory once deployed, which is why the `src` of every script, stylesheet, and image should be a **relative** path.
+
+## Step 4: Making Changes
+
+Once the repository is connected, updating the live site is three clicks.
+
+Edit your files and save. Then in the Source Control panel:
+
+1. **Stage** the changes. There is a small `+` next to "Changes" that says "Stage all changes". Staging says "these are the changes I want to send".
+2. **Commit** them, with a short message describing what you changed, such as `change second to third`. Committing records the change in the copy of the repository on your own machine.
+3. **Sync** the changes. Committing is local; syncing is what actually pushes to GitHub.
+
+As soon as GitHub receives the push, your page redeploys automatically. There is no second step to remember.
+
+### On Coursera Labs: Fixing Your Commit Name
+
+If you are working in the Coursera VS Code environment, your commits may be attributed to "Coursera Lab user". To fix that:
+
+- Open **File**, then **Open Folder**, and enter `/home/coder`.
+- In that directory, open the file `.gitconfig`.
+- Change the name and email to your own, and save.
+
+Commits made after that carry your name.
+
+## Something to Deploy
+
+Here is a small page worth putting on the web. Run the cell to see the behavior, and note that it is only the [click counter we built earlier in the module](<06 - Listening for Click Events.webnb>).
+
+```html id=page1
+<button id="my-button">Click me!</button>
+<p id="click-count">The button has been clicked 0 times</p>
+```
+
+```{javascript autorun}
+const myButton = document.querySelector('#my-button');
+const clickCountP = document.querySelector('#click-count');
+
+let count = 0;
+
+function handleClick() {
+  count++;
+  clickCountP.innerText = 'The button has been clicked ' + count + ' times';
+}
+
+myButton.addEventListener('click', handleClick);
+```
+```+id=page1
+```
+
+Split across three files, the way a real project would be, it looks like this.
+
+`index.html`:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="style.css">
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <button id="my-button">Click me!</button>
+    <p id="click-count">The button has been clicked 0 times</p>
+  </body>
+</html>
+```
+
+`style.css`:
+
+```css
+body {
+  background-color: steelblue;
+  color: gold;
+  font-size: 3em;
+}
+```
+
+`script.js`:
+
+```javascript
+const myButton = document.querySelector('#my-button');
+const clickCountP = document.querySelector('#click-count');
+
+let count = 0;
+
+function handleClick() {
+  count++;
+  clickCountP.innerText = 'The button has been clicked ' + count + ' times';
+}
+
+myButton.addEventListener('click', handleClick);
+```
+
+Both `href` and `src` there are bare file names, which makes them relative to `index.html`. Those three files will work in the same folder no matter where that folder ends up.
+
+## Exercises
+
+1. Build the project so you have something to publish. Create a `deploy-example` directory in your workspace containing the three files above.
+
+    ```{external}
+    title: Build a page to deploy
+    interval: 2s
+    - directory: workspace:deploy-example | Create a directory named `deploy-example`
+    - file: workspace:deploy-example/index.html | Inside it, create `index.html`
+    - file: workspace:deploy-example/style.css | Inside it, create `style.css`
+    - file: workspace:deploy-example/script.js | Inside it, create `script.js`
+    - contains: workspace:deploy-example/index.html | style.css | In `index.html`, link `style.css` with a `link` element
+    - contains: workspace:deploy-example/index.html | script.js | In `index.html`, load `script.js` with a `script` element
+    - contains: workspace:deploy-example/script.js | addEventListener | In `script.js`, add a click listener with `addEventListener`
+    ```
+
+    Once all four items pass, publish the folder to GitHub and turn on Pages, following the steps above. Open the resulting URL and click the button.
+
+2. The default GitHub Pages address
+
+    ```{mcq}
+    Your GitHub username is `ada` and your repository is called `portfolio`. Where does GitHub Pages serve the site by default?
+    correct: Correct! The default is `https://USERNAME.github.io/REPOSITORY/`, so the repository name becomes part of the path. That extra segment is why relative paths matter.
+    wrong: Look back at the end of "Step 3: Turning On GitHub Pages", and note where the repository name appears.
+    [x] `https://ada.github.io/portfolio/`
+    [ ] `https://portfolio.github.io/ada/`
+    [ ] `https://github.com/ada/portfolio/`
+    [ ] `https://ada.github.io/` only, since a repository name is never part of the address
+    ```
+
+3. You have edited a file, staged it, and committed it, and the change is still not on the live site. What is missing?
+
+    ```{mcq}
+    You staged and committed. Why has nothing changed on the deployed page?
+    correct: Correct! A commit records the change on your own machine. Syncing is the step that pushes it up to GitHub, and only then does the site redeploy.
+    wrong: Revisit "Step 4: Making Changes", and the difference between what a commit does and what a sync does.
+    [x] The commit has not been synced to GitHub yet
+    [ ] GitHub Pages has to be re-enabled after every change
+    [ ] Committed files are never deployed, only uploaded ones
+    [ ] The repository needs to be made public again
+    ```
+
+## Resources
+
+- [GitHub Docs: GitHub Pages](https://docs.github.com/en/pages)
+- [GitHub Docs: Configuring a publishing source for your GitHub Pages site](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+- [VS Code: Using Git source control](https://code.visualstudio.com/docs/sourcecontrol/overview)
+- [GitHub Docs: About custom domains and GitHub Pages](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site)

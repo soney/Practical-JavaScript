@@ -1,0 +1,176 @@
+# Introduction to External Libraries
+
+Every line of JavaScript we have used so far is code we wrote ourselves. Other developers also write reusable code, and they publish it for anyone to use. Code like that is called an **external library**.
+
+This lesson is about using it: how to get a library into a page, what the file you download looks like, how to load it from someone else's server, how to say which *version* you want, and what the license lets you do with it. That last pair matters more than it sounds like it should, because a library is someone else's work and it comes with someone else's terms.
+
+## Many Files, One Program
+
+Start with something smaller than a library. Suppose an HTML file loads two of our own script files:
+
+```html
+<script src="a.js"></script>
+<script src="b.js"></script>
+```
+
+If `a.js` declares a variable or a function, `b.js` can use it. The two files behave as though you had pasted them together into one big file, in the order the page loaded them.
+
+```javascript id=ajs
+// Inside a.js
+function someUsefulFunction(name) {
+  return 'Hello, ' + name + '!';
+}
+```
+
+```{javascript autorun}
+// Inside b.js
+console.log(someUsefulFunction('World'));
+```
+```+id=ajs
+```
+
+That cell works because the code from `a.js` is attached to it, exactly as a second `<script>` tag would attach it in a page.
+
+Now change one word in your head: instead of `a.js` written by us, make it a file written by a stranger and downloaded from the internet. Nothing about the mechanism changes. **A library is just a script file that ran before yours.**
+
+## Order Matters
+
+Because the browser reads script tags top to bottom, the file that *defines* something has to load before the file that *uses* it. Get that backwards and you get an error rather than a wrong answer:
+
+```{javascript autorun}
+try {
+  console.log(missingLibraryFunction('World'));
+} catch (error) {
+  console.log('Error: ' + error.message);
+}
+```
+
+The message is `missingLibraryFunction is not defined`. That is the single most common problem people hit when adding a library, and it almost always means the library tag is below the code that needs it, or is not there at all.
+
+This is important enough that HTML has attributes for controlling when scripts run, and we will get to those later in the lesson.
+
+## One Shared Space for Names
+
+If every script shares one namespace, then every script is competing for the same names. Two libraries that both declare `helpers` would overwrite each other.
+
+Libraries deal with this by claiming as little as possible: usually **one** global name that holds everything. Lodash claims `_`, jQuery claims `$`, and marked claims `marked`. Everything the library offers hangs off that one object.
+
+Here is a very small library in that style, with our own code underneath it. Remember that this is what the browser effectively ends up with anyway: the library file, then ours, in one shared space.
+
+```{javascript autorun}
+// Inside textkit.js
+const textkit = {
+  shout: function (text) {
+    return text.toUpperCase() + '!';
+  },
+  titleCase: function (text) {
+    const words = text.split(' ');
+    let out = '';
+
+    for (const word of words) {
+      out = out + word[0].toUpperCase() + word.slice(1) + ' ';
+    }
+
+    return out.trim();
+  }
+};
+
+// Inside our own file
+console.log(textkit.shout('hello'));
+console.log(textkit.titleCase('hello there'));
+```
+
+Two functions, one global name. Real libraries have hundreds of functions and still take up a single name. You do not need to follow how `titleCase` works inside; not having to is rather the point of using a library.
+
+## Why Bother
+
+- **Time.** Someone has already solved date formatting, or Markdown parsing, or drawing a chart.
+- **Correctness.** A popular library has been run by thousands of people against inputs you would never think to try. Your first version of the same function has not.
+- **Maintenance.** When a browser changes or a bug turns up, the library's maintainers fix it and you update.
+
+None of that is free. You are shipping someone else's code to your users, which means their file size, their bugs, their security holes, and their license terms. The rest of this lesson is largely about handling that responsibly.
+
+## Exercises
+
+1. Complete `greetUser` so it uses `someUsefulFunction` from `a.js` to greet `Alex`.
+
+    ```{javascript}
+    function greetUser() {
+      return '';
+    }
+
+    const greeting = greetUser();
+    ```
+    ```+id=ajs
+    ```
+    ```+solution
+    function greetUser() {
+      return someUsefulFunction('Alex');
+    }
+
+    const greeting = greetUser();
+    ```
+    ```+test
+    wrap(greeting).should('equal', 'Hello, Alex!').run('Call `someUsefulFunction` with `Alex` and return what it gives back', 'Returned the correct greeting');
+    ```
+
+2. A script tag has already loaded `textkit.js`, so the library object below exists. Leave it alone and use it: shout `hello` and store the result in `message`.
+
+    ```{javascript}
+    // Provided by textkit.js, which loaded before your script
+    const textkit = {
+      shout: function (text) {
+        return text.toUpperCase() + '!';
+      }
+    };
+
+    const message = /* Your code here */;
+
+    console.log(message);
+    ```
+    ```+solution
+    // Provided by textkit.js, which loaded before your script
+    const textkit = {
+      shout: function (text) {
+        return text.toUpperCase() + '!';
+      }
+    };
+
+    const message = textkit.shout('hello');
+
+    console.log(message);
+    ```
+    ```+test
+    wrap(message).should('equal', 'HELLO!').run('Reach the function through the library object, as `textkit.shout(...)`', 'Called the library function');
+    ```
+
+3. Your page loads a library and then your own script, and the console says `_ is not defined`. What is the most likely cause?
+
+    ```{mcq}
+    The library's global name is not defined when your code runs. Why?
+    correct: Correct! Scripts run in the order the browser reads them, so the library's tag has to come before the code that uses it. A missing or misspelled `src` produces the same message.
+    wrong: Look back at "Order Matters" and think about when each script tag runs.
+    [x] Your script ran before the library's script had defined it
+    [ ] The library was loaded twice, so the name was cleared
+    [ ] Global names from libraries have to be imported before use
+    [ ] `_` is a reserved word and cannot be a variable name
+    ```
+
+4. Why do libraries put everything on a single global object such as `_` or `marked`?
+
+    ```{mcq}
+    Lodash has hundreds of functions and claims exactly one global name. Why?
+    correct: Correct! Every script on the page shares one set of global names, so a library that declared hundreds of them would be very likely to collide with your code or with another library. One name keeps the risk to one name.
+    wrong: Think about what happens when two scripts declare a variable with the same name.
+    [x] All scripts share one namespace, so claiming fewer names avoids collisions
+    [ ] The browser only allows one global variable per script file
+    [ ] Objects load faster than functions do
+    [ ] It is required in order to use the library from another file
+    ```
+
+## Resources
+
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)
+- [MDN: Adding JavaScript to a page](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_is_JavaScript#how_do_you_add_javascript_to_your_page)
+- [npm: the public package registry](https://www.npmjs.com/)
+- [Lodash documentation](https://lodash.com/docs/)

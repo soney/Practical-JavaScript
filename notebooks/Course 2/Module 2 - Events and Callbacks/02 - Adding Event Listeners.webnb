@@ -1,0 +1,191 @@
+# Listening to Events
+
+Last lesson we talked about event listeners in the abstract. Now let's get concrete about how we add one, what it does to the browser, and when the callback actually runs.
+
+The method is **`el.addEventListener(event, callback)`**, where `el` stands in for any DOM element: a button, a span, an input, anything we got back from `querySelector`.
+
+It takes two arguments:
+
+1. **The event**, as a string, which determines what kind of action we are listening for. `'click'` for a click, `'keydown'` for a key being pressed down, `'mouseover'` for the pointer moving onto the element, and many more.
+2. **The callback function** to call when that event occurs. This must be **the function itself, not a call to it**, so no parentheses after the name.
+
+Between them, the element and the event say *when* to react, and the callback says *what to do*.
+
+![A diagram of a single addEventListener call, drawn as a block with two slots along its top: a blue hexagon reading event, and a gray slot reading function. A blue outline groups the call together with its event slot, labeled "Event description and function being called specify when". A red outline groups the second slot on its own, labeled "Callback function specifies what to do".](images/events-callbacks-when-what-to-do.png =x180)
+
+## The Whole Pattern
+
+Three steps: get the element, define the function, register the listener.
+
+```html id=page1
+<button id="my-button">Click me</button>
+```
+
+```{javascript autorun}
+const btn = document.querySelector('#my-button');
+
+function callback() {
+  console.log('user clicked button');
+  console.log('yay');
+}
+
+btn.addEventListener('click', callback);
+```
+```+id=page1
+```
+
+Run the cell and nothing is logged. Click the button and both lines appear. Click it again and they appear again, as many times as you like.
+
+## What Happens, and When
+
+It is worth tracing the timeline, because this is the part that feels unfamiliar.
+
+The browser has two things going on: the display, which is what the user sees, and an internal **list of event listeners**, which the user never sees.
+
+- Our three lines run. `addEventListener` adds an entry to that list: "when this button is clicked, run this callback." Then our script is finished.
+- **Nothing runs at all**, possibly for minutes. The page just sits there.
+- The user clicks. The browser looks at its list, finds the matching entry, and runs `callback`. The two `console.log` lines execute, and then the callback finishes, and nothing is running again.
+- The user clicks again. The browser runs the callback again.
+
+So the callback is not code that runs once in sequence. It is code we have handed to the browser to run on our behalf, an unknown number of times, at moments we cannot predict.
+
+## Seeing the Listeners
+
+The listener is invisible to the user, but not to you. Open the developer tools, find the element in the Elements panel, and you will see a small **event** badge next to it. Click that badge and the browser lists every listener attached to the element, along with the function each one will call. It is the fastest way to check whether a listener you thought you added is really there.
+
+## Many Listeners, One Page
+
+An element can have listeners for several different events at once:
+
+```{javascript autorun}
+const btn = document.querySelector('#my-button');
+
+function onClick() {
+  console.log('clicked on the button');
+}
+
+function onMouseOver() {
+  console.log('mouse over button');
+}
+
+btn.addEventListener('click', onClick);
+btn.addEventListener('mouseover', onMouseOver);
+```
+```+id=page1
+```
+
+Move your pointer onto the button and the `mouseover` callback runs. Click it and the `click` callback runs as well. Two listeners, two events, one element.
+
+And different elements can listen for entirely different things:
+
+```html id=page2
+<button id="my-button">Click me</button>
+<input id="my-input" type="text" placeholder="Type here">
+```
+
+```{javascript autorun}
+const btn = document.querySelector('#my-button');
+const inp = document.querySelector('#my-input');
+
+function onClick() {
+  console.log('clicked on the button');
+}
+
+function onKeyDown() {
+  console.log('key down on input');
+}
+
+btn.addEventListener('click', onClick);
+inp.addEventListener('keydown', onKeyDown);
+```
+```+id=page2
+```
+
+Type in the input and the `keydown` callback runs, once per key. The button's click listener is unaffected and still waiting.
+
+The next lesson looks more closely at callback functions themselves, and the one after that at the full range of event types available.
+
+## Exercises
+
+1. Add a click listener that changes the message to `Button clicked`.
+
+    ```html id=page3
+    <button id="action">Click me</button>
+    <p id="message">Waiting</p>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#action');
+    const message = document.querySelector('#message');
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const button = document.querySelector('#action');
+    const message = document.querySelector('#message');
+
+    function onClick() {
+      message.textContent = 'Button clicked';
+    }
+
+    button.addEventListener('click', onClick);
+    ```
+    ```+test
+    assert('#message').should('have.text', 'Waiting').run('The message should stay as `Waiting` until the button is clicked', 'Nothing happens before the click');
+    assert('#action').click().run('Could not find the `#action` button', 'Clicked the button');
+    assert('#message').should('have.text', 'Button clicked').run('Clicking should set the message to `Button clicked`', 'Updated the message');
+    ```
+
+2. Give the same button two listeners: a `click` listener that logs `clicked`, and a `mouseover` listener that logs `hovered`.
+
+    ```html id=page4
+    <button id="target">Hover or click me</button>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#target');
+
+    // Write your code here
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const button = document.querySelector('#target');
+
+    function onClick() {
+      console.log('clicked');
+    }
+
+    function onMouseOver() {
+      console.log('hovered');
+    }
+
+    button.addEventListener('click', onClick);
+    button.addEventListener('mouseover', onMouseOver);
+    ```
+    ```+test
+    assert('#target').click().run('Could not find the `#target` button', 'Clicked the button');
+    check.consoleLogged('clicked').run('The `click` listener should log `clicked`', 'The click listener works');
+    wrap(source.includes('mouseover')).should('equal', true).run('Add a second listener for the `mouseover` event', 'Added a mouseover listener');
+    wrap((source.match(/addEventListener/g) || []).length).should('equal', 2).run('Call `addEventListener` twice on the same button, once per event', 'Registered two listeners');
+    ```
+
+3. A script adds a click listener and finishes. The user clicks two minutes later. What runs?
+
+    ```{mcq}
+    Between the script finishing and the user clicking, and then at the moment of the click, what is executing?
+    correct: Correct! Nothing runs in between. When the click happens, the browser finds the matching listener and runs only the callback, and it will do that again on every later click.
+    wrong: Revisit "What Happens, and When", and the timeline described there.
+    [x] Nothing runs in the meantime; at the click, the browser runs the callback
+    [ ] The callback runs continuously in the background, checking for clicks
+    [ ] The whole script runs again from the top when the click happens
+    [ ] The listener expired when the script finished, so nothing happens
+    ```
+
+## Resources
+
+- [MDN: EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
+- [MDN: Element click event](https://developer.mozilla.org/en-US/docs/Web/API/Element/click_event)
+- [MDN: Element keydown event](https://developer.mozilla.org/en-US/docs/Web/API/Element/keydown_event)

@@ -1,0 +1,281 @@
+# Introduction to Operational Transformations
+
+Real-time collaboration is everywhere: a colleague's cursor moving in Google Docs, someone else dragging a shape in Figma. This lesson is about how that works.
+
+## The Problem
+
+Two users share a document containing `cat`. At the same moment:
+
+- The **blue** user deletes character 0, so their copy reads `at`.
+- The **red** user inserts `r` at position 2, so their copy reads `cart`.
+
+Neither did anything wrong, and the two documents no longer agree.
+
+There are two tempting answers, both bad. Take blue's version and throw red's edit away; or take red's version and throw blue's away. Somebody's typing disappears, which is exactly what collaborative editing must not do.
+
+What we want is a result containing **both** edits. Apply them one after the other:
+
+```
+cat  --delete char 0-->  at    --insert 'r' at 2-->  atr
+cat  --insert 'r' at 2-->  cart  --delete char 0-->  art
+```
+
+Two different answers, `atr` and `art`, depending on the order. Either is defensible. What matters is that **everyone agrees on the same order**, because a document that differs between screens is not a shared document.
+
+## Operations
+
+The unit of change is an **operation**. Blue's edit is an operation, "delete character 0", and we will call it **A**. Red's is "insert `r` at position 2", operation **B**.
+
+An important property: each user **applies their own operation immediately**. Blue's editor shows `at` the instant they press delete. Waiting for a server before showing your own typing would make the editor feel broken.
+
+So each user has already changed their document before hearing about the other's change. Now say the agreed order is B then A. Blue, who has already done A, receives B and applies it, and there is a problem:
+
+```
+blue's document is 'at'
+B says: insert 'r' at position 2
+```
+
+There is no position 2 in a two-character string, and even if there were, it is not the place red meant. Red's position 2 was a position in `cat`, and `cat` no longer exists on blue's screen.
+
+## The Transformation
+
+The fix is to **transform** the operation before applying it, hence operational transformations. B is adjusted to account for A having already happened:
+
+```
+B  = insert 'r' at position 2
+B' = insert 'r' at position 1     (one character before it was deleted)
+```
+
+`B'`, "B prime", is B rewritten for a document that A has already been applied to. Apply it to `at` and you get `art`.
+
+Red does the mirror image. They have already applied B, and receive A, "delete character 0". Transformed against B it happens to be unchanged, because there is still a character 0. Apply it to `cart` and you get `art`.
+
+**Both documents now read `art`.** Neither user waited, neither edit was lost, and the two agree. That is the whole idea.
+
+## Watching It Converge
+
+Small enough to write out, so here it is running:
+
+```{javascript autorun}
+function applyOp(text, op) {
+  if (op.type === 'delete') {
+    return text.slice(0, op.position) + text.slice(op.position + 1);
+  }
+
+  return text.slice(0, op.position) + op.character + text.slice(op.position);
+}
+
+// Rewrite `op` so it still means the right thing after `applied` has happened.
+function transform(op, applied) {
+  if (applied.type === 'delete' && applied.position < op.position) {
+    return { type: op.type, position: op.position - 1, character: op.character };
+  }
+
+  return op;
+}
+
+const opA = { type: 'delete', position: 0 };
+const opB = { type: 'insert', position: 2, character: 'r' };
+
+// The blue user deleted, then hears about the insert.
+let blue = applyOp('cat', opA);
+console.log('blue after its own edit:   ' + blue);
+blue = applyOp(blue, transform(opB, opA));
+console.log('blue after transforming B: ' + blue);
+
+// The red user inserted, then hears about the delete.
+let red = applyOp('cat', opB);
+console.log('red after its own edit:    ' + red);
+red = applyOp(red, transform(opA, opB));
+console.log('red after transforming A:  ' + red);
+
+console.log('do they agree? ' + (blue === red));
+```
+
+Change `transform` so it returns `op` untouched and run it again: the two documents come out different. That one adjustment is what convergence rests on.
+
+Real transformation functions are much harder than this. There is a good deal of mathematics in proving that a set of them always converges, for every pair of operations, in every order. That is why we will use a library rather than write our own.
+
+## The General Picture
+
+With several clients, the arrangement is:
+
+1. Each client applies its own operation **locally and immediately**.
+2. Each client sends its operation to the **server**.
+3. The server picks a **canonical order** for the operations it receives, knowing what version each client is on.
+4. The server sends back **transformed** operations.
+5. Each client applies the transformed operations it receives.
+
+The server's job in one word is **convergence**: making sure that once all the messages have been delivered, every client holds an identical document.
+
+## Operations in ShareDB
+
+**ShareDB** is a JavaScript implementation of all this, and the next few readings use it. Its documents are JSON rather than plain text, so an operation has to say *where* in the JSON it applies.
+
+Say the document is:
+
+```json
+{
+  "users": [
+    { "contact": { "email": "alice@example.com" }, "points": 10 }
+  ]
+}
+```
+
+A ShareDB operation is an array of objects, each with a path and an action:
+
+```javascript
+const changeEmail = [{
+  p: ['users', 0, 'contact', 'email'],
+  od: 'alice@example.com',
+  oi: 'alice.new@example.com'
+}];
+```
+
+**`p`** is the path, read left to right: look up `users`, take index `0`, look up `contact`, look up `email`. It is the route you would follow in JavaScript, written as an array.
+
+**`od`** is object delete, the value being removed; **`oi`** is object insert, the value replacing it. Together they say "change this property from that to this".
+
+Other actions exist for other kinds of change. To add to a number:
+
+```javascript
+const addPoints = [{
+  p: ['users', 0, 'points'],
+  na: 5
+}];
+```
+
+**`na`** is number add, so `points` goes from 10 to 15. Note that this says *add five*, not *set to fifteen*, which is what makes it safe when two clients both award points at once.
+
+## ShareDB's Four Pieces
+
+Four terms to have straight before the next reading:
+
+- A **connection** links one client to the server.
+- A **document** is a shared JSON object that updates itself on every client.
+- **Operations**, or **ops**, are single changes, applied locally and then sent to the server.
+- **OT types** define which operations are valid on a document.
+
+## Exercises
+
+1. Complete `applyOp`, which performs one operation on a string.
+
+    ```{javascript}
+    function applyOp(text, op) {
+      if (op.type === 'delete') {
+        // TODO: return text with the character at op.position removed
+      }
+
+      // TODO: return text with op.character inserted at op.position
+    }
+
+    console.log(applyOp('cat', { type: 'delete', position: 0 }));
+    console.log(applyOp('cat', { type: 'insert', position: 2, character: 'r' }));
+    ```
+    ```+solution
+    function applyOp(text, op) {
+      if (op.type === 'delete') {
+        return text.slice(0, op.position) + text.slice(op.position + 1);
+      }
+
+      return text.slice(0, op.position) + op.character + text.slice(op.position);
+    }
+
+    console.log(applyOp('cat', { type: 'delete', position: 0 }));
+    console.log(applyOp('cat', { type: 'insert', position: 2, character: 'r' }));
+    ```
+    ```+test
+    wrap(applyOp('cat', { type: 'delete', position: 0 })).should('equal', 'at').run('Deleting character 0 of `cat` gives `at`. Use `slice` to take the parts on either side of the deleted character', 'Applied a delete');
+    wrap(applyOp('cat', { type: 'insert', position: 2, character: 'r' })).should('equal', 'cart').run('Inserting `r` at position 2 of `cat` gives `cart`', 'Applied an insert');
+    wrap(applyOp('cat', { type: 'delete', position: 2 })).should('equal', 'ca').run('Deleting the last character should work too', 'Handled a delete at the end');
+    wrap(applyOp('at', { type: 'insert', position: 0, character: 'c' })).should('equal', 'cat').run('Inserting at position 0 should put the character at the front', 'Handled an insert at the start');
+    ```
+
+2. Complete `transform` so the two users converge.
+
+    ```{javascript}
+    function applyOp(text, op) {
+      if (op.type === 'delete') {
+        return text.slice(0, op.position) + text.slice(op.position + 1);
+      }
+
+      return text.slice(0, op.position) + op.character + text.slice(op.position);
+    }
+
+    function transform(op, applied) {
+      // TODO: if `applied` deleted a character at a position before op's
+      // position, shift op one place earlier. Otherwise leave op alone.
+      return op;
+    }
+
+    const opA = { type: 'delete', position: 0 };
+    const opB = { type: 'insert', position: 2, character: 'r' };
+
+    const blue = applyOp(applyOp('cat', opA), transform(opB, opA));
+    const red = applyOp(applyOp('cat', opB), transform(opA, opB));
+
+    console.log(blue, red, blue === red);
+    ```
+    ```+solution
+    function applyOp(text, op) {
+      if (op.type === 'delete') {
+        return text.slice(0, op.position) + text.slice(op.position + 1);
+      }
+
+      return text.slice(0, op.position) + op.character + text.slice(op.position);
+    }
+
+    function transform(op, applied) {
+      if (applied.type === 'delete' && applied.position < op.position) {
+        return { type: op.type, position: op.position - 1, character: op.character };
+      }
+
+      return op;
+    }
+
+    const opA = { type: 'delete', position: 0 };
+    const opB = { type: 'insert', position: 2, character: 'r' };
+
+    const blue = applyOp(applyOp('cat', opA), transform(opB, opA));
+    const red = applyOp(applyOp('cat', opB), transform(opA, opB));
+
+    console.log(blue, red, blue === red);
+    ```
+    ```+test
+    wrap(transform({ type: 'insert', position: 2, character: 'r' }, { type: 'delete', position: 0 }).position).should('equal', 1).run('A delete at position 0 came before position 2, so the insert shifts to position 1', 'Shifted the operation');
+    wrap(transform({ type: 'delete', position: 0 }, { type: 'insert', position: 2, character: 'r' }).position).should('equal', 0).run('An insert later in the document does not move this position, so leave the operation as it is', 'Left the unaffected operation alone');
+    wrap(blue).should('equal', 'art').run('The blue user should end with `art`', 'Blue converged');
+    wrap(red).should('equal', 'art').run('The red user should end with `art` as well', 'Red converged');
+    wrap(blue === red).should('equal', true).run('Both documents have to agree; that is what transforming is for', 'The documents converged');
+    ```
+
+3. Why did red's "insert `r` at position 2" have to become "insert `r` at position 1"?
+
+    ```{mcq}
+    What made the original position wrong?
+    correct: Correct! Position 2 was a position in `cat`. Once blue's delete had been applied the document was one character shorter and everything after the deletion had shifted left, so the original index no longer pointed at the intended place.
+    wrong: Ask which document red's position 2 referred to, and which document the operation is about to be applied to.
+    [x] The document had become shorter after the delete, so index 2 no longer pointed where red meant
+    [ ] Red changed their mind about where the letter should go
+    [ ] To make sure red's edit was discarded in favour of blue's
+    [ ] To make the document longer than the original
+    ```
+
+4. Several clients send operations to the server at once. What is the server responsible for?
+
+    ```{mcq}
+    What does the server do about convergence?
+    correct: Correct! It decides one canonical order, transforms the operations against each other accordingly, and sends the results back, so that every client ends up holding the same document.
+    wrong: The clients have already applied their own edits. What has to happen for their documents to end up matching?
+    [x] Choosing a canonical order for the operations and sending back transformed versions so every client ends up in the same state
+    [ ] Blocking everyone else until the first user stops typing
+    [ ] Saving every version of the document as a separate file
+    [ ] Translating the document for each user
+    ```
+
+## Resources
+
+- [ShareDB](https://github.com/share/sharedb)
+- [ShareDB: the JSON0 operation type](https://github.com/ottypes/json0)
+- [Wikipedia: operational transformation](https://en.wikipedia.org/wiki/Operational_transformation)
+- [MDN: String.prototype.slice()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/slice)

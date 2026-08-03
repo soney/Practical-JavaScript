@@ -1,0 +1,133 @@
+# Arithmetic Operators
+
+So far every expression we have written has been a literal: the value is the expression. Now let's learn a way to combine expressions into *larger* expressions. The first way is with **arithmetic operators**: addition, subtraction, multiplication, and division.
+
+## The Four Operators
+
+Imagine two expressions whose values are numbers. Call them `a` and `b`; `a` might be `20` and `b` might be `2.5`. Whatever they are, we can combine them with an operator, and the result is one bigger expression with one value of its own.
+
+```{javascript autorun}
+console.log(20 + 2.5);   // addition
+console.log(20 - 2.5);   // subtraction
+console.log(20 * 2.5);   // multiplication
+console.log(20 / 2.5);   // division
+```
+
+Each of these takes one expression on the left of the operator and one expression on the right, and produces a single value. Multiplication is a star, `*`, and division is a forward slash, `/`. Try changing `2.5` to another number and running the cell again.
+
+Notice that when the engine reaches `console.log(20 + 2.5)` it works out the value of the expression *first*, and then logs that value. The console shows `22.5`, never `20 + 2.5`. This is the same rule from earlier lessons: expressions become values, and it is the value that gets used.
+
+## Negating a Number
+
+There is one more arithmetic operator, and it takes only a single expression rather than two. Putting a minus sign in front of a numeric value makes it negative:
+
+```{javascript autorun}
+console.log(-20);
+console.log(-(4 * 5));
+```
+
+## Order of Operations
+
+When an expression contains several operators, JavaScript follows the same order of operations you may have learned in math class. From highest priority to lowest:
+
+1. Anything inside parentheses `()`
+2. Multiplication `*` and division `/`
+3. Addition `+` and subtraction `-`
+
+So in `1 + 2 * 3`, multiplication has the higher priority. The engine computes `2 * 3` and gets `6`, then computes `1 + 6` and gets `7`:
+
+```{javascript autorun}
+console.log(1 + 2 * 3);
+```
+
+This matters more than it may seem. Suppose we want the average of `10` and `30`. Written without parentheses, we get the wrong answer:
+
+```{javascript autorun}
+console.log(10 + 30 / 2);
+```
+
+That logs `25`, because `30 / 2` happened first and then `10` was added to it. To average two numbers we need them added together *before* the division, and parentheses are how we say so:
+
+```{javascript autorun}
+console.log((10 + 30) / 2);
+```
+
+That logs `20`, which is the answer we wanted. Whenever you catch yourself dividing a sum, reach for parentheses.
+
+### Operators of Equal Priority Go Left to Right
+
+What about `1 + 2 + 4`, where both operators have the same priority? The engine works from left to right. It computes the value of `1 + 2` first and gets `3`, then computes `3 + 4` and gets `7`.
+
+```{javascript autorun}
+console.log(1 + 2 + 4);
+```
+
+For addition the order does not change the answer, but for subtraction and division it very much does. Try `10 - 4 - 3` in the cell above and check that you get `3` rather than `9`.
+
+## Concatenating Strings with the Plus Operator
+
+There is one wrinkle worth learning now, because it catches everyone at least once. The `+` operator does not only do arithmetic. When one of its sides is a string, `+` **concatenates** instead: it glues the two pieces of text together into one longer string.
+
+```{javascript autorun}
+console.log(10 + 20);       // two numbers: arithmetic
+console.log('10' + '20');   // two strings: concatenation
+```
+
+The first line produces the number `30`. The second produces the string `1020`, because `'10'` and `'20'` are text, and gluing that text together gives `1020`. This is exactly the difference between `42` and `'42'` that we met in the last lesson, and here is where it starts to matter.
+
+Mixing the two types does not help either. If *either* side is a string, JavaScript turns the other side into text and concatenates:
+
+```{javascript autorun}
+console.log(10 + '20');
+console.log('The area is ' + 40);
+```
+
+The first line gives `1020`, not `30`. The second is the useful case: gluing a number onto a sentence is how we build a readable message out of a computed value, and you will do it constantly.
+
+The other three operators have no string version, so they always try to do arithmetic. This is a good habit to build early: before writing `+`, know whether the things on either side are numbers or text.
+
+## Exercises
+
+1. Log the average of `12` and `18` to the console. Watch your parentheses; the answer is `15`.
+
+    ```{javascript}
+    console.log(12 + 18 / 2);
+    ```
+    ```+solution
+    console.log((12 + 18) / 2);
+    ```
+    ```+test
+    check.consoleLogged(/^15$/).run('The cell should log `15`. Add parentheses so the addition happens before the division', 'Logged the correct average');
+    ```
+
+2. Using arithmetic operators, log the number of seconds in a day. Build it out of `60`, `60`, and `24` rather than typing the answer.
+
+    ```{javascript}
+    console.log();
+    ```
+    ```+solution
+    console.log(60 * 60 * 24);
+    ```
+    ```+test
+    check.consoleLogged(/^86400$/).run('The cell should log the number of seconds in a day', 'Logged 86400');
+    wrap(source.includes('86400')).should('equal', false).run('Write an expression that multiplies `60`, `60`, and `24` rather than typing `86400`', 'Computed the value with an expression');
+    ```
+
+3. Add a second line so the cell logs two things in this order: the number `30`, produced by adding two numbers, and then `1020`, produced by concatenating two strings.
+
+    ```{javascript}
+    console.log(10 + 20);
+    ```
+    ```+solution
+    console.log(10 + 20);
+    console.log('10' + '20');
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', '30,1020').run('The cell should log `30` and then `1020`', 'Logged the number and then the concatenated string');
+    ```
+
+## Resources
+
+- [MDN: Arithmetic operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators#arithmetic_operators)
+- [MDN: Operator precedence](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence)
+- [MDN: Addition operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Addition)

@@ -1,0 +1,452 @@
+# Peer-to-Peer Connections with WebRTC
+
+Everything in this module has gone through a server. In the last reading, two people editing the same document sent every keystroke through a machine that may be on another continent, even if they were sitting in the same room. For a chat message that is fine. For a video call it is silly.
+
+**WebRTC** lets two browsers connect **directly** to each other. It is what video calling in a browser is built on.
+
+The setup is more involved than a WebSocket, and the good news is that you do not need to hold the details in your head. This reading walks through the whole arrangement once, in the code the video built, so the vocabulary makes sense.
+
+## The Problem With Direct Connections
+
+Two browsers cannot simply address each other. Neither knows the other exists, neither knows its own public address, and both are probably behind a home router that does not accept incoming connections.
+
+So getting to a direct connection needs help from servers first. Two kinds:
+
+- A **signaling server** passes messages between the two clients while they arrange the connection. This is an ordinary WebSocket server, and it is the only piece you write.
+- A **STUN server** (session traversal utilities for NAT) helps a client figure out how it can be reached from outside its own network. Public ones exist; Google runs one.
+
+Once the connection is established, **both servers drop out** and the browsers talk to each other.
+
+## The Vocabulary
+
+**`RTCPeerConnection`** is the browser object representing one end of the connection, like a hand reached out toward the other client. Each side creates its own.
+
+A **session description** describes what a client wants to send. It has a `type` and a description of the media. Two types matter:
+
+- an **offer** is an opening proposal to form a connection, and
+- an **answer** is a reply to one.
+
+An **ICE candidate** (interactive connectivity establishment) is one possible route to reach a client, best thought of as "here is an address and port where you might find me". A client usually produces several, and the STUN server is what lets it discover them.
+
+None of these ever travel directly, because there is no direct connection yet. They travel through the signaling server, as text. Here is what that traffic actually looks like:
+
+```{javascript autorun}
+// A session description is an ordinary object: a type, plus a description
+// of the media (a real sdp is a few dozen lines long).
+const offer = { type: 'offer', sdp: 'v=0 (what I can send, and how)' };
+
+// To travel through the signaling server, it is wrapped in a labeled
+// message and turned into text.
+const wireMessage = JSON.stringify({ type: 'offer', offer: offer });
+
+console.log('sent through the signaling server: ' + wireMessage);
+
+// The receiving side turns the text back into an object and reads the
+// label to decide what to do.
+const message = JSON.parse(wireMessage);
+
+console.log('the other side received: a message of type "' + message.type + '"');
+```
+
+The signaling server never does that `JSON.parse`. It forwards the text without reading it; only the clients at either end care what is inside.
+
+## The Handshake
+
+In order:
+
+1. Each client creates an `RTCPeerConnection`.
+2. One client creates an **offer**, saves it as its own **local description**, and sends it to the signaling server.
+3. The signaling server forwards it to the other client, which sets it as its **remote description**, creates an **answer**, saves that as *its* local description, and sends the answer back.
+4. Meanwhile each client asks the **STUN server** how it can be reached, producing **ICE candidates**, and sends each one through the signaling server to the other side.
+5. Each client adds the candidates it receives to its peer connection, which tries the routes and finds one that works.
+6. With descriptions and candidates on both sides, the browsers connect **directly**, and the servers are no longer involved.
+
+Every client ends up holding two descriptions: a **local** one describing itself and a **remote** one describing the other side. That symmetry is the thing to remember.
+
+Sometimes no direct route exists, usually because of a firewall. The fallback is a **TURN server**, which relays the traffic. It is not peer-to-peer any more, and your code does not change: you work with the connection exactly as if it were.
+
+## The Project
+
+The code from the video is in your workspace, in the `p2p-demo/01-connection/` folder next to this notebook:
+
+    p2p-demo/
+      package.json        one install shared by this lesson's projects
+      01-connection/
+        server.js         the signaling server
+        static/
+          index.html      a page with one button
+          main.js         one client's side of the handshake
+
+Before the first run, install the dependencies once for the whole lesson: open a terminal, `cd "p2p-demo"`, and run `npm install`. The `README.md` in that folder repeats all of the run instructions.
+
+## The Signaling Server
+
+This is the only piece you write, and you have already written most of it: it is the chat-room broadcast from Module 2 with one change.
+
+```{walkthrough}
+title: The signaling server
+step: The relay
+file: p2p-demo/01-connection/server.js
+region: relay
+@"WebSocket.Server({ server })": Attached to the same HTTP server that hands out the page, so one port carries both, and the client can connect back to its own host. Both ideas are from the WebSockets readings.
+@"client !== socket": The one change from the chat room. There, the sender got its own message back and displayed it like everyone else's. Here that echo would be a disaster: a client would receive its own offer and answer itself.
+@"data.toString()": What gets forwarded is the raw text. The server never parses it, never checks whether it is an offer or a candidate, and would keep working if the message format changed completely.
+
+step: The rest of the file
+file: p2p-demo/01-connection/server.js
+region: static-server
+The rest is the [static file server](<../Module 2 - Server-Side JavaScript/03 - Serving Static Files.webnb>) from Module 2, Lesson 1, serving the page and its script out of `static/`. Nothing about WebRTC appears anywhere in this file.
+```
+
+The signaling server does not know what an offer is, and does not need to.
+
+## The Client, Before Any Call
+
+`static/main.js` runs in both windows. It starts with the two servers' addresses and one button:
+
+```{walkthrough}
+title: Setup
+step: The page
+file: p2p-demo/01-connection/static/index.html
+@"connect-button": The button starts disabled. Pressing Connect before the signaling channel exists could not work, so the page does not offer it, the same way the last reading's editor stayed disabled until the document arrived.
+
+step: Two servers, one object
+file: p2p-demo/01-connection/static/main.js
+region: setup
+@"new WebSocket(": The signaling channel: a WebSocket to whatever host served the page, exactly as in the chat room, and over `wss:` when the page itself arrived over `https:`. If the signaling server ran as a separate program on its own port, you would spell out that address here instead.
+@"stun:stun.l.google.com": The configuration names the STUN servers to use, and this is Google's public one. The peer connection contacts it on its own; no more code is needed for the STUN side.
+@"let peerConnection = null": Nothing is created yet. Each side builds its peer connection when a call actually starts, and which line does that depends on which side of the call you turn out to be.
+
+step: Enabling the button
+file: p2p-demo/01-connection/static/main.js
+region: enable
+@"removeAttribute": The button becomes clickable only once the WebSocket to the signaling server is open.
+```
+
+## Making an Offer
+
+Clicking Connect makes your window the caller:
+
+```{walkthrough}
+title: The caller's side
+step: The click handler
+file: p2p-demo/01-connection/static/main.js
+region: offer
+@"setAttribute('disabled'": Disabled again immediately, so a double click cannot send two offers.
+@"createOffer": Produces the session description: a `type` of `'offer'` plus a description of what this side can send. It returns a promise, hence the `await`.
+@"setLocalDescription(offer)": Create it, remember it as your own side's description, send it. All three, in that order.
+@"JSON.stringify({ type: 'offer'": The offer travels as text through the signaling server, wrapped in a labeled message like the one we printed earlier.
+
+step: Creating the connection
+file: p2p-demo/01-connection/static/main.js
+region: create-peer-connection
+@"new RTCPeerConnection(configuration)": One end of the connection, pointed at the STUN server by the configuration.
+@"addEventListener('icecandidate'": As the browser discovers routes to itself, this event fires once per candidate. Each one is forwarded through the signaling server so the other side can try it.
+@"if (iceEvent.candidate)": The event also fires once with no candidate to say "that was all of them", which is what the check filters out.
+```
+
+In the video, these listeners are written in the property form, `peerConnection.onicecandidate = ...`, and the WebSocket ones as `ws.onmessage = ...`. They are the same events with the same arguments; `addEventListener` is the form we have used all course.
+
+## Handling What Arrives
+
+Everything the other side sends comes out of the signaling server as a message, and one listener sorts them out:
+
+```{walkthrough}
+title: The dispatch
+step: Three kinds of message
+file: p2p-demo/01-connection/static/main.js
+region: handle-messages
+@"message.type === 'offer'": Somebody wants to connect to us. Their offer describes their side, so it becomes our **remote** description.
+@"if (!peerConnection)": The answering window never clicked Connect, so its peer connection does not exist yet. It gets created here instead, by the same function the caller ran in its click handler.
+@"createAnswer": The reply. An answer describes *our* side, so it is saved as our **local** description and sent back through the signaling server.
+@"message.type === 'answer'": The offer we sent worked. Their answer describes their side: remote description again, and nothing to send back.
+@"addIceCandidate": A route by which the other side might be reached. Every arriving candidate is handed to the peer connection, which tries the routes and settles on one that works.
+```
+
+Three kinds of message, three responses:
+
+- **an offer**: set it as the remote description, create an answer, save the answer locally, send it back.
+- **an answer**: set it as the remote description. Done; you made the offer.
+- **a candidate**: add it to the peer connection.
+
+Notice that "set the other side's description as my remote description" happens in both of the first two branches. It is the same step seen from either end, and it is how both sides end up holding both descriptions.
+
+## The Dispatch, Running
+
+The dispatch is the part to be sure of, so here it is running against stand-ins:
+
+```{javascript autorun}
+const peerConnection = { local: null, remote: null, candidates: [] };
+
+peerConnection.setLocalDescription = function (description) {
+  peerConnection.local = description.type;
+};
+
+peerConnection.setRemoteDescription = function (description) {
+  peerConnection.remote = description.type;
+};
+
+peerConnection.createAnswer = function () {
+  return { type: 'answer' };
+};
+
+peerConnection.addIceCandidate = function (candidate) {
+  peerConnection.candidates.push(candidate);
+};
+
+const sent = [];
+
+function handleSignal(message) {
+  if (message.type === 'offer') {
+    peerConnection.setRemoteDescription(message.offer);
+
+    const answer = peerConnection.createAnswer();
+
+    peerConnection.setLocalDescription(answer);
+
+    sent.push('answer');
+  } else if (message.type === 'answer') {
+    peerConnection.setRemoteDescription(message.answer);
+  } else if (message.type === 'candidate') {
+    peerConnection.addIceCandidate(message.candidate);
+  }
+}
+
+// Somebody else reaches out to us first.
+handleSignal({ type: 'offer', offer: { type: 'offer' } });
+handleSignal({ type: 'candidate', candidate: 'route-1' });
+handleSignal({ type: 'candidate', candidate: 'route-2' });
+
+console.log('remote description: ' + peerConnection.remote);
+console.log('local description:  ' + peerConnection.local);
+console.log('candidates known:   ' + peerConnection.candidates);
+console.log('sent back:          ' + sent);
+```
+
+An offer came in, an answer went out, and two routes were recorded. Both descriptions are set, which is what the connection needs.
+
+## Running It Yourself
+
+A handshake between two windows is not something one notebook cell can show you. Run it:
+
+```
+$ cd "p2p-demo"
+$ node 01-connection/server.js
+Listening on http://localhost:3000
+```
+
+Open `http://localhost:3000` in **two** browser windows, open the console in both (right-click, Inspect, Console), and click **Connect** in one of them. Then:
+
+1. The window you clicked logs `Sending an offer to the signaling server`, and the *other* window logs that an offer arrived and an answer went back. Whichever window you click is the caller; the other answers without anyone touching it.
+2. In the Network tab, find the request the page made to `ws://localhost:3000` and look at its Messages: the offer and the answer are right there as text. That text is everything the signaling server ever sees.
+3. Do not be surprised if few or no ICE candidates appear yet. Nothing is attached to this connection, so the browsers have nothing to route, and they may not bother finding routes for it. The next reading attaches a camera and a microphone, and the candidate traffic appears.
+
+The connection exists, and it is carrying nothing. That is the next reading.
+
+## Exercises
+
+1. Complete the signaling server's forwarding so a message reaches everyone except its sender.
+
+    ```{node}
+    const OPEN = 1;
+
+    function makeClient(name, readyState) {
+      const client = { name: name, readyState: readyState, received: [] };
+
+      client.send = function (data) {
+        client.received.push(data);
+      };
+
+      return client;
+    }
+
+    const alice = makeClient('alice', OPEN);
+    const bob = makeClient('bob', OPEN);
+    const carol = makeClient('carol', 3);
+
+    const clients = [alice, bob, carol];
+
+    function forward(fromSocket, data) {
+      // TODO: send data to every open client except the one it came from
+    }
+
+    forward(alice, 'an offer from alice');
+
+    console.log(alice.received, bob.received, carol.received);
+    ```
+    ```+solution
+    const OPEN = 1;
+
+    function makeClient(name, readyState) {
+      const client = { name: name, readyState: readyState, received: [] };
+
+      client.send = function (data) {
+        client.received.push(data);
+      };
+
+      return client;
+    }
+
+    const alice = makeClient('alice', OPEN);
+    const bob = makeClient('bob', OPEN);
+    const carol = makeClient('carol', 3);
+
+    const clients = [alice, bob, carol];
+
+    function forward(fromSocket, data) {
+      for (const client of clients) {
+        if (client !== fromSocket && client.readyState === OPEN) {
+          client.send(data);
+        }
+      }
+    }
+
+    forward(alice, 'an offer from alice');
+
+    console.log(alice.received, bob.received, carol.received);
+    ```
+    ```+test
+    wrap(bob.received).should('equal', ['an offer from alice']).run('Every other open client should receive the message', 'Forwarded to the other client');
+    wrap(alice.received).should('equal', []).run('The sender must not receive its own message back, or it would end up answering its own offer. Compare each client with the sending socket', 'Skipped the sender');
+    wrap(carol.received).should('equal', []).run('A client that is not open should be skipped, as in the chat room', 'Skipped the closed client');
+    ```
+
+2. Complete the signal handler so each of the three message types is dealt with.
+
+    ```{node}
+    const peerConnection = { local: null, remote: null, candidates: [] };
+
+    peerConnection.setLocalDescription = function (description) {
+      peerConnection.local = description.type;
+    };
+
+    peerConnection.setRemoteDescription = function (description) {
+      peerConnection.remote = description.type;
+    };
+
+    peerConnection.createAnswer = function () {
+      return { type: 'answer' };
+    };
+
+    peerConnection.addIceCandidate = function (candidate) {
+      peerConnection.candidates.push(candidate);
+    };
+
+    const sent = [];
+
+    function handleSignal(message) {
+      // TODO:
+      //   an offer     -> set message.offer as the remote description,
+      //                   create an answer, set that as the local
+      //                   description, and push 'answer' onto sent
+      //   an answer    -> set message.answer as the remote description
+      //   a candidate  -> add message.candidate to the peer connection
+    }
+
+    handleSignal({ type: 'offer', offer: { type: 'offer' } });
+    handleSignal({ type: 'candidate', candidate: 'route-1' });
+
+    console.log(peerConnection.remote, peerConnection.local, peerConnection.candidates, sent);
+    ```
+    ```+solution
+    const peerConnection = { local: null, remote: null, candidates: [] };
+
+    peerConnection.setLocalDescription = function (description) {
+      peerConnection.local = description.type;
+    };
+
+    peerConnection.setRemoteDescription = function (description) {
+      peerConnection.remote = description.type;
+    };
+
+    peerConnection.createAnswer = function () {
+      return { type: 'answer' };
+    };
+
+    peerConnection.addIceCandidate = function (candidate) {
+      peerConnection.candidates.push(candidate);
+    };
+
+    const sent = [];
+
+    function handleSignal(message) {
+      if (message.type === 'offer') {
+        peerConnection.setRemoteDescription(message.offer);
+
+        const answer = peerConnection.createAnswer();
+
+        peerConnection.setLocalDescription(answer);
+
+        sent.push('answer');
+      } else if (message.type === 'answer') {
+        peerConnection.setRemoteDescription(message.answer);
+      } else if (message.type === 'candidate') {
+        peerConnection.addIceCandidate(message.candidate);
+      }
+    }
+
+    handleSignal({ type: 'offer', offer: { type: 'offer' } });
+    handleSignal({ type: 'candidate', candidate: 'route-1' });
+
+    console.log(peerConnection.remote, peerConnection.local, peerConnection.candidates, sent);
+    ```
+    ```+test
+    wrap(peerConnection.remote).should('equal', 'offer').run('An incoming offer describes the other side, so `message.offer` becomes the remote description', 'Stored the remote description');
+    wrap(peerConnection.local).should('equal', 'answer').run('The answer you create describes your own side, so it becomes the local description', 'Stored the local description');
+    wrap(sent).should('equal', ['answer']).run('The answer has to be sent back through the signaling server', 'Sent the answer back');
+    wrap(peerConnection.candidates).should('equal', ['route-1']).run('A candidate message should be added with `addIceCandidate(message.candidate)`', 'Added the candidate');
+    wrap((function () { handleSignal({ type: 'answer', answer: { type: 'answer' } }); return peerConnection.remote; })()).should('equal', 'answer').run('An incoming answer becomes the remote description too, and needs no reply', 'Handled an incoming answer');
+    ```
+
+3. Put the caller's half of the handshake in order.
+
+    ```{javascript}
+    // The steps of starting a call, scrambled. Reorder the lines of this
+    // array so the steps happen in the right order.
+    const callerSteps = [
+      'send the offer through the signaling server',
+      'create the RTCPeerConnection',
+      'set the answer as the remote description',
+      'create an offer',
+      'set the offer as the local description',
+      'receive an answer back'
+    ];
+
+    console.log(callerSteps);
+    ```
+    ```+solution
+    const callerSteps = [
+      'create the RTCPeerConnection',
+      'create an offer',
+      'set the offer as the local description',
+      'send the offer through the signaling server',
+      'receive an answer back',
+      'set the answer as the remote description'
+    ];
+
+    console.log(callerSteps);
+    ```
+    ```+test
+    wrap(callerSteps[0]).should('equal', 'create the RTCPeerConnection').run('Nothing can happen before there is a peer connection for it to happen to', 'Started with the peer connection');
+    wrap(callerSteps.indexOf('set the offer as the local description') < callerSteps.indexOf('send the offer through the signaling server')).should('equal', true).run('Create it, remember it locally, send it: the offer is saved as the local description before it goes out', 'Saved the offer before sending it');
+    wrap(callerSteps).should('equal', ['create the RTCPeerConnection', 'create an offer', 'set the offer as the local description', 'send the offer through the signaling server', 'receive an answer back', 'set the answer as the remote description']).run('Follow the click handler in `main.js` from top to bottom, then the `answer` branch of the message listener', 'Put the whole handshake in order');
+    ```
+
+4. Where the traffic flows once the call is up
+
+    ```{mcq}
+    Two browsers finish the handshake and begin exchanging video. Which machines is that video passing through?
+    correct: Correct! It travels directly between the two browsers. The signaling server and the STUN server were only needed to set the connection up, and both have dropped out. (A TURN relay would carry it, but only as a fallback when no direct route exists.)
+    wrong: Think about what the signaling server and the STUN server were each for. Both jobs end once the connection is established.
+    [x] None: it travels directly between the two browsers
+    [ ] The signaling server, which keeps forwarding everything between them
+    [ ] The STUN server, which streams it between the two networks
+    [ ] Google's servers, because the configuration named `stun.l.google.com`
+    ```
+
+## Resources
+
+- [MDN: WebRTC API](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API)
+- [MDN: signaling and video calling](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Signaling_and_video_calling)
+- [MDN: RTCPeerConnection](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection)
+- [MDN: WebRTC protocols](https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API/Protocols)

@@ -1,0 +1,150 @@
+# useEffect Cleanup
+
+Some effects start something that needs to be stopped later.
+
+Examples:
+
+- a subscription,
+- a WebSocket connection,
+- a browser event listener,
+- a timer.
+
+An effect can return a **cleanup function**, and React calls it at exactly two moments:
+
+1. **Before the effect runs again.** If the effect re-runs because a dependency changed, the previous run is cleaned up first, so you never have two subscriptions or two timers alive at once.
+2. **When the component unmounts**, meaning it is removed from the page. That is the last chance to release anything it was holding.
+
+Both matter. Handling only unmount leaks on every dependency change; handling only re-runs leaks whenever a component goes away.
+
+## Subscription Cleanup
+
+```{react}
+function createSubscription() {
+  return {
+    connect() {
+      console.log('connected');
+    },
+    disconnect() {
+      console.log('disconnected');
+    }
+  };
+}
+
+function SubscriptionExample() {
+  React.useEffect(() => {
+    const subscription = createSubscription();
+    subscription.connect();
+
+    return () => {
+      subscription.disconnect();
+    };
+  }, []);
+
+  return <p>Subscription connected</p>;
+}
+
+renderReact(<SubscriptionExample />);
+```
+
+Without cleanup, subscriptions and connections can keep running after the component no longer needs them.
+
+## Exercises
+
+1. What does an effect cleanup function do?
+
+   ```{mcq}
+   What does an effect cleanup function do?
+   correct: Correct. Cleanup stops or disconnects work started by the effect.
+   wrong: Think about timers, subscriptions, and event listeners.
+   [x] Stops or disconnects work started by the effect.
+   [ ] Creates JSX during render.
+   [ ] Makes props global.
+   [ ] Turns state into CSS.
+   ```
+
+2. Add cleanup that disconnects the subscription.
+
+   ```{react}
+   function createSubscription() {
+     return {
+       connect() {
+         console.log('connected');
+       },
+       disconnect() {
+         console.log('disconnected');
+       }
+     };
+   }
+
+   function SubscriptionExample() {
+     React.useEffect(() => {
+       const subscription = createSubscription();
+       subscription.connect();
+     }, []);
+
+     return <p>Subscription connected</p>;
+   }
+
+   renderReact(<SubscriptionExample />);
+   ```
+   ```+solution
+   function createSubscription() {
+     return {
+       connect() {
+         console.log('connected');
+       },
+       disconnect() {
+         console.log('disconnected');
+       }
+     };
+   }
+
+   function SubscriptionExample() {
+     React.useEffect(() => {
+       const subscription = createSubscription();
+       subscription.connect();
+
+       return () => {
+         subscription.disconnect();
+       };
+     }, []);
+
+     return <p>Subscription connected</p>;
+   }
+
+   renderReact(<SubscriptionExample />);
+   ```
+   ```+test
+   wrap(source.includes('return () =>')).should('equal', true).run('Return a cleanup function from the effect', 'Returned a cleanup function');
+   wrap(source.includes('subscription.disconnect()')).should('equal', true).run('Call `subscription.disconnect()` in cleanup', 'Disconnected the subscription');
+   ```
+
+3. Which effect usually needs cleanup?
+
+   ```{mcq}
+   Which effect usually needs cleanup?
+   correct: Correct. A subscription should be disconnected when the component no longer needs it.
+   wrong: Think about work that keeps running or stays connected.
+   [x] A subscription to an external service.
+   [ ] Calculating `price * quantity` during render.
+   [ ] Reading a prop value.
+   [ ] Returning a paragraph.
+   ```
+
+4. When does a cleanup function run?
+
+   ```{mcq}
+   A `useEffect` returns a function. When does React call it?
+   correct: Correct! Both: before each subsequent run of the effect, and once more when the component is removed from the page. That pairing is what keeps subscriptions and timers from accumulating.
+   wrong: There are two moments, and covering only one of them still leaks.
+   [x] Before the effect runs again after a dependency change, and when the component unmounts
+   [ ] Only once, when the component unmounts
+   [ ] Immediately after the effect body finishes
+   [ ] Every time the component renders, before the effect body
+   ```
+
+## Resources
+
+- [React Docs: Lifecycle of Reactive Effects](https://react.dev/learn/lifecycle-of-reactive-effects)
+- [React Docs: useEffect](https://react.dev/reference/react/useEffect)
+- [MDN: EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)

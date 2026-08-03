@@ -1,0 +1,174 @@
+# The `<style>` Element
+
+The last notebook covered inline CSS, where we add CSS directly to an HTML element using the `style` attribute. However, inline CSS is not very maintainable, especially for larger projects. In this notebook, we'll cover another way to add CSS to a web page: **internal CSS**, where we add CSS to a `<style>` element in the `<head>` of the document.
+
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      p {
+        color: red;
+        font-weight: bold;
+        background-color: yellow;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Hello, world!</p>
+  </body>
+</html>
+```
+
+The code above includes a `<style>` element in the `<head>` of the document, with CSS rules inside of the `<style>` element. We have the `color` property set to `red`, the `font-weight` property set to `bold`, and the `background-color` property set to `yellow`. So this is a way to add CSS to a web page.
+
+
+## Selectors
+
+In the CSS example above, we have a `p` before the declarations. This is called a **selector**. A selector is a way to specify which elements the CSS should apply to. In this case, we're saying that this CSS should apply to all `<p>` elements. Then, we have curly braces to start and end the set of declarations that will apply to the `<p>` elements.
+
+So if we added more `<p>` elements, they would all have red text, bold text, and a yellow background.
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      p {
+        color: red;
+        font-weight: bold;
+        background-color: yellow;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Hello, world!</p>
+    <p>This is another paragraph! The same style rules apply.</p>
+  </body>
+</html>
+```
+
+### Multiple Selectors
+
+We could also add a selector for `<h1>` elements, like this:
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      p {
+        color: red;
+        font-weight: bold;
+        background-color: yellow;
+      }
+      h1 {
+        color: blue;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Heading</h1>
+    <p>Hello, world!</p>
+    <p>This is another paragraph!</p>
+  </body>
+</html>
+```
+
+Now we have two selectors: one for `<p>` elements and one for `<h1>` elements, and the `<h1>` element shows up blue. Selectors have their own syntax, which we will cover in more detail later.
+
+## One Page at a Time
+
+There is a limitation worth knowing before we go further. **A `<style>` element applies only to the page it is written in.** The rules above style this document, and nothing else.
+
+That is fine for one page. A real site has many: a main page, an about page, an FAQ page, a contact page. If they should all look alike, every one of them needs its own copy of the same `<style>` element, and changing the color of every heading means editing every file, which is the same maintenance problem inline CSS had, one level up.
+
+Notice, too, that the document now contains two languages. Everything outside the `<style>` element is HTML; everything inside it is CSS. The syntax changes at that boundary, and mixing up the two is a common early mistake. The next reading solves the one-page problem by moving the CSS out into a file of its own.
+
+## Exercises
+
+1. Add a `<style>` element to the `<head>` of the document below. Inside of it, write the following CSS to make all `<h1>` elements blue and all `<p>` elements gray:
+
+    ```css
+    h1 {
+    color: blue;
+    }
+    p {
+    background-color: gray;
+    }
+    ```
+
+    ```{html}
+    <html>
+      <head>
+          <!-- Create a style element below this comment -->
+      </head>
+      <body>
+          <h1>Heading</h1>
+          <p>This is a paragraph.</p>
+      </body>
+    </html>
+    ```
+    ```+solution
+    <html>
+      <head>
+          <style>
+              h1 {
+                  color: blue;
+              }
+              p {
+                  background-color: gray;
+              }
+          </style>
+      </head>
+      <body>
+          <h1>Heading</h1>
+          <p>This is a paragraph.</p>
+      </body>
+    </html>
+    ```
+    ```+test
+    assert('style').should('exist').run('Failed to find a style element', 'Created a style element');
+    assert('h1').should('have.css', 'color: blue').run('Failed to make the h1 blue', 'Made the h1 blue');
+    assert('p').should('have.css', 'background-color: gray').run('Failed to give the paragraph a gray background', 'Styled the paragraph background');
+    ```
+
+2. Reading a selector
+
+    ```{mcq}
+    What does the selector `p` mean inside a `<style>` element?
+    correct: Correct! The selector `p` targets every paragraph element.
+    wrong: Think about which HTML elements match the tag name `p`.
+    [x] It selects all `<p>` elements.
+    [ ] It selects only the first `<p>` element.
+    [ ] It creates a new paragraph element.
+    [ ] It selects all elements inside a paragraph.
+    ```
+
+3. Add a CSS rule that makes all paragraphs (`p` elements) red.
+
+    ```html id=page1
+    <p>First paragraph</p>
+    <p>Second paragraph</p>
+    ```
+
+    ```{css}
+    /* Write your CSS here, as if it is inside a <style> element */
+    ```
+    ```+solution
+    p {
+      color: red;
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+test
+    assert('p').should('exist').should('have.css', 'color: red').run('Failed to apply red text to the paragraphs', 'Applied red text to the paragraphs');
+    ```
+
+## Resources
+
+- [MDN: The style element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/style)
+- [MDN: CSS syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Syntax/Introduction)
+- [MDN: CSS selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors)

@@ -1,0 +1,206 @@
+# Downloading Library Code
+
+We know that scripts loaded by the same page share one space: if `a.js` declares something, `b.js` can use it, as though the two files had been added together into one big file.
+
+```html
+<script src="a.js"></script>
+<script src="b.js"></script>
+```
+
+Now replace `a.js` with a file we did not write. Call it `lib.js`, or better, give it the name of a real library. Nothing about the mechanism changes, and that is the whole trick: **using a library means getting its file into the page before ours.**
+
+The most direct way to do that is to download the file. Let's do it with a real library.
+
+## Meet Lodash
+
+**Lodash** is a library of general-purpose utility functions. Its documentation lists dozens of them; a few examples:
+
+- `_.chunk(array, size)` splits an array into smaller arrays of the given size.
+- `_.shuffle(array)` returns the array's items in a random order.
+- `_.partition(array, test)` splits an array into two: the items that pass a test, and the items that do not.
+- `_.defaults(object, defaults)` fills in any properties an object is missing.
+
+Everything hangs off the single global name `_`, following the convention from the previous reading.
+
+We cannot download a real library into a notebook cell, so here is a miniature stand-in with two of those functions, to show the shape of what they do. The real implementations handle far more cases than these five lines do:
+
+```{javascript autorun}
+// A tiny stand-in for Lodash, not the real thing
+const _ = {
+  chunk: function (array, size) {
+    const out = [];
+
+    for (let i = 0; i < array.length; i = i + size) {
+      out.push(array.slice(i, i + size));
+    }
+
+    return out;
+  },
+  shuffle: function (array) {
+    const out = array.slice();
+
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const held = out[i];
+
+      out[i] = out[j];
+      out[j] = held;
+    }
+
+    return out;
+  }
+};
+
+console.log(_.chunk([1, 2, 3, 4, 5], 2));
+console.log(_.shuffle([1, 2, 3, 4]));
+```
+
+Run that cell a few times. `chunk` gives the same answer every time; `shuffle` gives a different order every time, which is what makes it useful for things like dealing cards or randomizing quiz questions.
+
+The point of a library is that you did not have to write either of those, and you do not have to read them either.
+
+## Getting the File
+
+On the Lodash website there is a **Full build** link. Clicking it shows you the library itself: one JavaScript file, thousands of lines long, defining every function in the documentation.
+
+To use it, save that file into the folder with your own code. In a browser that is **Save As**, then choose your project directory. The file then shows up in your editor alongside your own files:
+
+```
+my-project/
+  index.html
+  lodash.js      <- the file you just downloaded
+  my-code.js     <- your code
+```
+
+Now load it, ahead of your own script:
+
+```html
+<script src="lodash.js"></script>
+<script src="my-code.js"></script>
+```
+
+And use it:
+
+```javascript
+// Inside my-code.js
+console.log(_.shuffle([1, 2, 3, 4]));
+```
+
+Reload the page a few times and the logged order changes each time.
+
+Lodash is one library out of thousands available this way.
+
+## Two Mistakes That Look the Same
+
+Both of these produce the same message, `_ is not defined`, and between them they account for most first attempts.
+
+**Forgetting the library entirely.** Your code refers to `_`, but nothing ever defined it, because `lodash.js` was never loaded.
+
+```html
+<!-- No library tag at all -->
+<script src="my-code.js"></script>
+```
+
+**Loading it in the wrong order.** The library is there, but your code ran first, when `_` still did not exist.
+
+```html
+<script src="my-code.js"></script>
+<script src="lodash.js"></script>
+```
+
+Both are worth recognizing on sight, because the error names the *symptom*, `_ is not defined`, and never the cause.
+
+Downloading works, and it has costs: that file is large, it is bundled into your project, and you have to download it again by hand every time the library is updated. Next we look at making library files smaller, and after that at loading them from somebody else's server instead of your own.
+
+## Exercises
+
+1. The stand-in `_` from earlier is already defined here. Use it to split `cards` into groups of three, and store the result in `hands`.
+
+    ```{javascript}
+    const _ = {
+      chunk: function (array, size) {
+        const out = [];
+
+        for (let i = 0; i < array.length; i = i + size) {
+          out.push(array.slice(i, i + size));
+        }
+
+        return out;
+      }
+    };
+
+    const cards = [1, 2, 3, 4, 5, 6];
+
+    const hands = /* Your code here */;
+
+    console.log(hands);
+    ```
+    ```+solution
+    const _ = {
+      chunk: function (array, size) {
+        const out = [];
+
+        for (let i = 0; i < array.length; i = i + size) {
+          out.push(array.slice(i, i + size));
+        }
+
+        return out;
+      }
+    };
+
+    const cards = [1, 2, 3, 4, 5, 6];
+
+    const hands = _.chunk(cards, 3);
+
+    console.log(hands);
+    ```
+    ```+test
+    wrap(hands).should('equal', [[1, 2, 3], [4, 5, 6]]).run('Call `_.chunk` with the array and a size of `3`', 'Split the array into groups of three');
+    ```
+
+2. Write the two script tags that load a downloaded `lodash.js` and then your own `my-code.js`, in the order that works.
+
+    ```{html}
+    <!-- Write your two script tags here -->
+    ```
+    ```+solution
+    <script src="lodash.js"></script>
+    <script src="my-code.js"></script>
+    ```
+    ```+test
+    assert('script').should('have.length', 2).run('Write two `script` tags, one for each file', 'Wrote both script tags');
+    wrap(/src\s*=\s*["']lodash\.js["']/.test(source)).should('equal', true).run('One tag should load `lodash.js`', 'Loaded the library');
+    wrap(/src\s*=\s*["']my-code\.js["']/.test(source)).should('equal', true).run('The other should load `my-code.js`', 'Loaded your own code');
+    wrap(/src\s*=\s*["']lodash\.js["'][\s\S]*src\s*=\s*["']my-code\.js["']/.test(source)).should('equal', true).run('The library has to come first, or `_` will not exist when your code runs', 'Put them in the working order');
+    ```
+
+3. Why does the library have to be loaded before the script that uses its functions?
+
+    ```{mcq}
+    What is the reason for the order?
+    correct: Correct! Scripts run in order, and a function has to exist before it can be called. Loading the library first is what makes its functions exist by the time your code runs.
+    wrong: Think about what your code is asking for at the moment it runs.
+    [x] The functions the library defines must exist before another script can use them
+    [ ] HTML requires libraries to be imported after user scripts
+    [ ] JavaScript allows only one script file per HTML page
+    [ ] Loading the library automatically runs your main script file
+    ```
+
+4. What does `_.shuffle()` do to an array?
+
+    ```{mcq}
+    You call `_.shuffle([1, 2, 3, 4])`. What comes back?
+    correct: Correct! It returns the same items in a random order, which is why you get a different result on each page load.
+    wrong: Look back at what the stand-in cell logged when you ran it several times.
+    [x] Randomly rearranges the elements
+    [ ] Sorts the elements in ascending order
+    [ ] Removes duplicate elements
+    [ ] Splits it into smaller arrays
+    ```
+
+## Resources
+
+- [Lodash documentation](https://lodash.com/docs/)
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)
+- [MDN: ReferenceError: "x" is not defined](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_defined)
+- [MDN: Array.prototype.slice()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice)

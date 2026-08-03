@@ -1,0 +1,224 @@
+# JavaScript Expressions in JSX
+
+The JSX so far has been **static**: whatever you typed is what appears. Interfaces usually need to reflect something that changes, which means getting JavaScript values into the markup.
+
+In JSX, **curly braces** do that. Whatever is inside them is evaluated, and the resulting value is inserted into the output.
+
+```{react autorun}
+function Greeting() {
+  const name = 'Bob';
+
+  return (
+    <p>
+      Hello, {name}. One plus one equals {1 + 1}.
+    </p>
+  );
+}
+
+renderReact(<Greeting />);
+```
+
+Two sets of braces, two values inserted. Change `Bob` to your own name and run it again.
+
+## Expressions, Not Statements
+
+The word **expression** is doing real work in that sentence, and it is the thing to take away from this lesson.
+
+An **expression** produces a value: `name`, `1 + 1`, `score > 10`, `name.toUpperCase()`, `items.length`.
+
+A **statement** performs an action and produces no value: `if`, `for`, `while`, `return`, a variable declaration.
+
+**Only expressions go in the braces.** This is a hard rule, and it follows from what braces mean: React is going to take the value and put it in the output, so there has to be a value.
+
+```jsx
+{/* Fine: each of these produces a value */}
+<p>{name}</p>
+<p>{name.toUpperCase()}</p>
+<p>{score + bonus}</p>
+<p>{items.length}</p>
+
+{/* Not allowed: an if statement produces no value */}
+<p>{if (isReady) { name }}</p>
+```
+
+That last line is a syntax error, and it is the mistake everyone makes at least once. Conditionals in JSX are still possible, using expressions that do the same job. That is the subject of a later lesson.
+
+## Any Expression, Not Only Variables
+
+The braces do not hold a special mini-language. Any JavaScript that produces a value is fair game, including method calls and arithmetic:
+
+```{react autorun}
+function ProductRow() {
+  const product = 'wireless mouse';
+  const price = 24.5;
+  const quantity = 3;
+
+  return (
+    <ul>
+      <li>{product}</li>
+      <li>{product.toUpperCase()}</li>
+      <li>{price * quantity}</li>
+      <li>{'Item: ' + product}</li>
+      <li>{product.length} characters in the name</li>
+    </ul>
+  );
+}
+
+renderReact(<ProductRow />);
+```
+
+Every one of those is an ordinary JavaScript expression that happens to be written inside markup. Try adding a line that shows the price rounded with `price.toFixed(2)`.
+
+## Where Braces Can Go
+
+Braces work in two places: as **content** between tags, and as an **attribute value**.
+
+```{react autorun}
+function Avatar() {
+  const user = 'ada';
+  const size = 60;
+
+  return (
+    <div>
+      <img
+        src={'https://example.com/' + user + '.png'}
+        alt={'Profile picture for ' + user}
+        width={size}
+        height={size}
+      />
+      <p>Showing {user} at {size} pixels</p>
+    </div>
+  );
+}
+
+renderReact(<Avatar />);
+```
+
+Note `width={size}` rather than `width="size"`. With quotes you get the literal string `size`; with braces you get the value of the variable. This is a common early mistake and it is worth trying: change one of them to quotes and see what the attribute becomes.
+
+## Exercises
+
+1. Use the `name` variable inside the heading so the page reads `Hello, Grace`.
+
+   ```{react}
+   function Greeting() {
+     const name = 'Grace';
+
+     return <h1>Hello, name</h1>;
+   }
+
+   renderReact(<Greeting />);
+   ```
+   ```+solution
+   function Greeting() {
+     const name = 'Grace';
+
+     return <h1>Hello, {name}</h1>;
+   }
+
+   renderReact(<Greeting />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('h1').should('have.text', 'Hello, Grace').run('Render `Hello, Grace` by putting the `name` variable in curly braces', 'Rendered the name');
+   }, 50);
+   ```
+
+2. Show the total. Display the product name in uppercase, and the price multiplied by the quantity.
+
+   ```{react}
+   function Receipt() {
+     const item = 'notebook';
+     const price = 4;
+     const quantity = 3;
+
+     return (
+       <div>
+         <h2>{/* TODO: the item name, in uppercase */}</h2>
+         <p>Total: {/* TODO: price times quantity */}</p>
+       </div>
+     );
+   }
+
+   renderReact(<Receipt />);
+   ```
+   ```+solution
+   function Receipt() {
+     const item = 'notebook';
+     const price = 4;
+     const quantity = 3;
+
+     return (
+       <div>
+         <h2>{item.toUpperCase()}</h2>
+         <p>Total: {price * quantity}</p>
+       </div>
+     );
+   }
+
+   renderReact(<Receipt />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('h2').should('have.text', 'NOTEBOOK').run('Show the item name in uppercase. Any expression works inside the braces, including `item.toUpperCase()`', 'Showed the uppercase name');
+     assert('p').should('have.text', 'Total: 12').run('Show the price times the quantity, which is `12`', 'Showed the total');
+   }, 50);
+   ```
+
+3. Set the image's `width` attribute from the `size` variable rather than from a literal string.
+
+   ```{react}
+   function Thumbnail() {
+     const size = 80;
+
+     return <img src="cat.png" alt="A cat" width="size" />;
+   }
+
+   renderReact(<Thumbnail />);
+   ```
+   ```+solution
+   function Thumbnail() {
+     const size = 80;
+
+     return <img src="cat.png" alt="A cat" width={size} />;
+   }
+
+   renderReact(<Thumbnail />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('img').should('have.attribute', 'width', '80').run('Use `width={size}` with braces. Quotes would give the literal text `size` instead of the value', 'Set the width from the variable');
+   }, 50);
+   ```
+
+4. What can go inside JSX curly braces?
+
+   ```{mcq}
+   Which of these is allowed inside `{ }` in JSX?
+   correct: Correct! Braces hold expressions, meaning code that produces a value. An `if` statement performs an action and produces nothing, so there would be nothing for React to insert.
+   wrong: Ask of each option: does this produce a value that could be inserted into the output? Look back at "Expressions, Not Statements".
+   [x] `score + 1`
+   [ ] `if (ready) { name }`
+   [ ] `for (const item of items) { }`
+   [ ] `const total = 5;`
+   ```
+
+5. Why is a statement not allowed there?
+
+   ```{mcq}
+   What is the reason for the expressions-only rule?
+   correct: Correct! React takes whatever the braces evaluate to and puts it in the output, so there has to be a value. A statement produces none.
+   wrong: Think about what React does with the contents of the braces once it has evaluated them.
+   [x] React inserts the resulting value into the output, and a statement produces no value
+   [ ] Statements are too slow for React to run during a render
+   [ ] Babel cannot parse statements at all
+   [ ] Statements are allowed, but only one per component
+   ```
+
+## Resources
+
+- [React Docs: JavaScript in JSX with curly braces](https://react.dev/learn/javascript-in-jsx-with-curly-braces)
+- [MDN: Expressions and operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators)
+- [MDN: Statements and declarations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements)

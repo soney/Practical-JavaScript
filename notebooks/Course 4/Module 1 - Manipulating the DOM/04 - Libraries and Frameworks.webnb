@@ -1,0 +1,106 @@
+# Libraries and Frameworks
+
+The terms **library** and **framework** are sometimes used interchangeably to mean "external code we use," but there is an important distinction between them, and it comes down to a single question: who calls whom?
+
+## Who Calls Whom
+
+A **library** is a collection of code you can use in your project. Your code stays in charge: it decides when and where to call the library's functions.
+
+```javascript
+// Your code calls the library.
+const result = Math.max(3, 7, 2); // you decide when to call Math.max
+console.log(result); // 7
+```
+
+A **framework** inverts that relationship. Instead of you calling the framework, the framework calls your code. The framework is in charge of deciding what runs and when, and you fill in the pieces it asks for.
+
+This inversion is often called **inversion of control**, or the **Hollywood principle**: "Don't call us, we'll call you." The idea comes from casting in Hollywood, where there are so many actors that the people hiring say: don't bother calling us, we'll call you if we want you. A framework works the same way. You hand it your code, and it calls that code at the moments it chooses.
+
+A helpful picture:
+
+- With a **library**, your code sits on the outside and reaches in to call the library.
+- With a **framework**, your code sits *inside* the framework, in the empty spaces the framework leaves for you. The framework runs the overall flow and calls your code as needed. Frameworks usually also bundle libraries so your code can call back into the framework's own functionality.
+
+## React: A Library That Behaves Like a Framework
+
+React is commonly described as a JavaScript **library** for building user interfaces, and technically that is accurate. In practice, though, React behaves much more like a **framework**: you structure your code to fit within the React ecosystem, and React decides when to run it.
+
+Consider a React component:
+
+```{react}
+function AlertMessage() {
+  return <p role="alert">Profile saved</p>;
+}
+
+renderReact(<AlertMessage />);
+```
+
+Notice what you did *not* do: you never called `AlertMessage()` yourself. You wrote the function and handed it to React (as `<AlertMessage />`), and React decides when to call it, when to call it again after data changes, and where to place the result in the page. That is the Hollywood principle in action: don't call us, we'll call you. This is why React feels framework-like even though it is packaged as a library.
+
+React focuses on the UI layer. Many React projects add other libraries on top for routing, state management, forms, data fetching, and testing.
+
+## Choosing Tools
+
+Before adding a library or framework, ask:
+
+- What problem does it solve?
+- Does the app already have this problem?
+- How much new syntax does it introduce?
+- How will we test it?
+
+## Exercises
+
+1. Which statement describes the difference between a library and a framework?
+
+   ```{mcq}
+   Which statement describes the difference between a library and a framework?
+   correct: Correct. With a library your code calls the library; a framework inverts control and calls your code (the Hollywood principle).
+   wrong: Think about who is in charge of calling whom.
+   [x] With a library your code calls it; a framework calls your code.
+   [ ] A library calls your code; with a framework your code calls it.
+   [ ] Libraries run on the server and frameworks run in the browser.
+   [ ] There is no difference; the terms mean exactly the same thing.
+   ```
+
+2. Create a component named `AlertMessage` that renders an alert with the exact text `Saved`. Notice that you write the component but never call it directly; you hand it to React with `renderReact` and React calls it for you.
+
+   ```{react}
+   function AlertMessage() {
+     return <p role="alert">Change me</p>;
+   }
+
+   renderReact(<AlertMessage />);
+   ```
+   ```+solution
+   function AlertMessage() {
+     return <p role="alert">Saved</p>;
+   }
+
+   renderReact(<AlertMessage />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('[role="alert"]').should('have.text', 'Saved').run('Render an alert with the exact text `Saved`', 'Rendered the alert');
+   }, 50);
+   ```
+
+3. The "Hollywood principle" ("Don't call us, we'll call you") describes how which kind of tool behaves?
+
+   ```{mcq}
+   The "Hollywood principle" ("Don't call us, we'll call you") describes how which kind of tool behaves?
+   correct: Correct. A framework inverts control: it calls your code instead of your code calling it. React is technically a library but behaves this way.
+   wrong: Recall which tool is in charge of deciding when your code runs.
+   [x] A framework, which calls your code rather than being called by it.
+   [ ] A library, which your code always calls directly.
+   [ ] A database, which stores your code on disk.
+   [ ] A compiler, which turns your code into machine code.
+   ```
+
+## Resources
+
+- [React Docs: Describing the UI](https://react.dev/learn/describing-the-ui)
+- [React Docs: Your First Component](https://react.dev/learn/your-first-component)
+- [Wikipedia: Inversion of control](https://en.wikipedia.org/wiki/Inversion_of_control)
+- [MartinFowler.com: Inversion of Control](https://martinfowler.com/bliki/InversionOfControl.html)

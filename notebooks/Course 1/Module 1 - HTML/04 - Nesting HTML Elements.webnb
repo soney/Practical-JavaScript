@@ -1,0 +1,111 @@
+# Nesting HTML Elements
+
+HTML elements can contain other HTML elements. This is called _nesting_. For example, in the following code:
+
+```{html autorun}
+<p>This is a <strong>bolded</strong> word</p>
+```
+
+The `<strong>` element is nested inside the `<p>` element. This means that the text "bolded" will be displayed in bold, while the rest of the text will be displayed normally.
+
+![A diagram showing one element nested inside another](images/nested-element-illustration.png)
+
+## Terminology
+
+In the code sample above (`<p>This is a <strong>bolded</strong> word.</p>`), there is standard terminology:
+
+- The `<p>` element is the **parent** of the `<strong>` element.
+- The `<strong>` element is the **child** of the `<p>` element.
+
+Whenever nesting elements, it is important to make sure elements are _fully nested_, meaning that every child element is fully contained within its parent element. For example, the following code is **not** fully nested:
+
+```html
+<p>This would <em>not be</p> fully nested.</em>
+```
+
+In the example above, the `<em>` element (which creates emphasized text that is italicized) is not fully contained within the `<p>` element, which makes it invalid HTML (though browsers will try to fix it).
+
+![Diagram of improperly nested tags: an opening p tag, an opening em tag, a closing p tag, then a closing em tag, with the p and em ranges drawn as crossing arcs instead of one sitting inside the other](images/not-fully-nested.png)
+
+We could fix it by fully moving the `<em>` element inside its parent, such as:
+
+```{html autorun}
+<p>This would <em>be</em> fully nested.</p>
+```
+
+## Exercises
+
+1. Answer the following question about nesting terminology:
+
+   ```{mcq}
+   Consider the code `<div><p>Hello</p></div>`. Which of the following statements is true?
+   correct: Nice work. The `p` element is nested inside the `div` element, so the `div` is the parent and the `p` is the child.
+   wrong: Not quite. Look at which element is nested inside the other: the `p` element is inside the `div` element.
+   [x] The `div` element is the parent of the `p` element.
+     correct: Right. The `p` element is nested inside the `div` element, so the `div` is its parent.
+     wrong: This is the correct statement. The `p` element is nested inside the `div` element, so the `div` is its parent.
+   [ ] The `p` element is the parent of the `div` element.
+     wrong: The `p` element is nested inside the `div` element, so the `p` is the child, not the parent.
+   [ ] The `div` element is the child of the `p` element.
+     wrong: The `div` element contains the `p` element, so the `div` is the parent, not the child.
+   ```
+
+2. Create a `p` element with the text "This is very important", where the words "very important" are bolded (using a `strong` element nested inside the `p` element).
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <p>This is <strong>very important</strong></p>
+   ```
+
+   ```+test
+   assert('p').should('exist').run('Could not find a p element', 'Created a p element')
+   assert('p strong').should('exist').run('The p element does not contain a strong element', 'Created a p element with a strong element')
+   assert('p').should('have.text', 'This is very important').run('The p element does not have the text "This is very important"', 'The p element has the text "This is very important"')
+   assert('p strong').should('have.text', 'very important').run('The strong element should contain the text "very important"', 'The words "very important" are bolded')
+   ```
+
+3. Create an `h1` element with the text "Welcome to my page", where the word "my" is emphasized (using an `em` element nested inside the `h1` element).
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <h1>Welcome to <em>my</em> page</h1>
+   ```
+
+   ```+test
+   assert('h1').should('exist').run('Could not find an h1 element', 'Created an h1 element')
+   assert('h1 em').should('exist').run('The h1 element does not contain an em element', 'Created an h1 element with an em element')
+   assert('h1').should('have.text', 'Welcome to my page').run('The h1 element does not have the text "Welcome to my page"', 'The h1 element has the text "Welcome to my page"')
+   assert('h1 em').should('have.text', 'my').run('The em element should contain the text "my"', 'The word "my" is emphasized')
+   ```
+
+4. Create an unordered list (`ul`) element that contains two list item (`li`) elements: the first with the text "Milk" and the second with the text "Apples". Make sure both `li` elements are fully nested within the `ul` element.
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <ul>
+       <li>Milk</li>
+       <li>Apples</li>
+   </ul>
+   ```
+
+   ```+test
+   assert('ul').should('exist').run('Could not find a ul element', 'Created a ul element')
+   assert('ul li').should('exist').run('The ul element does not contain any li elements', 'Created a ul element with li elements')
+   assert('ul li:nth-child(1)').should('have.text', 'Milk').run('The first li element does not have the text "Milk"', 'The first list item has the text "Milk"')
+   assert('ul li:nth-child(2)').should('have.text', 'Apples').run('The second li element does not have the text "Apples"', 'The second list item has the text "Apples"')
+   ```
+
+## Resources
+
+- [MDN: HTML basics](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Basic_HTML_syntax)
+- [MDN: Lists](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Lists)
+- [MDN: Document and website structure](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Structuring_documents)

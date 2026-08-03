@@ -1,0 +1,198 @@
+# Default Exports
+
+A module can export any number of values. Often, though, a file has one obvious main thing in it: a file called `greet.js` whose job is a `greet` function, or `api.js` whose job is a connection object.
+
+For that case there is the **default export**. It marks one value as the module's main one, and **a module can have at most one**.
+
+## Exporting a Default
+
+Add `default` after `export`:
+
+```{javascript autorun}
+// greet.js
+
+export default function greet(name) {
+  return 'Hello, ' + name + '!';
+}
+
+console.log(greet('World'));
+```
+
+Because there can only be one, the value does not even need a name. This is legal:
+
+```javascript
+export default function (name) {
+  return 'Hello, ' + name + '!';
+}
+```
+
+Any expression works, which is common for a configuration or connection object:
+
+```javascript
+// api.js
+export default {
+  baseUrl: 'https://example.com/api',
+  timeoutMs: 5000
+};
+```
+
+## Importing a Default
+
+A default import takes **no curly braces**, and you may call it whatever you like:
+
+```javascript
+import greet from './greet.js';
+
+console.log(greet('World'));
+```
+
+```javascript
+// The same default export, under a different name. Both work.
+import sayHello from './greet.js';
+
+console.log(sayHello('World'));
+```
+
+That freedom is the difference between the two kinds of import. A named import has to match the exported name, or be renamed explicitly with `as`. A default import has no name to match, so you choose one at the point of use.
+
+The notebook runtime provides a `path` module, so this actually runs, with a name of our own choosing:
+
+```{javascript autorun}
+import fileTools from 'path';
+
+console.log(fileTools.basename('/workspace/src/app.js'));
+console.log(fileTools.join('src', 'app.js'));
+```
+
+## Mixing Default and Named
+
+A module can have one default export *and* any number of named ones. Here is the video's `weather-utils.js`, with the two conversions as named exports and a new `isFreezing` as the default:
+
+```{javascript autorun}
+// weather-utils.js
+
+export function fahrenheitToCelsius(temp) {
+  return (temp - 32) * 5 / 9;
+}
+
+export function celsiusToFahrenheit(temp) {
+  return temp * 9 / 5 + 32;
+}
+
+export default function isFreezing(tempF) {
+  return fahrenheitToCelsius(tempF) <= 0;
+}
+
+console.log('is 20F freezing? ' + isFreezing(20));
+console.log('is 70F freezing? ' + isFreezing(70));
+```
+
+To import both kinds in one statement, the default comes **first, without braces**, then a comma, then the named ones in braces:
+
+```javascript
+import isFreezing, { celsiusToFahrenheit } from './weather-utils.js';
+
+console.log(isFreezing(20));
+console.log(celsiusToFahrenheit(0));
+```
+
+The order matters: the default is always outside the braces and always first.
+
+## Where the Default Hides in a Namespace Import
+
+One detail that explains an otherwise confusing result. If you import the whole module:
+
+```javascript
+import * as weather from './weather-utils.js';
+
+console.log(weather);
+```
+
+the object you get has the named exports on it *and* a property called **`default`**, which is the default export. So `weather.default(30)` calls `isFreezing`. It works, and it reads badly, which is why giving the default a name of your own is the better habit.
+
+## Exercises
+
+1. Make `isFreezing` the default export of this module, and keep `fahrenheitToCelsius` as a named export.
+
+    ```{javascript}
+    // weather-utils.js
+
+    function fahrenheitToCelsius(temp) {
+      return (temp - 32) * 5 / 9;
+    }
+
+    function isFreezing(tempF) {
+      return fahrenheitToCelsius(tempF) <= 0;
+    }
+
+    console.log(isFreezing(20));
+    ```
+    ```+solution
+    // weather-utils.js
+
+    export function fahrenheitToCelsius(temp) {
+      return (temp - 32) * 5 / 9;
+    }
+
+    export default function isFreezing(tempF) {
+      return fahrenheitToCelsius(tempF) <= 0;
+    }
+
+    console.log(isFreezing(20));
+    ```
+    ```+test
+    wrap(typeof exports !== 'undefined' && typeof exports.default === 'function').should('equal', true).run('Add `default` after `export` on `isFreezing`', 'Made isFreezing the default export');
+    wrap(typeof exports !== 'undefined' && exports.default(20) === true).should('equal', true).run('The default export should still report that 20F is freezing', 'The default export works');
+    wrap(typeof exports !== 'undefined' && typeof exports.fahrenheitToCelsius === 'function').should('equal', true).run('Export `fahrenheitToCelsius` as well, as an ordinary named export', 'Exported the named function too');
+    wrap((source.match(/export\s+default/g) || []).length).should('equal', 1).run('A module can have only one default export', 'Used exactly one default export');
+    ```
+
+2. The `path` module here has a default and a named `join`. Import the default under the name `paths`, and `join` by name, in a single statement.
+
+    ```{javascript}
+    // Write your import statement here
+
+    console.log(paths.basename('/workspace/notes/todo.txt'));
+    console.log(join('notes', 'todo.txt'));
+    ```
+    ```+solution
+    import paths, { join } from 'path';
+
+    console.log(paths.basename('/workspace/notes/todo.txt'));
+    console.log(join('notes', 'todo.txt'));
+    ```
+    ```+test
+    wrap(/import\s+paths\s*,\s*\{[^}]*\bjoin\b[^}]*\}\s*from/.test(source)).should('equal', true).run('The default comes first with no braces, then a comma, then the named import in braces', 'Used the combined import form');
+    check.consoleLogged('todo.txt').run('`paths.basename(...)` should log the file name', 'The default import works');
+    check.consoleLogged('notes/todo.txt').run('`join(...)` should log the joined path', 'The named import works');
+    ```
+
+3. What can you do with a default export that you cannot do with a named export?
+
+    ```{mcq}
+    What is the distinctive thing about a default export?
+    correct: Correct! There is no exported name to match, so the importing file picks the name. A named import has to use the exported name, or rename it explicitly with `as`.
+    wrong: Compare `import greet from './greet.js'` with `import { greet } from './greet.js'`. What is the importer free to change?
+    [x] When importing it, you can call it whatever you like
+    [ ] You can have as many default exports in a file as you want
+    [ ] You must use curly braces when importing it
+    [ ] It has to be declared with `const`
+    ```
+
+4. `api.js` has a default export, an object called `connection`, and a named export, a function called `fetchData`. How do you import both at once?
+
+    ```{mcq}
+    One statement, one default and one named import.
+    correct: Correct! The default is listed first and bare, then a comma, then the named exports inside braces.
+    wrong: Remember which of the two goes inside the curly braces.
+    [x] `import connection, { fetchData } from './api.js';`
+    [ ] `import { connection, fetchData } from './api.js';`
+    [ ] `import fetchData, { connection } from './api.js';`
+    [ ] `import connection and fetchData from './api.js';`
+    ```
+
+## Resources
+
+- [MDN: export default](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export#using_the_default_export)
+- [MDN: import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)

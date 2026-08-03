@@ -1,0 +1,191 @@
+# Call Stacks
+
+The **call stack** represents all of the functions that are running at a given time. Understanding it matters because it is how we make sense of what our code is doing, and it is the first thing the browser shows us when something goes wrong.
+
+You can think of the call stack as a to-do list for the JavaScript engine. To finish one function, the engine may need to run another function first, and the stack is how it remembers where it left off. It works like a stack of plates: things are added to the top and removed from the top, so the function on top is always the one running right now.
+
+## Walking Through an Example
+
+Suppose we declare three functions, where each one calls the next:
+
+```{javascript autorun}
+function multiply(x, y) {
+  return x * y;
+}
+
+function square(n) {
+  return multiply(n, n);
+}
+
+function printSquare(n) {
+  const squared = square(n);
+  console.log(squared);
+}
+
+printSquare(5);
+```
+
+The output is `25`, but the interesting part is the route the engine took to get there.
+
+First it declares `multiply`, then `square`, then `printSquare`. Declaring a function runs nothing, as we know, so nothing happens yet. Then it reaches `printSquare(5)`, and this is where it gets interesting:
+
+- `printSquare` is added to the call stack, and the engine goes inside its body. Stack: `printSquare`.
+- To evaluate `square(5)`, `square` is added and the engine goes inside it. Stack: `printSquare`, `square`.
+- To evaluate `multiply(5, 5)`, `multiply` is added. Stack: `printSquare`, `square`, `multiply`.
+- `multiply` returns `25` and is removed. Stack: `printSquare`, `square`.
+- `square` returns that `25` and is removed. Stack: `printSquare`.
+- `console.log(25)` is added, prints, and is removed.
+- `printSquare` finishes and is removed. The stack is empty again.
+
+Notice the shape of that: functions come off in the opposite order from how they went on. `multiply` was added last and removed first. At the deepest moment, the stack held all three, and it was the engine's record of what still had to be finished.
+
+## Seeing the Call Stack
+
+Normally the call stack is invisible. There are two everyday ways to look at it.
+
+### When Something Goes Wrong
+
+If a runtime error happens, the browser prints the whole call stack as it was at that moment. Here is `multiply` with a deliberate mistake in it. Run the cell and read the error:
+
+```{javascript}
+function multiply(x, y) {
+  console.log(doesNotExist);
+  return x * y;
+}
+
+function square(n) {
+  return multiply(n, n);
+}
+
+function printSquare(n) {
+  console.log(square(n));
+}
+
+printSquare(5);
+```
+
+The message is `doesNotExist is not defined`, and in a browser console it comes with the stack that led there: `printSquare` called `square`, which called `multiply`. That is far more useful than the message alone, because it tells you not just what broke but how the engine got to the broken line. At the bottom of a real browser's stack you will often see an anonymous function; think of that as the code running your whole script.
+
+One important detail: **the call stack reflects which function called which, not the order the functions are written in.** Move `multiply` to the bottom of the file, or add three more functions between them, and the printed stack is unchanged, because `printSquare` still calls `square` which still calls `multiply`.
+
+### With `console.trace()`
+
+You do not need an error to look at the stack. **`console.trace()`** works like `console.log`, printing whatever you pass it, and it also prints the current call stack:
+
+```{javascript autorun}
+function multiply(x, y) {
+  console.trace('trace!');
+  return x * y;
+}
+
+function square(n) {
+  return multiply(n, n);
+}
+
+function printSquare(n) {
+  console.log(square(n));
+}
+
+printSquare(6);
+```
+
+Open the developer console in a real browser to see the full trace. It is a good way to answer the question "how did the engine end up here?" while you are debugging.
+
+Next we will look at breakpoints, which are another way to see the call stack, and which also let us pause our code partway through and poke at it.
+
+## Exercises
+
+1. Complete `third` so that running `first()` logs the five messages in the order the call stack produces them: `first`, `second`, `third`, `second again`, `first again`.
+
+    ```{javascript}
+    function first() {
+      console.log('first');
+      second();
+      console.log('first again');
+    }
+
+    function second() {
+      console.log('second');
+      third();
+      console.log('second again');
+    }
+
+    function third() {
+      // Write your code here
+    }
+
+    first();
+    ```
+    ```+solution
+    function first() {
+      console.log('first');
+      second();
+      console.log('first again');
+    }
+
+    function second() {
+      console.log('second');
+      third();
+      console.log('second again');
+    }
+
+    function third() {
+      console.log('third');
+    }
+
+    first();
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'first,second,third,second again,first again').run('The output should be `first`, `second`, `third`, `second again`, `first again`. Have `third` log `third`', 'The output matches the order the call stack produces');
+    ```
+
+2. Write `cube` and `printCube` so that `printCube(3)` logs `27`. `cube` must get its answer by calling `multiply` twice, and `printCube` must get its answer by calling `cube`.
+
+    ```{javascript}
+    function multiply(x, y) {
+      return x * y;
+    }
+
+    // Write cube and printCube here
+
+    printCube(3);
+    ```
+    ```+solution
+    function multiply(x, y) {
+      return x * y;
+    }
+
+    function cube(n) {
+      return multiply(multiply(n, n), n);
+    }
+
+    function printCube(n) {
+      console.log(cube(n));
+    }
+
+    printCube(3);
+    ```
+    ```+test
+    wrap(cube(3)).should('equal', 27).run('`cube(3)` should return `27`', 'cube works');
+    wrap(cube(5)).should('equal', 125).run('`cube(5)` should return `125`', 'cube works for other numbers too');
+    check.consoleLogged(/^27$/).run('`printCube(3)` should log `27`', 'printCube logs the answer');
+    wrap((source.match(/multiply\(/g) || []).length >= 3).should('equal', true).run('`cube` should compute its answer by calling `multiply`, rather than using `*` directly', 'cube calls multiply');
+    ```
+
+3. Reading the call stack
+
+    ```{mcq}
+    At the deepest point of `printSquare(5)`, list the stack from the function running right now down to the outermost one.
+    correct: Correct! `multiply` is on top because it was called most recently, and `printSquare` is at the bottom because it was called first and is still waiting for the others to finish.
+    wrong: Remember that a call stack works like a stack of plates: the most recently called function sits on top.
+    [x] `multiply`, `square`, `printSquare`
+    [ ] `printSquare`, `square`, `multiply`
+    [ ] `square`, `multiply`, `printSquare`
+    [ ] `multiply`, `printSquare`, `square`
+    ```
+
+## Resources
+
+- [MDN: Call stack](https://developer.mozilla.org/en-US/docs/Glossary/Call_stack)
+- [MDN: console.trace()](https://developer.mozilla.org/en-US/docs/Web/API/console/trace_static)
+- [MDN: ReferenceError](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_defined)

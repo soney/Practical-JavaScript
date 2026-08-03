@@ -1,0 +1,355 @@
+# The `package.json` File
+
+In the last reading, `npm init -y` created a file called `package.json`, and then `npm install lodash` reached in and edited it. That file is going to follow us for the rest of this specialization: every project we build has one, and so does every package we install. So let's go through it field by field.
+
+## One File, Describing One Project
+
+`package.json` sits at the top of the project directory, next to `node_modules/`, and it holds a single JSON object. It has two audiences. npm and Node read it to decide what to install and how to run your code, and people read it to find out what the project is and what it needs.
+
+Almost every field in it is optional. `npm init -y` writes a starting set for you, npm keeps the dependency fields up to date as you install and uninstall, and the rest you edit by hand, which is normal and expected.
+
+Because it is JSON, you already know how to read one:
+
+```{javascript autorun}
+const fileContents = '{ "name": "ann-arbor-facts", "version": "1.2.0", "dependencies": { "lodash": "^4.17.21" } }';
+
+const pkg = JSON.parse(fileContents);
+
+console.log('name:    ' + pkg.name);
+console.log('version: ' + pkg.version);
+console.log('lodash:  ' + pkg.dependencies.lodash);
+```
+
+That is the `JSON.parse` we met in [Course 2's JSON Data reading](<../../Course 2/Module 3 - Asynchronous Data and Fetching/09 - JSON Data.webnb#jsonstringify-and-jsonparse>), pointed at a file of your own. npm does the same thing every time you run a command.
+
+## It Is JSON, Not JavaScript
+
+The file is named after JavaScript objects and it is not one, which trips people up when they edit it by hand. JSON has stricter rules:
+
+- Every key is in **double quotes**: `"name"`, never `name` or `'name'`.
+- Every string value is in double quotes too.
+- **No trailing comma** after the last entry in an object or array.
+- **No comments.** There is nowhere in this file to leave a note.
+
+Break one of those and the file stops parsing:
+
+```{javascript autorun}
+const broken = '{ "name": "ann-arbor-facts", "version": "1.2.0", }';
+
+try {
+  JSON.parse(broken);
+} catch (error) {
+  console.log('Error: ' + error.message);
+}
+```
+
+The only difference between that and a working file is the comma after `"1.2.0"`. npm parses `package.json` before it does anything else, so an error like that one stops every npm command in the project until you fix it. When npm suddenly refuses to run, a stray comma is the first thing worth checking.
+
+## The Fields That Describe the Project
+
+These fields are about identity rather than behavior, and `npm init -y` writes most of them for you:
+
+- `name`: What the project is called. Lowercase, no spaces. If you ever publish it, this is the name people install, and the rules that go with that come up later in this lesson.
+- `version`: The project's own version number, in the [major.minor.patch form](<10 - Semantic Versioning.webnb>) from Lesson 2. `npm init` starts you at `1.0.0`.
+- `description`: A sentence about what the project does, shown on the package's npm page.
+- `keywords`: An array of words people might search for.
+- `author`: Your name, and optionally an email address.
+- `license`: Which license the code is under, defaulting to the permissive `ISC` we met in [the Licensing reading](<11 - Licensing.webnb#permissive-licenses>).
+
+For a project nobody will ever install, most of these are documentation and nothing more. One extra field is worth knowing about, though: `"private": true` tells npm to refuse to publish this project at all, which is a useful guard on code that was never meant to leave your computer.
+
+```{javascript autorun}
+function publishResult(pkg) {
+  if (pkg.private === true) {
+    return 'npm refuses: this project is marked private';
+  }
+
+  return 'npm would publish ' + pkg.name + '@' + pkg.version;
+}
+
+console.log(publishResult({ name: 'ann-arbor-facts', version: '1.2.0' }));
+console.log(publishResult({ name: 'ann-arbor-facts', version: '1.2.0', private: true }));
+```
+
+## `main`: The File Other Code Gets
+
+`main` names the entry point of your project: the file that gets loaded when somebody imports the whole package by name. It defaults to `index.js`, which is why `npm init` writes that even before the file exists.
+
+```{javascript autorun}
+function entryFile(pkg) {
+  if (pkg.main === undefined) {
+    return 'index.js';
+  }
+
+  return pkg.main;
+}
+
+console.log('with no main field:      ' + entryFile({ name: 'ann-arbor-facts' }));
+console.log('with "main": "app.js":   ' + entryFile({ name: 'ann-arbor-facts', main: 'app.js' }));
+```
+
+It is worth being clear about what `main` is *not*. It is not the file that runs when you type `node something.js`, because there you named the file yourself. `main` only matters when another piece of code imports the package rather than a specific file inside it.
+
+## `type`: Which Module System Your Files Use
+
+This is the field that causes the most confusion, and it is one word long.
+
+Node has two module systems. One is the [`import` and `export` syntax](<12 - Modules Overview.webnb>) from Lesson 3. The other is **CommonJS**, an older system Node used before that syntax existed, which writes `require` and `module.exports` instead. A `.js` file could be written in either, so Node has to be told which, and with no `type` field it reads `.js` files as CommonJS:
+
+```{javascript autorun}
+function moduleSystem(pkg) {
+  if (pkg.type === 'module') {
+    return 'ES modules: import and export work';
+  }
+
+  return 'CommonJS: require and module.exports work';
+}
+
+console.log(moduleSystem({ name: 'ann-arbor-facts' }));
+console.log(moduleSystem({ name: 'ann-arbor-facts', type: 'module' }));
+```
+
+So a file that starts with `import _ from 'lodash';` fails with `Cannot use import statement outside a module` until `package.json` says otherwise. That single line is the fix:
+
+```json
+{
+  "name": "ann-arbor-facts",
+  "type": "module"
+}
+```
+
+This is why the last reading added `"type": "module"` before importing Lodash, and why the `package.json` in each of this lesson's practice problems has it too.
+
+## `scripts`: Names for Commands You Run Often
+
+`scripts` is a small dictionary of command names. Each key is a name you make up, and each value is a command line that npm will run for you:
+
+```json
+"scripts": {
+  "start": "node show-facts.js",
+  "dev": "nodemon show-facts.js"
+}
+```
+
+Then `npm run dev` runs whatever `"dev"` says. Two names are special: `npm start` and `npm test` work without the word `run`, so `npm start` and `npm run start` do the same thing.
+
+```{javascript autorun}
+const scripts = {
+  start: 'node show-facts.js',
+  dev: 'nodemon show-facts.js'
+};
+
+console.log('npm run start  ->  ' + scripts.start);
+console.log('npm run dev    ->  ' + scripts.dev);
+console.log('npm run build  ->  ' + scripts.build);
+```
+
+That last line prints `undefined`, because there is no `"build"` script in the object. npm reports the same thing in its own words, `Missing script: "build"`, and lists the names it did find.
+
+Scripts are worth writing for two reasons. The first is memory: the command that starts your project lives in the project instead of in your head, so anyone who clones it can run `npm start` without being told what to type. The second is that inside a script, tools installed into `node_modules/` can be called by their plain name. In Lesson 5 we will build a project with `npx webpack`; with `"build": "webpack"` in `scripts`, `npm run build` does the same job.
+
+## `dependencies` and `devDependencies`
+
+These two hold the packages the project needs, and npm writes both of them for you.
+
+**`dependencies`** is what your code needs in order to *run*. Lodash goes here, because `index.js` imports it and would fail without it.
+
+**`devDependencies`** is what *you* need in order to work on the project. Bundlers, development servers, and test tools go here, because the finished product does not use them. Install one with `-D` (or the longer `--save-dev`) and npm files it under this field instead:
+
+```
+$ npm install -D nodemon
+```
+
+That is what the Let's Build in this lesson did with Vite: `npm install -D vite`, because Vite serves the page while you build it and has no part in the result.
+
+On your own machine, `npm install` installs both, so the distinction costs you nothing there. It starts to matter where something else installs your project, such as a server, which can ask for the runtime packages only:
+
+```{javascript autorun}
+const pkg = {
+  dependencies: { lodash: '^4.17.21' },
+  devDependencies: { nodemon: '^3.1.7' }
+};
+
+function willInstall(name, omitDev) {
+  if (pkg.dependencies[name] !== undefined) {
+    return true;
+  }
+
+  if (omitDev) {
+    return false;
+  }
+
+  return pkg.devDependencies[name] !== undefined;
+}
+
+console.log('npm install installs nodemon:              ' + willInstall('nodemon', false));
+console.log('npm install --omit=dev installs nodemon:   ' + willInstall('nodemon', true));
+console.log('either one installs lodash:                ' + willInstall('lodash', true));
+```
+
+Between them, these two fields are the reason `node_modules/` is disposable. Delete the whole folder, run `npm install`, and npm rebuilds it from these lists, with the exact versions recorded in `package-lock.json` from the previous reading.
+
+## A Real One
+
+Every field we have covered is in one small project sitting next to this notebook, in the `demo-project` folder. Here it is, along with the files those fields point at. Every file name and line number below opens the real file beside the notebook, so you can read the whole thing whenever a snippet leaves you wondering what came next.
+
+```{walkthrough}
+title: demo-project
+
+step: What the project is
+file: demo-project/package.json
+lines: 1-6
+The top of the file is the project describing itself, plus the two fields that change how Node treats its code.
+@"name": Lowercase and no spaces, so it would be a legal name on npm.
+@"version": This project's own version, not any package's.
+@"main": The file another project would get if it imported `ann-arbor-facts` as a whole.
+@"type": Without this line, the `import` in `index.js` would be a syntax error.
+
+step: The commands it records
+file: demo-project/package.json
+lines: 7-10
+Someone who has never seen this project can now run it without being told how.
+@"start": `npm start` runs this, with or without the word `run`.
+@"dev": `npm run dev` runs this one. `nodemon` restarts the program every time you save a file, which is helpful while writing code and pointless afterwards.
+
+step: What it needs installed
+file: demo-project/package.json
+lines: 17-22
+Two packages, filed by who needs them.
+@"lodash": The code imports this, so the project cannot run without it.
+@"devDependencies": Everything in here is a tool for working on the project. It went in with `npm install -D nodemon`.
+
+step: The file `main` names
+file: demo-project/index.js
+The entry point. It imports the dependency by name and exports one function.
+@"import _": A bare name, so this is the installed package rather than a file of ours.
+@"export function": What another file gets when it imports this one.
+
+step: The file `npm start` runs
+file: demo-project/show-facts.js
+A different file from `main`, and that is the usual arrangement: one file to be imported, one to be run.
+@"./index.js": A relative path, because this one is ours. The `.js` on the end is required in ES modules.
+```
+
+Like any project, it ships without its `node_modules/`. To watch it work, right-click the `demo-project` folder in the file explorer, choose "Open in Integrated Terminal", and let `package.json` do its job:
+
+```
+$ npm install
+$ npm start
+Michigan Stadium holds more than 107,000 people.
+Ann Arbor sits on the Huron River.
+Ann Arbor was founded in 1824.
+```
+
+A different three each time, from a project whose whole setup was one file.
+
+There are more fields than these. You will meet `repository`, `engines`, `files`, and `bin` in packages you install, and frameworks add their own. You are not expected to know them, and npm's `package.json` documentation, linked at the end of this reading, lists every one.
+
+## Exercises
+
+These are ungraded and you can run them as many times as you like.
+
+1. Write `runScript`, which does what `npm run` does: look up a name in the project's scripts and return the command it stands for. When there is no such script, return `'Missing script: '` followed by the name.
+
+    ```{javascript}
+    const packageJson = {
+      name: 'ann-arbor-facts',
+      scripts: {
+        start: 'node show-facts.js',
+        dev: 'nodemon show-facts.js'
+      }
+    };
+
+    function runScript(pkg, name) {
+      // TODO: return the command stored under this name in pkg.scripts,
+      //       or 'Missing script: ' + name when there is no such script
+      return '';
+    }
+
+    console.log(runScript(packageJson, 'start'));
+    console.log(runScript(packageJson, 'build'));
+    ```
+    ```+solution
+    const packageJson = {
+      name: 'ann-arbor-facts',
+      scripts: {
+        start: 'node show-facts.js',
+        dev: 'nodemon show-facts.js'
+      }
+    };
+
+    function runScript(pkg, name) {
+      const command = pkg.scripts[name];
+
+      if (command === undefined) {
+        return 'Missing script: ' + name;
+      }
+
+      return command;
+    }
+
+    console.log(runScript(packageJson, 'start'));
+    console.log(runScript(packageJson, 'build'));
+    ```
+    ```+test
+    wrap(runScript(packageJson, 'start')).should('equal', 'node show-facts.js').run('`runScript(packageJson, "start")` should return the command stored under `start`', 'Found the `start` command');
+    wrap(runScript(packageJson, 'dev')).should('equal', 'nodemon show-facts.js').run('`runScript(packageJson, "dev")` should return the command stored under `dev`', 'Found the `dev` command');
+    wrap(runScript(packageJson, 'build')).should('equal', 'Missing script: build').run('There is no `build` script, so the result should be `Missing script: build`', 'Reported the missing script');
+    ```
+
+2. Write a `package.json` of your own. In the file explorer, next to this notebook, create a folder named `practice-project` with a file named `package.json` in it. Give the project the name `practice-project`, add `"type": "module"`, and add a `scripts` entry named `start` whose command is `node index.js`. You can type the whole file yourself, or open a terminal in the folder, run `npm init -y`, and edit what npm writes.
+
+    ```{external}
+    title: A package.json you wrote yourself
+    interval: 2s
+    - directory: practice-project | Create a folder named `practice-project`
+    - file: practice-project/package.json | Inside it, create a file named `package.json`
+    - matches: practice-project/package.json | /"name"\s*:\s*"practice-project"/ | Set `name` to `practice-project`
+    - matches: practice-project/package.json | /"type"\s*:\s*"module"/ | Add `"type": "module"`
+    - matches: practice-project/package.json | /"start"\s*:\s*"node index\.js"/ | Add a `start` script whose command is `node index.js`
+    ```
+
+3. A project that will not start
+
+    ```{mcq}
+    A project has this `package.json`, and its `index.js` starts with `import _ from 'lodash';`. Running `node index.js` fails with `Cannot use import statement outside a module`. Which change fixes it?
+
+    ~~~json
+    {
+      "name": "ann-arbor-facts",
+      "version": "1.0.0",
+      "main": "index.js",
+      "dependencies": {
+        "lodash": "^4.17.21"
+      }
+    }
+    ~~~
+
+    correct: Correct! With no `type` field, Node reads `.js` files as CommonJS, where `import` is not valid syntax. `"type": "module"` tells it to read them as ES modules instead.
+    wrong: The error is about the syntax of the file rather than about Lodash. Look back at the `type` section: what decides which module system a `.js` file is written in?
+    [x] Add `"type": "module"` to `package.json`
+    [ ] Run `npm install lodash` again, since the failing line is the one importing it
+    [ ] Add `"module": "index.js"` to `package.json`
+    [ ] Add a `scripts` entry of `"start": "node index.js"` and run `npm start`
+    ```
+
+4. Filing a new package
+
+    ```{mcq}
+    You add `nodemon`, a tool that restarts your program every time you save a file while you are working on it. The deployed project never uses it. Where should it be recorded, and how do you get it there?
+
+    correct: Correct! A tool you use while developing belongs in `devDependencies`, and `npm install -D` (the same as `--save-dev`) is what puts it there.
+    wrong: Ask which of the two dependency fields a package belongs in when the finished project never runs it, then look back at the command that files a package under that field.
+    [x] In `devDependencies`, by running `npm install -D nodemon`
+    [ ] In `dependencies`, by running `npm install nodemon`
+    [ ] In `scripts`, as an entry named `nodemon`
+    [ ] Nowhere in `package.json`, since development tools are installed globally
+    ```
+
+## Resources
+
+- [npm: package.json](https://docs.npmjs.com/cli/v10/configuring-npm/package-json)
+- [npm: npm run](https://docs.npmjs.com/cli/v10/commands/npm-run-script)
+- [npm: about devDependencies](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#devdependencies)
+- [Node.js: determining module system](https://nodejs.org/api/packages.html#determining-module-system)
+- [MDN: JSON](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON)

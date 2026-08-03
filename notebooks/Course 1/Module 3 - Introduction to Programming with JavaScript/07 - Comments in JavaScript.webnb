@@ -1,0 +1,128 @@
+# Comments in JavaScript
+
+We just said that the JavaScript engine runs our code from top to bottom, line by line. **Comments** are one exception to that. A comment is text in your file that the engine does not interpret at all, and there are two reasons to write one: to add a natural-language explanation of what the code does, and to specify that a certain part of the code should not run.
+
+Just like the HTML comments we saw in Module 1, JavaScript has two kinds. The syntax is different, but the idea is the same.
+
+## Single-Line Comments
+
+A single-line comment starts with two forward slashes, `//`. Everything after those slashes, to the end of that line, is a comment.
+
+Run this cell:
+
+```{javascript autorun}
+console.log('line 1');
+// console.log('line 2');
+console.log('line 3');
+```
+
+`line 2` never appears, because that line is commented out. Most code editors color comments differently, usually green or gray, so you can see at a glance which lines are inert. Try removing the `//` and running the cell again, then putting it back.
+
+A comment does not have to take up the whole line. Put `//` after some code and the code still runs; only the rest of the line is ignored:
+
+```{javascript autorun}
+console.log(3 + 3); // logs the value 6 to the console
+```
+
+That is the other use of comments: describing in plain English what a line is doing, for yourself in six months or for whoever reads your code next.
+
+## Block Comments
+
+The other kind is a **block comment**, sometimes called a multi-line comment. It starts with `/*` and ends with `*/`. Everything between those two markers is a comment and is not interpreted by the engine.
+
+The two markers can sit on the same line or on different lines, so a block comment can cover as much code as you like:
+
+```{javascript autorun}
+console.log('line 1');
+/*
+console.log('line 2');
+console.log('line 3');
+*/
+console.log('line 4');
+```
+
+Only `line 1` and `line 4` are logged. Move the `*/` up one line and run it again to bring `line 2` back.
+
+Block comments are also how you disable a whole region at once. Put `/*` above the first line you want to switch off and `*/` below the last one, and everything in between stops running.
+
+### Comments in the Middle of a Line
+
+Because a block comment ends wherever you put `*/`, it can also sit *inside* a line of code. This is a small trick that is very useful while you are experimenting:
+
+```{javascript autorun}
+console.log(3 /* + 4 */);
+```
+
+That logs `3`. The `+ 4` is still sitting there in the file, so you can bring it back by deleting the two markers, but as far as the engine is concerned the line reads `console.log(3);`. Try deleting the `/*` and `*/` and running the cell again.
+
+## Comments in VS Code
+
+You will not usually type these characters by hand. Most code editors have a keyboard shortcut for toggling comments, and VS Code is no exception: put the cursor on a line and press `Ctrl + /` (Windows) or `Cmd + /` (Mac). If the line is not commented, it gets commented out. Press it again and the comment is removed.
+
+The same shortcut works on a selection. Select several lines, press `Ctrl + /` or `Cmd + /`, and the whole region is commented out; press it again with the region still selected and it comes back. When you are hunting for which line broke your page, this is the fastest tool you have.
+
+## Exercises
+
+1. Comment out the middle line so that the cell logs only `first` and `third`.
+
+    ```{javascript}
+    console.log('first');
+    console.log('second');
+    console.log('third');
+    ```
+    ```+solution
+    console.log('first');
+    // console.log('second');
+    console.log('third');
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'first,third').run('The cell should log only `first` and `third`', 'Commented out the middle line');
+    wrap(source.includes('second')).should('equal', true).run('Comment the line out rather than deleting it', 'The line is still there, commented out');
+    ```
+
+2. Using a block comment, disable the `+ 4` part of the line below without deleting it, so that the cell logs `3`.
+
+    ```{javascript}
+    console.log(3 + 4);
+    ```
+    ```+solution
+    console.log(3 /* + 4 */);
+    ```
+    ```+test
+    check.consoleLogged(/^3$/).run('The cell should log `3`', 'Logged 3');
+    wrap(source.includes('4')).should('equal', true).run('Comment the `+ 4` out with `/*` and `*/` rather than deleting it', 'The `+ 4` is still there, inside a block comment');
+    ```
+
+3. Work out what this script logs once the engine skips the comments.
+
+    ```{mcq}
+    What does this script log?
+
+    ~~~javascript
+    console.log('a');
+    // console.log('b');
+    console.log('c'); // console.log('d');
+    /*
+    console.log('e');
+    */
+    console.log('f');
+    ~~~
+
+    correct: Correct! `b` and `e` are commented out, and `d` is too, because a `//` hides everything from there to the end of that line.
+    wrong: Take the lines one at a time. A `//` hides the rest of its line, and a `/*` hides everything up to the next `*/`, however many lines that covers.
+    [x] `a`, `c`, `f`
+      correct: Right: the only lines the engine runs are the three that are not inside a comment.
+      wrong: This is the one. `b` is behind a `//`, `d` is behind a `//` in the middle of a line, and `e` is inside the block comment.
+    [ ] `a`, `c`, `d`, `f`
+      wrong: Look again at the line with `c`. The `//` hides everything after it to the end of that line, and `console.log('d');` is after it.
+    [ ] `a`, `c`, `e`, `f`
+      wrong: A block comment covers everything between `/*` and `*/`, and `console.log('e');` sits between them, so it never runs.
+    [ ] `a`, `b`, `c`, `d`, `e`, `f`
+      wrong: The engine does not run commented-out code. Three of these six lines are inside comments.
+    ```
+
+## Resources
+
+- [MDN: JavaScript comments](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#comments)
+- [MDN: JavaScript lexical grammar](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar)
+- [VS Code: Basic editing](https://code.visualstudio.com/docs/editing/codebasics)

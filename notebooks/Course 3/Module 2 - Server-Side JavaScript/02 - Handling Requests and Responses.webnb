@@ -1,0 +1,280 @@
+# Handling Requests and Responses
+
+Our server so far answers every request the same way, which no real server does. Visiting the home page and visiting a page that does not exist should not produce the same reply. To tell them apart we need the **request** object; to answer properly we need more of the **response** object.
+
+```javascript
+const http = require('http');
+
+const server = http.createServer((request, response) => {
+  // request:  what the client asked for
+  // response: how we answer
+});
+
+server.listen(3000);
+```
+
+## What Is in the Request
+
+The request object describes the incoming message. Two properties matter most:
+
+- **`request.url`** is the path that was asked for.
+- **`request.method`** is `GET`, `POST`, and so on. That is the next lesson's subject.
+
+You can watch `url` for yourself:
+
+```javascript
+const server = http.createServer((request, response) => {
+  console.log('request to: ' + request.url);
+
+  response.end('Hello client');
+});
+```
+
+Visit `http://localhost:3000` and it logs `/`. Visit `http://localhost:3000/about` and it logs `/about`. The host and port are not included, because the server already knows those; what arrives is the path.
+
+## Routing on the URL
+
+That is enough to answer different requests differently:
+
+```javascript
+const server = http.createServer((request, response) => {
+  if (request.url === '/') {
+    response.end('Welcome home');
+  } else if (request.url === '/about') {
+    response.end('About us');
+  } else {
+    response.end('Page not found');
+  }
+});
+```
+
+Deciding what to do based on the requested URL is called **routing**, and every web framework you ever meet is an elaboration of that `if` statement.
+
+## What Is in the Response
+
+`response.end(text)` sends a body and closes the connection. There is more to a response than the body, and one method covers it:
+
+**`response.writeHead(statusCode, headers)`** sends the response **header**: a status code summarizing what happened, and a set of headers describing the response.
+
+```javascript
+response.writeHead(404, { 'Content-Type': 'text/plain' });
+response.end('Page not found');
+```
+
+Two separate pieces of information there.
+
+**The status code** tells the client what happened. Our third branch above sent the text "Page not found" with no status at all, so as far as the browser was concerned the request **succeeded** and the page's content happens to read "Page not found". A search engine would index it. `404` is how you actually say it is missing.
+
+**`Content-Type`** tells the client how to interpret the body. `text/plain` means show it as text; `text/html` means parse it as HTML. Get this wrong and the browser displays your HTML as visible tags, or tries to render your plain text as markup.
+
+`writeHead` goes **before** `end`, because the header is sent before the body.
+
+Also on the response object: **`response.write(text)`** sends part of a body without closing the connection, so you can build a response in pieces and then call `end`.
+
+Here is the whole handler, with headers:
+
+```javascript
+const server = http.createServer((request, response) => {
+  if (request.url === '/') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('Welcome home');
+  } else if (request.url === '/about') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('About us');
+  } else {
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end('Page not found');
+  }
+});
+```
+
+## Running It Yourself
+
+This one is on disk too, as `demo-server/routing-server.js`:
+
+```{walkthrough}
+title: demo-server/routing-server.js
+file: demo-server/routing-server.js
+region: handler
+The whole server is one function with one `if` statement in it. Each branch sends a status code and a content type, then a body.
+@"console.log": Logs the method and the path of every request, so the terminal shows you exactly what the browser asked for. Load the page once and watch the extra request for `/favicon.ico` arrive on its own.
+@"request.url === '/about'": Add another branch here for `/contact` and restart the server to see it answer.
+@"writeHead(404": The status code is the part that matters. Change this `404` to `200`, restart, and the "Page not found" text still appears, except now the browser believes the request succeeded.
+```
+
+Run it the same way as before, stopping any server already using port 3000 first:
+
+```
+$ cd "demo-server"
+$ node routing-server.js
+Listening on port 3000
+```
+
+Now visit each of `http://localhost:3000`, `http://localhost:3000/about`, and `http://localhost:3000/xyz`. Three different answers from one handler. Open the Network tab before loading the last one and you can see the `404` in the status column and `text/plain` among the response headers, which is the same information the code above wrote.
+
+## Status Codes
+
+`200` and `404` are two of many. They come in families, and the first digit tells you the family:
+
+| Code | Meaning |
+| --- | --- |
+| `200` | OK, the request succeeded |
+| `301`, `302` | Redirect; the thing is somewhere else |
+| `400` | Bad request; the client sent something malformed |
+| `403` | Forbidden; you are not allowed this |
+| `404` | Not found |
+| `500` | Server error; something broke on our side |
+
+`404` is the one everybody has seen. `200` is the one everybody has seen far more often without noticing, because when a request succeeds you look at the page rather than at the code.
+
+The Network tab is where you check this on a real page: every request is listed with its status code and its response headers, `Content-Type` among them.
+
+## Running a Handler Here
+
+Again, no ports in a notebook, so we call the handler ourselves. This fake response records what a real one would have sent:
+
+```{node autorun}
+function makeFakeResponse() {
+  const sent = { statusCode: null, headers: null, body: '' };
+
+  sent.writeHead = function (code, headers) {
+    sent.statusCode = code;
+    sent.headers = headers;
+  };
+
+  sent.end = function (text) {
+    sent.body = text;
+  };
+
+  return sent;
+}
+
+function handleRequest(request, response) {
+  if (request.url === '/') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('Welcome home');
+  } else if (request.url === '/about') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('About us');
+  } else {
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end('Page not found');
+  }
+}
+
+for (const url of ['/', '/about', '/nowhere']) {
+  const response = makeFakeResponse();
+
+  handleRequest({ url: url }, response);
+
+  console.log(url + ' -> ' + response.statusCode + ' ' + response.body);
+}
+```
+
+Three requests, three different answers, from the same handler.
+
+## Exercises
+
+1. Write a handler that serves a home page and a contact page, and reports anything else as missing. Send plain text in every case.
+
+    ```{node}
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      // TODO:
+      //   '/'        -> 200, body 'Welcome home'
+      //   '/contact' -> 200, body 'Contact us'
+      //   anything else -> 404, body 'Page not found'
+      //   Always send a Content-Type of text/plain
+    }
+
+    const home = makeFakeResponse();
+    handleRequest({ url: '/' }, home);
+
+    console.log(home.statusCode + ' ' + home.body);
+    ```
+    ```+solution
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      if (request.url === '/') {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('Welcome home');
+      } else if (request.url === '/contact') {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('Contact us');
+      } else {
+        response.writeHead(404, { 'Content-Type': 'text/plain' });
+        response.end('Page not found');
+      }
+    }
+
+    const home = makeFakeResponse();
+    handleRequest({ url: '/' }, home);
+
+    console.log(home.statusCode + ' ' + home.body);
+    ```
+    ```+test
+    wrap(home.statusCode).should('equal', 200).run('A request for `/` should get a `200` status through `response.writeHead`', 'The home page returns 200');
+    wrap(home.body).should('equal', 'Welcome home').run('The body for `/` should be exactly `Welcome home`', 'The home page body is right');
+    wrap(home.headers && home.headers['Content-Type']).should('equal', 'text/plain').run('Include a `Content-Type` of `text/plain` in the header', 'The home page sets a content type');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ url: '/contact' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '200|Contact us').run('A request for `/contact` should get `200` and the body `Contact us`', 'The contact page works');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ url: '/nowhere' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '404|Page not found').run('Anything else should get `404` and the body `Page not found`. Without the status code the browser thinks the request succeeded', 'Unknown URLs return 404');
+    ```
+
+2. You want to know what path the client asked for, so that `localhost:3000/contact` can be answered differently from `localhost:3000`. Which property do you check?
+
+    ```{mcq}
+    Which property of the request holds the path?
+    correct: Correct! `request.url` is the path, `/contact` in that example. The host and port are not part of it, since the server already knows them.
+    wrong: Only one of these is a real property of Node's request object.
+    [x] `request.url`
+    [ ] `request.domain`
+    [ ] `request.pathway`
+    [ ] `request.info`
+    ```
+
+3. Which line sends a successful status code along with a plain-text content type?
+
+    ```{mcq}
+    Pick the line that sends that header.
+    correct: Correct! `writeHead` takes the status code first and a headers object second, and `200` is success.
+    wrong: The status code and the headers are two separate arguments to one method, and the body is sent afterwards.
+    [x] `response.writeHead(200, { 'Content-Type': 'text/plain' });`
+    [ ] `response.writeHead(404, { 'Content-Type': 'text/html' });`
+    [ ] `response.end('200 OK - text/plain');`
+    [ ] `http.createServer(200);`
+    ```
+
+## Resources
+
+- [Node.js: response.writeHead()](https://nodejs.org/api/http.html#responsewriteheadstatuscode-statusmessage-headers)
+- [MDN: HTTP response status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status)
+- [MDN: Content-Type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Type)
+- [MDN: HTTP messages](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Messages)

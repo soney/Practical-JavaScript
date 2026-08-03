@@ -1,0 +1,111 @@
+# Common Attributes
+
+Attributes give information about an element. Some attributes are specific to certain elements (for example, the `href` attribute for `<a>` elements), while others are common to many elements. This notebook will cover some of the most common attributes.
+
+## Element-Specific Attributes
+
+Some attributes are specific to certain elements. Some of the most important attributes are:
+
+- `<a>` (anchor) elements can set:
+    - `href`: Specifies the URL of the page the link goes to.
+    ```{html autorun}
+    <a href="https://si.umich.edu">This is an example of a link that goes to the UM School of Information homepage</a>
+    ```
+- `<img>` (image) elements can set:
+    - `src`: Specifies the URL of the image.
+    - `alt`: Specifies the alternative text to display if the image cannot be loaded
+    ```{html autorun}
+    <img src="images/puppy.jpg" alt="A cute puppy" />
+    ```
+- `<button>` and `<input>` elements can set:
+    - `disabled`: Specifies that the element is disabled and cannot be clicked.
+        - Note that regardless of the value of the `disabled` attribute, the button will be disabled if the attribute is present.
+    ```{html autorun}
+    <button>Click me</button>
+    <button disabled>You cannot click me</button>
+    <button disabled="true">You cannot click me</button>
+    <button disabled="false">You cannot click me</button>
+    <button disabled="disabled">You cannot click me</button>
+    <button disabled="">You can click me</button>
+    <button>You can click me</button>
+    ```
+
+## Global Attributes
+
+There are also some attributes that are can be used on any element. These include:
+- `id`: Specifies a *unique* identifier for the element. This will be used to reference the element from JavaScript or CSS. This identifier should be unique across the entire page (i.e., no two elements should have the same `id`).
+- `class`: Specifies one or more class names for the element. Like `id`, this will be used to reference the element from JavaScript or CSS. Unlike `id`, the class name does not have to be unique. You can use the same class name for multiple elements.
+
+Modifying these attributes does not directly change the appearance of the element, but they can be used to select elements and apply styles or behaviors to them, as we will see when we learn about CSS and JavaScript.
+
+## Exercises
+
+1. Create an `h1` element with the text "My Profile".
+    - Give it an `id` of `page-title`.
+    - Give it a `class` of `heading`.
+
+    ```{html}
+
+    ```
+
+    ```+solution
+    <h1 id="page-title" class="heading">My Profile</h1>
+    ```
+
+    ```+test
+    assert('#page-title').should('exist').run('Could not find an element with id "page-title"', 'Created an element with id "page-title"')
+    assert('h1#page-title').should('exist').run('Could not find an h1 element with id "page-title"', 'Created an h1 element with id "page-title"')
+    assert('#page-title').should('have.class', 'heading').run('The h1 element does not have class "heading"', 'Added class "heading" to the h1 element')
+    assert('#page-title').should('have.text', 'My Profile').run('The h1 element does not have the text "My Profile"', 'Set the h1 text to "My Profile"')
+    ```
+
+2. Create two `<p>` elements that both use the class `note`.
+    - The first paragraph should have `id="note-1"` and text `Bring water`.
+    - The second paragraph should have `id="note-2"` and text `Wear sunscreen`.
+
+    ```{html}
+
+    ```
+
+    ```+solution
+    <p id="note-1" class="note">Bring water</p>
+    <p id="note-2" class="note">Wear sunscreen</p>
+    ```
+
+    ```+test
+    assert('.note').should('have.length', 2).run('Could not find exactly two elements with class "note"', 'Created two elements with class "note"')
+    assert('#note-1').should('exist').run('Could not find an element with id "note-1"', 'Created an element with id "note-1"')
+    assert('#note-2').should('exist').run('Could not find an element with id "note-2"', 'Created an element with id "note-2"')
+    assert('#note-1').should('have.class', 'note').run('The first paragraph does not have class "note"', 'Added class "note" to the first paragraph')
+    assert('#note-2').should('have.class', 'note').run('The second paragraph does not have class "note"', 'Added class "note" to the second paragraph')
+    assert('#note-1').should('have.text', 'Bring water').run('The first paragraph text should be "Bring water"', 'Set the first paragraph text correctly')
+    assert('#note-2').should('have.text', 'Wear sunscreen').run('The second paragraph text should be "Wear sunscreen"', 'Set the second paragraph text correctly')
+    ```
+
+3. Create an image element and a button with these attributes:
+    - `<img>` with `src="images/cat.jpg"`, `alt="A cat"`, and `class="pet-photo"`
+    - `<button>` with text `Submit`, `id="submit-btn"`, and the `disabled` attribute
+
+    ```{html}
+
+    ```
+    ```+solution
+    <img src="images/cat.jpg" alt="A cat" class="pet-photo" />
+    <button id="submit-btn" disabled>Submit</button>
+    ```
+
+    ```+test
+    assert('img.pet-photo').should('exist').run('Could not find an img element with class "pet-photo"', 'Created an img element with class "pet-photo"')
+    assert('img.pet-photo').should('have.attr', 'src', 'images/cat.jpg').run('The img element does not have src="cat.jpg"', 'Set the img src attribute correctly')
+    assert('img.pet-photo').should('have.attr', 'alt', 'A cat').run('The img element does not have alt="A cat"', 'Set the img alt attribute correctly')
+    assert('#submit-btn').should('exist').run('Could not find a button with id "submit-btn"', 'Created a button with id "submit-btn"')
+    assert('#submit-btn').should('have.text', 'Submit').run('The button text should be "Submit"', 'Set the button text to "Submit"')
+    assert('#submit-btn').should('have.attr', 'disabled').run('The button should include the disabled attribute', 'Added the disabled attribute to the button')
+    ```
+
+## Resources
+
+- [MDN: Global attributes](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes)
+- [MDN: The class attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/class)
+- [MDN: The id attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/id)
+- [MDN: The style attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/style)

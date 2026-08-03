@@ -1,0 +1,322 @@
+# React Components: Understanding the Mechanics (Part II)
+
+The freact we read in Part I turns one element into one DOM node. Two React features break that assumption, and both break it the same way: sometimes a description has to become **several** nodes, or none.
+
+In the video, we added both to freact: **fragments**, and **arrays of elements**. The updated code is in `freact/02-fragments/` next to this notebook. It is the same project as Part I's `freact/01-elements/` with a handful of additions, and this reading walks through exactly the parts that changed. To watch it run, right-click `index.html` in that folder and choose "Show Preview".
+
+## The Problem: One Node Is Not Always Enough
+
+A component returns a single value, so returning two elements has to be wrapped in something:
+
+```jsx
+return (
+  <div>
+    <h1>Title</h1>
+    <p>Body</p>
+  </div>
+);
+```
+
+That `<div>` is not wanted. It exists only to satisfy the one-value rule, and it lands in the DOM, where it can interfere with layout and with CSS selectors that expect a particular structure.
+
+React's answer is a **fragment**: empty angle brackets that group children without producing an element.
+
+```jsx
+return (
+  <>
+    <h1>Title</h1>
+    <p>Body</p>
+  </>
+);
+```
+
+In the video, writing `<>` before freact supported it produced an element whose tag was literally `undefined`. So the first job is giving fragments an identity of their own.
+
+## A Type That Cannot Collide
+
+A fragment needs a `type` that can never be confused with a tag name or a component, and JavaScript has exactly the tool: **`Symbol`**, which creates a value guaranteed to be unique and unequal to everything else.
+
+```{javascript autorun}
+const Fragment = Symbol('Fragment');
+const other = Symbol('Fragment');
+
+console.log('Symbols with the same label are still different: ' + (Fragment === other));
+console.log('And nothing else equals one: ' + (Fragment === 'Fragment'));
+```
+
+That uniqueness is the whole point: a `<div>` has type `'div'`, and no element can accidentally have type `Fragment`.
+
+## What Changed in `freact.js`
+
+```{walkthrough}
+title: The additions to freact.js
+Everything from Part I is still here, unchanged. These are the new pieces, in the order the video added them.
+
+step: The Fragment marker
+file: freact/02-fragments/freact.js
+region: fragment
+One line, at the top of the file. The compiler turns `<>...</>` into `createElement(Fragment, ...)`, so from `createElement`'s point of view a fragment is an ordinary element whose type happens to be this symbol.
+@"Symbol('Fragment')": In the video this line was written `export const Fragment = ...`; with no build step it is a plain constant, shared through the globals at the bottom of the file.
+
+step: A fragment produces its children, not itself
+file: freact/02-fragments/freact.js
+region: fragment-branch
+A new branch near the top of `_createDomNode`. When the element is a fragment, no node is created for it: its children are each built with the same function, and the resulting **array** of nodes is returned directly.
+@"element.type === Fragment": Comparing against the symbol. This test can never be fooled by a component or a tag name, which is what the Symbol bought us.
+@"props.children.map": `map(...)`, from "Rendering Lists With Map", turns the array of child descriptions into an array of child nodes, and `.flat()` unpacks any child that itself produced several nodes.
+
+step: An array of elements gets the same treatment
+file: freact/02-fragments/freact.js
+region: array-of-elements
+The other new branch, and it is the same shape. A JSX expression like `{ names.map(...) }` hands the renderer an array of descriptions where one element was expected, so `_createDomNode` maps itself over it.
+@"Array.isArray(element)": An array is not an element, so this check comes first, before anything tries to read `element.type` off of it.
+
+step: Appending several nodes
+file: freact/02-fragments/freact.js
+region: children
+The children loop from Part I appended one node per child. Now that a child can be a fragment or an array, what comes back may be an array of nodes, so appending gets a check.
+@"Array.isArray(childDom)": Both shapes are handled: an array of nodes is appended one by one, a single node as before.
+
+step: render learns the same trick
+file: freact/02-fragments/freact.js
+region: render
+The top-level element can be a fragment or an array too, so `render` gets the matching check, and several nodes land side by side in the container.
+@"Array.isArray(domNode)": This is why the fragment's children end up directly inside `#root`, with no wrapper element anywhere.
+```
+
+## The Components
+
+With the machinery in place, the component side can finally be written the way you have been writing real React.
+
+```{walkthrough}
+title: App.jsx, using both features
+step: A reusable Greeting
+file: freact/02-fragments/App.jsx
+region: greeting-component
+A component made to be rendered by another component. In the video this lived in its own file, `Greeting.jsx`, exported there and imported by App; with no build step, both components share this file, and the comment marks where the import would go.
+@"props.name": The same props mechanism from Part I: `_createDomNode` sees a function type, calls it, and passes `{ name: 'Alice' }` in. The `|| 'visitor'` supplies a default when the prop is missing.
+
+step: App renders a fragment and a list
+file: freact/02-fragments/App.jsx
+region: app-component
+Both new features in five lines: everything is grouped by `<>...</>` with no wrapper element, and the list of Greetings is data-driven, one per name.
+@"return <>": The fragment. Change it to a `<div>...</div>`, save, reload the preview, and inspect the page: the extra wrapper appears in the DOM. Change it back and it is gone.
+@"names.map": An array of element descriptions, straight into the JSX. This is the pattern from "Rendering Lists With Map", and the array branch you just read is the reason it works.
+@"<Greeting name={n}": One note: there are no `key` props in freact. Keys exist so *real* React can tell list items apart between renders; freact rebuilds everything from scratch anyway, so it has nothing to tell apart.
+```
+
+Open the preview and count what is inside `#root`: an `h1`, a `p`, and three `div`s, side by side. Five nodes from one component, and no wrapper in sight. Then add a fourth name to the `names` array, save, and reload: four Greetings, and the number is not written anywhere in the markup.
+
+## What This Explains
+
+Two things you have already been told now have reasons.
+
+**Why a fragment produces no element**: because `_createDomNode` returns its children's nodes instead of making one of its own.
+
+**Why you can put an array of elements straight into JSX**: because an array is a case the renderer handles, not something you have to unpack first.
+
+Both come from loosening one assumption, that a description makes exactly one node. Real React's version of this is more elaborate and the shape is the same.
+
+## Exercises
+
+1. Complete the fragment branch. A fragment should return the nodes of its children, flattened, and no node of its own. (This cell reaches the real document as `window.document`, since a cell's own `document` has no `createElement`.)
+
+    ```{javascript}
+    const Fragment = Symbol('Fragment');
+    const realDocument = window.document;
+
+    function _createDomNode(element) {
+      if (!element) {
+        return null;
+      }
+
+      if (element.type === Fragment) {
+        // TODO: map the fragment's children through _createDomNode and
+        // flatten the result, so several nodes come back instead of one
+      }
+
+      const dom = realDocument.createElement(element.type);
+
+      for (const child of element.props.children) {
+        const childDom = _createDomNode(child);
+
+        if (Array.isArray(childDom)) {
+          for (const node of childDom) {
+            dom.append(node);
+          }
+        } else if (childDom) {
+          dom.append(childDom);
+        }
+      }
+
+      return dom;
+    }
+
+    const tree = {
+      type: 'section',
+      props: {
+        children: [
+          {
+            type: Fragment,
+            props: {
+              children: [
+                { type: 'h1', props: { children: [] } },
+                { type: 'p', props: { children: [] } }
+              ]
+            }
+          }
+        ]
+      }
+    };
+
+    const result = _createDomNode(tree);
+
+    console.log(result.outerHTML);
+    ```
+    ```+solution
+    const Fragment = Symbol('Fragment');
+    const realDocument = window.document;
+
+    function _createDomNode(element) {
+      if (!element) {
+        return null;
+      }
+
+      if (element.type === Fragment) {
+        return element.props.children.map(_createDomNode).flat();
+      }
+
+      const dom = realDocument.createElement(element.type);
+
+      for (const child of element.props.children) {
+        const childDom = _createDomNode(child);
+
+        if (Array.isArray(childDom)) {
+          for (const node of childDom) {
+            dom.append(node);
+          }
+        } else if (childDom) {
+          dom.append(childDom);
+        }
+      }
+
+      return dom;
+    }
+
+    const tree = {
+      type: 'section',
+      props: {
+        children: [
+          {
+            type: Fragment,
+            props: {
+              children: [
+                { type: 'h1', props: { children: [] } },
+                { type: 'p', props: { children: [] } }
+              ]
+            }
+          }
+        ]
+      }
+    };
+
+    const result = _createDomNode(tree);
+
+    console.log(result.outerHTML);
+    ```
+    ```+test
+    wrap(result && result.tagName).should('equal', 'SECTION').run('The outer element should still become a `section` node', 'Built the outer element');
+    wrap(result && result.children.length).should('equal', 2).run('Both of the fragment`s children should end up inside the section', 'Both children were appended');
+    wrap(result && result.querySelectorAll('h1').length).should('equal', 1).run('The `h1` should be there', 'The h1 is there');
+    wrap(result && result.outerHTML.indexOf('undefined')).should('equal', -1).run('A fragment should produce no element of its own, so no `<undefined>` tag should appear', 'The fragment added no element');
+    ```
+
+2. Build a list from data. Turn each name into an element description, and let the array branch do the rest.
+
+    ```{javascript}
+    const realDocument = window.document;
+
+    function _createDomNode(element) {
+      if (Array.isArray(element)) {
+        return element.map(_createDomNode).flat();
+      }
+
+      const dom = realDocument.createElement(element.type);
+
+      dom.innerText = element.props.text || '';
+
+      return dom;
+    }
+
+    const names = ['Alice', 'Bob', 'Charlie'];
+
+    // TODO: turn names into an array of element descriptions of the form
+    // { type: 'li', props: { text: <the name> } }
+    const items = [];
+
+    const nodes = _createDomNode(items);
+
+    console.log(nodes.length + ' nodes');
+    ```
+    ```+solution
+    const realDocument = window.document;
+
+    function _createDomNode(element) {
+      if (Array.isArray(element)) {
+        return element.map(_createDomNode).flat();
+      }
+
+      const dom = realDocument.createElement(element.type);
+
+      dom.innerText = element.props.text || '';
+
+      return dom;
+    }
+
+    const names = ['Alice', 'Bob', 'Charlie'];
+
+    const items = names.map(function (name) {
+      return { type: 'li', props: { text: name } };
+    });
+
+    const nodes = _createDomNode(items);
+
+    console.log(nodes.length + ' nodes');
+    ```
+    ```+test
+    wrap(Array.isArray(nodes)).should('equal', true).run('An array of descriptions should produce an array of nodes', 'Got an array of nodes');
+    wrap(nodes.length).should('equal', 3).run('There should be one node per name, so three', 'One node per name');
+    wrap(nodes[0] && nodes[0].tagName).should('equal', 'LI').run('Each description should have a `type` of `li`', 'Built list items');
+    wrap(nodes[2] && nodes[2].innerText).should('equal', 'Charlie').run('Each description should carry its own name in `props.text`', 'Carried the names through');
+    ```
+
+3. Why a `Symbol` and not a string
+
+    ```{mcq}
+    freact marks fragments with `Symbol('Fragment')`. What would go wrong with a plain string like `'fragment'` instead?
+    correct: Correct! A `Symbol` is guaranteed unique, so no element type can ever equal it by accident. A string could collide with a real tag name or with a component someone else wrote.
+    wrong: Element types are compared with `===`. What else in a real application might equal the string `'fragment'`?
+    [x] A string could collide with a real element type; a `Symbol` cannot be equal to anything else
+    [ ] Strings cannot be used in a `switch` or an `if`
+    [ ] React reserves all lowercase strings for HTML tags
+    [ ] Symbols render faster than strings
+    ```
+
+4. What comes back for a fragment
+
+    ```{mcq}
+    A fragment element goes into `_createDomNode`. What comes out?
+    correct: Correct! An array of its children's nodes and nothing wrapping them, which is why the children land directly in the parent and no extra element appears in the DOM.
+    wrong: A fragment exists precisely so that no element of its own shows up. Look back at "A fragment produces its children, not itself" in the walkthrough.
+    [x] An array of the nodes its children produced, with no node of its own
+    [ ] A single empty `<div>` containing its children
+    [ ] `null`, so its children are skipped
+    [ ] A text node holding the children's text
+    ```
+
+## Resources
+
+- [React Docs: Fragment](https://react.dev/reference/react/Fragment)
+- [React Docs: Rendering lists](https://react.dev/learn/rendering-lists)
+- [MDN: Symbol](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol)
+- [MDN: Array.prototype.flat()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat)

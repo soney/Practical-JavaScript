@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>react-i18next demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- React and ReactDOM. With a bundler these would be imports; here they
+         load first and become globals. -->
+    <script src="../react/react.development.js"></script>
+    <script src="../react/react-dom.development.js"></script>
+
+    <!-- The translation engine and its React bindings, as prebuilt browser
+         copies (globals: i18next and ReactI18next). In the video these were
+         the npm packages i18next and react-i18next. -->
+    <script src="../react/i18next.js"></script>
+    <script src="../react/react-i18next.js"></script>
+
+    <!-- The in-browser JSX compiler. In the video, Babel and webpack did this
+         job before the page was ever loaded. -->
+    <script src="../react/jsx.min.js"></script>
+
+    <script type="text/babel" data-presets="react" src="App.jsx"></script>
+  </body>
+</html>

@@ -1,0 +1,333 @@
+# DOM Elements in JavaScript
+
+In this lesson we talk about something that has been hidden behind the scenes all along: the **DOM**, or Document Object Model. The DOM is the crucial bridge between HTML and JavaScript, and it represents what users actually see on the page.
+
+The DOM is a **tree** of elements, and it is the star of the show. Every language we have learned touches it:
+
+- **HTML** is what we write to create the initial version of the DOM.
+- **CSS** is what we write to tell the browser how to render the DOM. (Technically CSS builds something called the CSSOM, but we do not need to go into that here.)
+- **JavaScript** is what we write to change the DOM dynamically, while the page is running.
+
+![A diagram illustrating that the DOM is built from HTML, rendered according to CSS, and modified with JavaScript](images/dom.png)
+
+So when you write `<h1>` and `<p>` elements, the browser builds a DOM tree out of them; when you write `p { color: blue; }`, that controls how the tree is rendered; and now we are going to reach into that tree from JavaScript.
+
+## Seeing the DOM
+
+You can look at the DOM directly in the browser's developer tools. Right-click a page, choose "Inspect", and the Elements panel shows the live DOM tree. That is worth emphasizing: it shows the tree *as it is now*, which can differ from the HTML you originally wrote, because JavaScript may have changed it since the page loaded.
+
+## The `document` Object
+
+To reach the DOM from JavaScript we use the built-in **`document`** object, which is our entry point to the tree. We are going to focus on two of its methods:
+
+- **`document.querySelector(selector)`** gives us the **first** element that matches a selector.
+- **`document.querySelectorAll(selector)`** gives us **every** element that matches a selector.
+
+The `selector` argument is a CSS selector, exactly like the ones we wrote in CSS rules back in Module 2.
+
+Remembering the history lesson, you will not be surprised that there are many other ways to do this. `document` also has `getElementById`, `getElementsByClassName`, `getElementsByTagName`, and more. `querySelector` and `querySelectorAll` can cover all of them, so those are the two we will use.
+
+### Selecting Elements
+
+Here is a small page to select from. The cell below it selects pieces of that page and reports what it found.
+
+```html id=domsample
+<h1>Fruit</h1>
+<p class="box">A paragraph in a box.</p>
+<p class="highlight">A highlighted paragraph.</p>
+<ul id="list">
+  <li>First item</li>
+  <li class="highlight">Second item</li>
+  <li>Third item</li>
+  <li class="highlight">Fourth item</li>
+</ul>
+```
+
+```{javascript autorun}
+console.log(document.querySelector('p.box').innerText);
+console.log(document.querySelector('.highlight').innerText);
+console.log(document.querySelectorAll('.highlight').length);
+console.log(document.querySelectorAll('ul .highlight').length);
+```
+```+id=domsample
+```
+
+Walking through those four lines:
+
+- `p.box` selects the first `<p>` element with class `box`.
+- `.highlight` selects the first element with class `highlight`, which is the paragraph, not one of the list items, because the paragraph comes first in the document.
+- `querySelectorAll('.highlight')` finds all three highlighted elements: the paragraph and two list items.
+- `ul .highlight` selects only elements with class `highlight` that are inside a `<ul>`, which narrows it to the two list items.
+
+### Searching Inside an Element
+
+`querySelector` and `querySelectorAll` are not only available on `document`. **Every element object has them too**, and when you call one on an element it searches only inside that element rather than the whole page.
+
+```{javascript autorun}
+const list = document.querySelector('#list');
+
+console.log(document.querySelector('.highlight').innerText);
+console.log(list.querySelector('.highlight').innerText);
+```
+```+id=domsample
+```
+
+The first line searches the whole document and finds the paragraph. The second searches only inside the `<ul>`, so it skips the paragraph entirely and finds the second list item. This is useful whenever you have already located a container and want something within it.
+
+### What These Methods Return
+
+The two methods give back different kinds of thing, and the difference matters:
+
+- `querySelector` returns a single **element object**, which is a JavaScript object representing one DOM element. If nothing matches, it returns **`null`**.
+- `querySelectorAll` returns a **NodeList**, which is array-like: it has a `length` and you can loop over it with `for...of`, though it is not quite an array. If nothing matches, you get an **empty** NodeList, not `null`.
+
+```{javascript autorun}
+console.log(document.querySelector('.xyz'));
+console.log(document.querySelectorAll('.xyz').length);
+```
+```+id=domsample
+```
+
+Nothing on the page has the class `xyz`, so the first line logs `null` and the second logs `0`.
+
+That difference has a practical consequence. Because `querySelector` can hand back `null`, code that assumes it found something, such as `document.querySelector('.xyz').innerText`, will fail with an error instead of quietly doing nothing.
+
+## Reading and Changing an Element
+
+Once we have an element object, it has properties and methods that let us both read and change the DOM:
+
+- `element.innerHTML` is the HTML content inside the element, tags included.
+- `element.innerText` is the text inside the element, with no tags.
+- Assigning to either one changes what the page displays.
+- `element.setAttribute(name, value)` adds or updates an attribute, and `element.removeAttribute(name)` removes one.
+- `element.classList.add(name)` adds a CSS class. There is also `.remove(name)` and `.toggle(name)`.
+
+First, reading. Note the difference between the two properties on an element that contains other elements:
+
+```{javascript autorun}
+const list = document.querySelector('#list');
+
+console.log(list.innerHTML);
+console.log(list.innerText);
+```
+```+id=domsample
+```
+
+`innerHTML` gives back the `<li>` tags and everything between them, matching what we wrote in HTML. `innerText` gives back only the words.
+
+Now, changing. The cell below has its own small fixture so you can see the result update:
+
+```html id=page1
+<h1 title="original">This is the header</h1>
+```
+
+```{javascript autorun}
+const header = document.querySelector('h1');
+
+console.log(header.innerText);
+
+header.innerText = 'Changed from JavaScript';
+
+header.setAttribute('id', 'added-from-js');
+header.removeAttribute('title');
+header.classList.add('added-from-js');
+
+console.log(header.innerText);
+```
+```+id=page1
+```
+
+The rendered heading above the output now reads `Changed from JavaScript`. Assigning to `innerText` did not just change a variable; it changed the DOM, and the browser redrew the page to match. The attribute and class changes are invisible on screen but are real, and you can confirm them in the developer tools inspector.
+
+We will go into much more detail on these properties and methods in Course 2. The important idea for now is that `document.querySelector` and `document.querySelectorAll` hand us element objects, and those objects let us view and manipulate what is on screen.
+
+## Exercises
+
+1. Use `document.querySelector` to grab the heading below, then change its content to `DOM Rocks`.
+
+    ```html id=page2
+    <h1 id="title">Old Title</h1>
+    ```
+
+    ```{javascript}
+    // Select the h1 element, then change its text to "DOM Rocks"
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const title = document.querySelector('#title');
+
+    title.innerText = 'DOM Rocks';
+    ```
+    ```+test
+    assert('#title').should('have.text', 'DOM Rocks').run('The heading should read `DOM Rocks`. Select it with `document.querySelector` and assign to `innerText`', 'Selected the heading and changed its text');
+    wrap(source.includes('querySelector')).should('equal', true).run('Use `document.querySelector` to find the element', 'Used querySelector');
+    ```
+
+2. Count how many list items have the class `done`, and store that number in `doneCount`.
+
+    ```html id=page3
+    <ul>
+      <li class="done">Buy milk</li>
+      <li>Walk the dog</li>
+      <li class="done">Rake leaves</li>
+      <li class="done">Return library books</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const doneCount = /* Your code here */;
+
+    console.log(doneCount);
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const doneCount = document.querySelectorAll('.done').length;
+
+    console.log(doneCount);
+    ```
+    ```+test
+    wrap(doneCount).should('equal', 3).run('`doneCount` should be `3`. Use `document.querySelectorAll` and read its `length`', 'Counted the finished items');
+    wrap(source.includes('querySelectorAll')).should('equal', true).run('Use `document.querySelectorAll`, since more than one element matches', 'Used querySelectorAll');
+    ```
+
+3. Add the class `urgent` to the paragraph below, without changing its text.
+
+    ```html id=page4
+    <p id="notice">The library closes at 6pm.</p>
+    ```
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const notice = document.querySelector('#notice');
+
+    notice.classList.add('urgent');
+    ```
+    ```+test
+    assert('#notice').should('have.class', 'urgent').run('The paragraph should have the class `urgent`. Use `classList.add`', 'Added the class');
+    assert('#notice').should('have.text', 'The library closes at 6pm.').run('Leave the text of the paragraph as it was', 'Left the text alone');
+    ```
+
+4. The page below has a paragraph with the class `note` in two different places. Select the `#main` container into `main`, then search *inside it* so that `mainNote` holds the main note rather than the sidebar one.
+
+    ```html id=page5
+    <div id="sidebar">
+      <p class="note">Check back on Monday.</p>
+    </div>
+    <div id="main">
+      <p class="note">The exhibit opens at noon.</p>
+    </div>
+    ```
+
+    ```{javascript}
+    const main = /* Your code here */;
+    const mainNote = /* Your code here */;
+
+    console.log(mainNote);
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const main = document.querySelector('#main');
+    const mainNote = main.querySelector('.note').innerText;
+
+    console.log(mainNote);
+    ```
+    ```+test
+    wrap(main).should('be.an', 'element').run('`main` should be the `#main` element, found with `document.querySelector`', 'Selected the container');
+    wrap(mainNote).should('equal', 'The exhibit opens at noon.').run('`mainNote` should be the text of the note inside `#main`. Call `querySelector` on `main` rather than on `document`', 'Searched inside the container');
+    ```
+
+5. Add the class `done` to every item in the list below. `querySelectorAll` has already given you the NodeList; loop over it with a `for...of` loop, as in Module 3, and add the class to each item.
+
+    ```html id=page6
+    <ul id="tasks">
+      <li>Water the plants</li>
+      <li>Sweep the porch</li>
+      <li>Sort the mail</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const items = document.querySelectorAll('#tasks li');
+
+    // Write your loop here
+    ```
+    ```+id=page6
+    ```
+    ```+solution
+    const items = document.querySelectorAll('#tasks li');
+
+    for (const item of items) {
+      item.classList.add('done');
+    }
+    ```
+    ```+test
+    assert('#tasks li').should('have.length', 3).run('Leave all three list items on the page', 'The three items are still there');
+    assert('#tasks li').should('have.class', 'done').run('Every list item should end up with the class `done`. Loop over `items` and call `classList.add` on each one', 'Added the class to every item');
+    ```
+
+6. The link below has no destination yet, and it carries a leftover `title` attribute. Give it an `href` of `https://example.com` with `setAttribute`, and take the `title` off with `removeAttribute`.
+
+    ```html id=page7
+    <a id="site" title="temporary">Course home</a>
+    ```
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+id=page7
+    ```
+    ```+solution
+    const site = document.querySelector('#site');
+
+    site.setAttribute('href', 'https://example.com');
+    site.removeAttribute('title');
+    ```
+    ```+test
+    assert('#site').should('have.attribute', 'href', 'https://example.com').run('Set the `href` attribute to `https://example.com` using `setAttribute`', 'Gave the link a destination');
+    assert('#site').should('not.have.attribute', 'title').run('Remove the `title` attribute using `removeAttribute`', 'Removed the leftover attribute');
+    assert('#site').should('have.text', 'Course home').run('Leave the text of the link as it was', 'Left the text alone');
+    ```
+
+7. What does `document.querySelector('.xyz')` return when nothing on the page has that class?
+
+    ```{mcq}
+    No element on the page has the class `xyz`. What is the value of `document.querySelector('.xyz')`?
+    correct: Correct! `querySelector` returns `null` when nothing matches, which is why reading a property off it without checking can fail. `querySelectorAll` behaves differently: it returns an empty NodeList.
+    wrong: Look back at "What These Methods Return", and at the cell that logged the results for `.xyz`.
+    [x] `null`
+    [ ] An empty NodeList
+    [ ] An empty array, `[]`
+    [ ] The `document` object
+    ```
+
+8. `innerText` versus `innerHTML`
+
+    ```{mcq}
+    A paragraph on the page is written like this:
+
+    ~~~html
+    <p id="msg">Hello <strong>world</strong></p>
+    ~~~
+
+    What does `document.querySelector('#msg').innerText` give back?
+    correct: Correct! `innerText` is the text with the tags stripped out. `innerHTML` is the one that would hand back `Hello <strong>world</strong>`, tags included.
+    wrong: Look back at the cell that logged both properties for the `<ul>`, and at what each one included.
+    [x] `Hello world`
+    [ ] `Hello <strong>world</strong>`
+    [ ] `<p id="msg">Hello <strong>world</strong></p>`
+    [ ] `world`
+    ```
+
+## Resources
+
+- [MDN: Introduction to the DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction)
+- [MDN: Document.querySelector()](https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelector)
+- [MDN: Document.querySelectorAll()](https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelectorAll)
+- [MDN: Element.classList](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList)

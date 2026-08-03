@@ -1,0 +1,282 @@
+# Creating Custom Hooks
+
+As an application grows, you start noticing the same logic in several components: the same state variable, the same effect, the same listener, the same cleanup. A **custom hook** is how you pull that logic out and share it.
+
+A custom hook is not a new language feature. It is **a function that calls hooks**, and you write it yourself.
+
+## The Repetition
+
+Two components both care about the size of the window:
+
+```jsx
+function ComponentOne() {
+  const [width, setWidth] = React.useState(window.innerWidth);
+
+  React.useEffect(() => {
+    function handleResize() {
+      setWidth(window.innerWidth);
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return <p>Width: {width}</p>;
+}
+
+function ComponentTwo() {
+  const [height, setHeight] = React.useState(window.innerHeight);
+
+  React.useEffect(() => {
+    function handleResize() {
+      setHeight(window.innerHeight);
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return <p>Height: {height}</p>;
+}
+```
+
+Almost every line is duplicated. Only the measurement differs, and the interesting part, the listener with its cleanup, is copied word for word. A third component would copy it again, and fixing a bug in it would mean fixing it three times.
+
+## Extracting the Hook
+
+Move the shared logic into a function, generalize the state a little, and return whatever the callers need:
+
+```{react autorun}
+function useWindowSize() {
+  const [size, setSize] = React.useState({
+    width: window.innerWidth,
+    height: window.innerHeight
+  });
+
+  React.useEffect(() => {
+    function handleResize() {
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    }
+
+    window.addEventListener('resize', handleResize);
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return size;
+}
+
+function ComponentOne() {
+  const { width } = useWindowSize();
+
+  return <p>Width: {width}</p>;
+}
+
+function ComponentTwo() {
+  const { height } = useWindowSize();
+
+  return <p>Height: {height}</p>;
+}
+
+function App() {
+  return (
+    <div>
+      <ComponentOne />
+      <ComponentTwo />
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+Each component is now two lines, and the resize handling exists once. Resize the browser window and both numbers update.
+
+Three things make this a hook rather than an ordinary function.
+
+**The name starts with `use`.** This is required, not stylistic: linters use the prefix to know that the rules of hooks apply inside this function.
+
+**The same rules apply.** Hook calls inside a custom hook must be at the top level, in the same order every time. A custom hook is called during a render, so its hooks belong to the calling component's list.
+
+**It returns data, not JSX.** That is the line between a hook and a component. A component returns something to display; a hook returns values and functions for a component to use.
+
+## Each Call Gets Its Own State
+
+This one surprises people. `ComponentOne` and `ComponentTwo` both call `useWindowSize`, and they do **not** share anything.
+
+Each call runs `useState` and `useEffect` in the calling component's own hooks list. So there are two separate state variables and two separate resize listeners. The numbers stay in step because both are driven by the same event and the same logic, and they are not the same object.
+
+A custom hook shares **logic**, not **state**. Sharing actual state between components is a different problem, and it is what Module 3 is about.
+
+## A Smaller Example
+
+Not every custom hook needs an effect. Any repeated state pattern will do:
+
+```{react autorun}
+function useToggle(initialValue) {
+  const [value, setValue] = React.useState(initialValue);
+
+  function toggle() {
+    setValue((currentValue) => !currentValue);
+  }
+
+  return [value, toggle];
+}
+
+function ToggleButton() {
+  const [isOn, toggle] = useToggle(false);
+
+  return <button onClick={toggle}>{isOn ? 'On' : 'Off'}</button>;
+}
+
+function TwoToggles() {
+  return (
+    <div>
+      <ToggleButton />
+      <ToggleButton />
+    </div>
+  );
+}
+
+renderReact(<TwoToggles />);
+```
+
+Two buttons, one hook, and clicking one does not move the other. Separate state, shared logic, exactly as above.
+
+Returning an array here rather than an object is a small convention borrowed from `useState`: it lets the caller name the pair whatever it likes, as in `const [isDark, toggleDark] = useToggle(false)`.
+
+## Exercises
+
+1. Complete `useToggle` so the button flips between `Off` and `On`.
+
+   ```{react}
+   function useToggle(initialValue) {
+     const [value, setValue] = React.useState(initialValue);
+
+     function toggle() {
+       // TODO: set the value to the opposite of what it is now
+       setValue(value);
+     }
+
+     return [value, toggle];
+   }
+
+   function ToggleButton() {
+     const [isOn, toggle] = useToggle(false);
+
+     return <button onClick={toggle}>{isOn ? 'On' : 'Off'}</button>;
+   }
+
+   renderReact(<ToggleButton />);
+   ```
+   ```+solution
+   function useToggle(initialValue) {
+     const [value, setValue] = React.useState(initialValue);
+
+     function toggle() {
+       setValue((currentValue) => !currentValue);
+     }
+
+     return [value, toggle];
+   }
+
+   function ToggleButton() {
+     const [isOn, toggle] = useToggle(false);
+
+     return <button onClick={toggle}>{isOn ? 'On' : 'Off'}</button>;
+   }
+
+   renderReact(<ToggleButton />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('function useToggle')).should('equal', true).run('Keep the logic in a custom hook named `useToggle`', 'Kept the custom hook');
+     assert('button').should('have.text', 'Off').run('The button should start at `Off`', 'Starts off');
+     assert('button').click().run('Click the toggle', 'Clicked the toggle');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('button').should('have.text', 'On').run('Clicking should flip the value to `On`', 'Toggled the value');
+     }, 50);
+   }, 50);
+   ```
+
+2. Write a `useCounter` hook that holds a count and returns it along with an `increment` function. Start at the value passed in.
+
+   ```{react}
+   function useCounter(startAt) {
+     // TODO: hold the count in state, starting at startAt, and return
+     // [count, increment] so the button counts up from 3.
+     return [0, function () {}];
+   }
+
+   function Clicker() {
+     const [count, increment] = useCounter(3);
+
+     return <button onClick={increment}>Count: {count}</button>;
+   }
+
+   renderReact(<Clicker />);
+   ```
+   ```+solution
+   function useCounter(startAt) {
+     const [count, setCount] = React.useState(startAt);
+
+     function increment() {
+       setCount((current) => current + 1);
+     }
+
+     return [count, increment];
+   }
+
+   function Clicker() {
+     const [count, increment] = useCounter(3);
+
+     return <button onClick={increment}>Count: {count}</button>;
+   }
+
+   renderReact(<Clicker />);
+   ```
+   ```+test
+   setTimeout(function () {
+     wrap(/function\s+useCounter/.test(source)).should('equal', true).run('Name the hook `useCounter`, since a hook name has to start with `use`', 'Named the hook correctly');
+     assert('button').should('have.text', 'Count: 3').run('The count should start at the value passed in, `3`', 'Started at the passed value');
+     assert('button').click().run('Click the button', 'Clicked the button');
+     setTimeout(function () {
+       assert('button').should('have.text', 'Count: 4').run('`increment` should add one to the count', 'Incremented the count');
+     }, 50);
+   }, 50);
+   ```
+
+3. Two components both call `useWindowSize`. What do they share?
+
+   ```{mcq}
+   Is the state shared between them?
+   correct: Correct! Each call runs its own `useState` and its own `useEffect` in the calling component's hooks list, so there are two state variables and two listeners. They agree because the same logic drives both, not because they are the same value.
+   wrong: A custom hook is a function that gets called. Ask what happens each time `useState` inside it runs. Look back at "Each Call Gets Its Own State".
+   [x] The logic, not the state: each call creates its own state and its own listener
+   [ ] Both the logic and the state, since there is only one hook
+   [ ] Nothing; the second call reuses the first component's values
+   [ ] The state, but only while both components are on screen
+   ```
+
+4. What separates a custom hook from a component?
+
+   ```{mcq}
+   Both are functions. What is the difference?
+   correct: Correct! A component returns something to render; a hook returns values and functions for a component to use. The `use` prefix is what marks the second kind, and it is what lets linters check the rules of hooks inside it.
+   wrong: Look at what `useWindowSize` returns compared with what `ComponentOne` returns.
+   [x] A hook returns data and functions; a component returns JSX to render
+   [ ] A hook cannot call `useState`; a component can
+   [ ] A hook must be defined in its own file; a component need not be
+   [ ] A hook takes no arguments; a component takes props
+   ```
+
+## Resources
+
+- [React Docs: Reusing logic with custom hooks](https://react.dev/learn/reusing-logic-with-custom-hooks)
+- [React Docs: Rules of hooks](https://react.dev/reference/rules/rules-of-hooks)
+- [MDN: Window resize event](https://developer.mozilla.org/en-US/docs/Web/API/Window/resize_event)

@@ -1,0 +1,302 @@
+# Lifting State Up
+
+We have the two halves now. State belongs in the nearest common ancestor, and callback props carry changes back up to it. Putting them together has a name: **lifting state up**.
+
+The move is: take a state variable out of a child, put it in an ancestor, then send the value **down** as a prop and the updates **up** as a callback prop.
+
+```text
+        Parent            <- the state lives here
+       /      \
+   value      onChange     <- down as a prop, up as a callback
+     |            |
+   Child A     Child B
+```
+
+## A Controlled Input
+
+The clearest case is a text input whose value belongs to the parent:
+
+```{react autorun}
+function ChatInput({ value, onValueChange }) {
+  return (
+    <input
+      value={value}
+      placeholder="Type a message"
+      onChange={(inputEvent) => onValueChange(inputEvent.target.value)}
+    />
+  );
+}
+
+function Preview({ value }) {
+  return <p>{value.length === 0 ? 'Enter a message' : 'Draft: ' + value}</p>;
+}
+
+function App() {
+  const [inputValue, setInputValue] = React.useState('');
+
+  return (
+    <section>
+      <ChatInput value={inputValue} onValueChange={setInputValue} />
+      <Preview value={inputValue} />
+    </section>
+  );
+}
+
+renderReact(<App />);
+```
+
+Type in the box and the preview follows. Trace one keystroke:
+
+1. The DOM fires `change` on the input.
+2. `ChatInput`'s handler calls `onValueChange(inputEvent.target.value)`, sending the text **up**.
+3. `App` runs `setInputValue`, so its state changes and it re-renders.
+4. The new value goes **down** to both children as a prop.
+
+`ChatInput` holds no state at all. It is handed a value and a way to report a change, which is what makes it a **controlled component**: the parent controls what it shows.
+
+That is what makes step 4 possible. Because `Preview` reads the same state, it cannot fall out of step with the input, whatever either one does.
+
+## Building Up: Three Interdependent Components
+
+The pattern scales without changing. Here is a small chat, with an input, a send button, and a list of sent messages:
+
+```{react autorun}
+function ChatInput({ value, onValueChange, onSendMessage }) {
+  function handleKeyDown(keyEvent) {
+    if (keyEvent.key === 'Enter') {
+      onSendMessage();
+    }
+  }
+
+  return (
+    <div>
+      <input
+        value={value}
+        placeholder="Type a message"
+        onChange={(inputEvent) => onValueChange(inputEvent.target.value)}
+        onKeyDown={handleKeyDown}
+      />
+      <button onClick={onSendMessage}>Send</button>
+    </div>
+  );
+}
+
+function ChatMessages({ messages }) {
+  return (
+    <ul>
+      {messages.map((message, index) => <li key={index}>{message}</li>)}
+    </ul>
+  );
+}
+
+function App() {
+  const [inputValue, setInputValue] = React.useState('');
+  const [messages, setMessages] = React.useState([]);
+
+  function handleSendMessage() {
+    if (inputValue.length === 0) {
+      return;
+    }
+
+    setMessages([...messages, inputValue]);
+    setInputValue('');
+  }
+
+  return (
+    <section>
+      <ChatInput
+        value={inputValue}
+        onValueChange={setInputValue}
+        onSendMessage={handleSendMessage}
+      />
+      <ChatMessages messages={messages} />
+    </section>
+  );
+}
+
+renderReact(<App />);
+```
+
+Type something and press Enter or click Send. Both state variables live in `App`, and neither child owns anything.
+
+Two details worth noticing.
+
+**Sending is one callback with two triggers.** `ChatInput` calls `onSendMessage` from a click and from an Enter key. `App` does not know or care which happened, which is the point of naming the prop for the event rather than for the mechanism.
+
+**Clearing the input is the parent's doing.** `handleSendMessage` calls `setInputValue('')`, and the input empties because its `value` prop changed. The child never clears itself, because the child does not own the text.
+
+## When It Gets Uncomfortable
+
+This works, and it has a limit. If the state lives five levels up from the component that needs it, every component in between has to accept props it does not use and pass them along. That is **prop drilling**, and it is what `useContext` in the next reading is for.
+
+The rule stays the same: lift to the **nearest** common ancestor. Prop drilling is a symptom of lifting further than necessary, or of a value that genuinely belongs to the whole application, which is exactly the case context handles.
+
+## Exercises
+
+1. Lift the state. Right now the input owns its text, so the preview cannot see it.
+
+   ```{react}
+   function NameInput() {
+     const [name, setName] = React.useState('');
+
+     return <input aria-label="Name" value={name} onChange={(inputEvent) => setName(inputEvent.target.value)} />;
+   }
+
+   function Preview({ name }) {
+     return <p>Hello, {name}</p>;
+   }
+
+   function App() {
+     return (
+       <section>
+         <NameInput />
+         <Preview name="" />
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function NameInput({ name, onNameChange }) {
+     return <input aria-label="Name" value={name} onChange={(inputEvent) => onNameChange(inputEvent.target.value)} />;
+   }
+
+   function Preview({ name }) {
+     return <p>Hello, {name}</p>;
+   }
+
+   function App() {
+     const [name, setName] = React.useState('');
+
+     return (
+       <section>
+         <NameInput name={name} onNameChange={setName} />
+         <Preview name={name} />
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(/function App\(\)[\s\S]*?React\.useState/.test(source)).should('equal', true).run('Move the `useState` call into `App`, the nearest common ancestor of the input and the preview', 'State lives in the parent');
+     wrap(/function NameInput\([^)]*\)\s*\{\s*return/.test(source)).should('equal', true).run('`NameInput` should hold no state of its own; it takes the value and a change callback as props', 'The input is controlled');
+     wrap(/name=\{name\}/.test(source)).should('equal', true).run('Pass the name down to both children as a prop', 'Passed the value down');
+     assert('input').should('exist').run('The input should render', 'The input renders');
+     assert('p').should('have.text', 'Hello, ').run('The preview should read the same state the input writes', 'The preview reads the shared state');
+   }, 50);
+   ```
+
+2. Complete the send handler so a message is added to the list and the input is cleared.
+
+   ```{react}
+   function ChatInput({ value, onValueChange, onSendMessage }) {
+     return (
+       <div>
+         <input value={value} onChange={(inputEvent) => onValueChange(inputEvent.target.value)} />
+         <button onClick={onSendMessage}>Send</button>
+       </div>
+     );
+   }
+
+   function ChatMessages({ messages }) {
+     return <ul>{messages.map((message, index) => <li key={index}>{message}</li>)}</ul>;
+   }
+
+   function App() {
+     const [inputValue, setInputValue] = React.useState('hello');
+     const [messages, setMessages] = React.useState([]);
+
+     function handleSendMessage() {
+       // TODO: add inputValue to the end of messages, then clear the input
+     }
+
+     return (
+       <section>
+         <ChatInput value={inputValue} onValueChange={setInputValue} onSendMessage={handleSendMessage} />
+         <ChatMessages messages={messages} />
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function ChatInput({ value, onValueChange, onSendMessage }) {
+     return (
+       <div>
+         <input value={value} onChange={(inputEvent) => onValueChange(inputEvent.target.value)} />
+         <button onClick={onSendMessage}>Send</button>
+       </div>
+     );
+   }
+
+   function ChatMessages({ messages }) {
+     return <ul>{messages.map((message, index) => <li key={index}>{message}</li>)}</ul>;
+   }
+
+   function App() {
+     const [inputValue, setInputValue] = React.useState('hello');
+     const [messages, setMessages] = React.useState([]);
+
+     function handleSendMessage() {
+       setMessages([...messages, inputValue]);
+       setInputValue('');
+     }
+
+     return (
+       <section>
+         <ChatInput value={inputValue} onValueChange={setInputValue} onSendMessage={handleSendMessage} />
+         <ChatMessages messages={messages} />
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('li').should('have.length', 0).run('The list should start empty', 'The list starts empty');
+     assert('button').click().run('Click Send', 'Clicked Send');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('li').should('have.length', 1).run('Sending should add the input`s text to the messages array', 'Added the message');
+       assert('li').should('have.text', 'hello').run('The new message should be the text that was in the input', 'The message text is right');
+       wrap(document.querySelector('input').value).should('equal', '').run('Clear the input afterwards by setting its state back to an empty string. The child cannot clear itself, since the parent owns the value', 'Cleared the input');
+     }, 60);
+   }, 50);
+   ```
+
+3. What makes an input "controlled"?
+
+   ```{mcq}
+   `ChatInput` has no `useState`. Where does the text it displays come from?
+   correct: Correct! Its `value` comes down as a prop and every keystroke goes up through a callback. The parent owns the text, which is what lets other components read the same value.
+   wrong: Look at what `ChatInput` receives and what it does when the input changes. It never stores anything.
+   [x] From a prop, with changes reported to the parent through a callback
+   [ ] From the DOM, which React reads when it needs it
+   [ ] From a hidden state variable React creates for every input
+   [ ] From the `placeholder` attribute
+   ```
+
+4. Who clears the input after a message is sent?
+
+   ```{mcq}
+   The box empties after Send. What actually caused that?
+   correct: Correct! The parent set its own state back to an empty string, and the input's `value` prop changed as a result. The child has nothing to clear, because it never held the text.
+   wrong: Ask where the text lives. Whoever owns it is the only one who can change it.
+   [x] The parent set the shared state to an empty string, which flowed down as the new `value`
+   [ ] The child reset its own internal state
+   [ ] The browser clears an input automatically after a click
+   [ ] React clears every input after a state update
+   ```
+
+## Resources
+
+- [React Docs: Sharing state between components](https://react.dev/learn/sharing-state-between-components)
+- [React Docs: Controlled and uncontrolled components](https://react.dev/learn/sharing-state-between-components#controlled-and-uncontrolled-components)
+- [React Docs: Updating arrays in state](https://react.dev/learn/updating-arrays-in-state)

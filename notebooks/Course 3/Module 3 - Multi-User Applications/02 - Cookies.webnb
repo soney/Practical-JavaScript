@@ -1,0 +1,262 @@
+# Cookies
+
+HTTP is **stateless**: every request is independent of every other one. The browser can remember things and the server can remember things, but the protocol connecting them remembers nothing.
+
+That is a problem as soon as anyone logs in:
+
+```
+client                                    server
+  POST /login.html      ------------->
+                        <-------------     "welcome back"
+  GET /profile          ------------->     ...who is this?
+```
+
+Nothing in that second request says it came from the same person as the first.
+
+**Cookies** are the fix. The server sends a small piece of data with its response; the browser stores it and sends it back with every subsequent request. The second exchange becomes:
+
+```
+client                                    server
+  POST /login.html      ------------->
+                        <-------------     "welcome back" + Set-Cookie
+  GET /profile + cookie ------------->     this is Alice
+```
+
+The cookie itself usually holds nothing interesting: a short identifier that the server looks up in its own records. The real data stays on the server.
+
+## The Other Use for Cookies
+
+The same mechanism enables tracking, which is worth understanding rather than being vaguely uneasy about.
+
+Your page tells the browser to load an image or a script from **another** server. That server's response can set a cookie of its own, and the browser stores it. Later you visit a completely different site that also loads something from that same third server, and the browser dutifully sends that cookie along.
+
+The third server has now seen you on two unrelated sites and can join them up. Nobody had to cooperate; the browser simply followed the rules. This is what "third-party cookies" means, and it is why browsers and regulators have spent years restricting them.
+
+## What a Cookie Looks Like
+
+A cookie is name-value pairs and attributes, separated by semicolons. The server sends one with the **`Set-Cookie`** header:
+
+```
+Set-Cookie: userId=abc123; Max-Age=3600; HttpOnly
+```
+
+```javascript
+response.writeHead(200, {
+  'Content-Type': 'text/html',
+  'Set-Cookie': 'exampleCookie=hello world; Path=/; Max-Age=3600'
+});
+```
+
+The name and value are yours to choose. The attributes have fixed meanings:
+
+| Attribute | What it does |
+| --- | --- |
+| `Expires` | A date at which the cookie stops being valid |
+| `Max-Age` | How many **seconds** from now the cookie lasts |
+| `Domain` | Which domains the browser should send it to |
+| `Path` | Which URLs on that domain it is sent for |
+| `Secure` | Only send over HTTPS |
+| `HttpOnly` | Hide it from JavaScript entirely |
+| `SameSite` | Whether to send it on cross-site requests |
+
+`Secure`, `HttpOnly`, and `SameSite` are the security-relevant three. `HttpOnly` in particular means a script on your page cannot read the cookie at all, which is what you want for a session identifier: if an attacker manages to run JavaScript on your page, they still cannot steal the session.
+
+## Reading Cookies on the Server
+
+The browser sends them back in the **`Cookie`** header:
+
+```javascript
+console.log(request.headers.cookie);   // 'exampleCookie=hello world'
+```
+
+Set that cookie once and it comes back on **every** request to the server: `/index.html`, `/other.html`, images, everything. That is the behavior that makes cookies useful and also the behavior that makes them heavy, since they ride along with requests that have no use for them.
+
+It arrives as one string, so getting a single value means parsing it:
+
+```{javascript autorun}
+function readCookie(cookieHeader, name) {
+  if (!cookieHeader) {
+    return null;
+  }
+
+  for (const pair of cookieHeader.split(';')) {
+    const parts = pair.trim().split('=');
+
+    if (parts[0] === name) {
+      return parts[1];
+    }
+  }
+
+  return null;
+}
+
+console.log(readCookie('theme=dark; userId=abc123', 'userId'));
+console.log(readCookie('theme=dark; userId=abc123', 'missing'));
+console.log(readCookie(undefined, 'userId'));
+```
+
+Note the `trim()`. The pairs are separated by `; ` with a space, so splitting on `;` alone leaves the space attached to the next name.
+
+## Deleting a Cookie
+
+The server cannot reach into the browser and remove one. What it can do is set the same cookie again with **`Max-Age=0`**, which tells the browser it has already expired:
+
+```javascript
+response.writeHead(200, {
+  'Set-Cookie': 'exampleCookie=; Path=/; Max-Age=0'
+});
+```
+
+Refresh and the cookie is gone from the browser's list.
+
+## Cookies in the Browser: `document.cookie`
+
+Page scripts can also work with cookies, as long as they are not `HttpOnly`.
+
+Reading gives you every visible cookie in one string, in the same format you just parsed:
+
+```javascript
+console.log(document.cookie);   // 'theme=dark; userId=abc123'
+```
+
+Writing sets **one cookie at a time**, and this is the part that surprises people. Assigning does not replace the string; it adds or updates a single entry:
+
+```javascript
+document.cookie = 'theme=dark';
+document.cookie = 'lang=en; max-age=3600';
+
+// document.cookie is now 'theme=dark; lang=en'
+```
+
+Deleting works the same way as on the server:
+
+```javascript
+document.cookie = 'theme=; max-age=0';
+```
+
+Cookies marked `HttpOnly` never appear here at all. That is the point of the attribute.
+
+## Looking at Real Cookies
+
+You can see all of this on any site you visit. Open the developer tools, find the storage or application section, and look at Cookies for the current domain. On a typical university page you might find:
+
+- **`__cf_bm`**, Cloudflare's bot management cookie, used to judge whether requests are coming from a person.
+- **`_ga`** and friends, Google Analytics, which is how a site owner sees how visitors move through their pages, and how the same visitor is recognized across many sites.
+
+Almost every site you use has several, and few of them are the site's own.
+
+Cookies and the storage APIs from the previous reading are not rivals. Cookies go to the server automatically, which is what makes them right for identifying a session; `localStorage` never leaves the browser, which is what makes it right for a theme preference. Real applications use both.
+
+## Exercises
+
+1. Complete `readCookie` so it returns the value for a name, and `null` when there is nothing to return.
+
+    ```{javascript}
+    function readCookie(cookieHeader, name) {
+      if (!cookieHeader) {
+        return null;
+      }
+
+      for (const pair of cookieHeader.split(';')) {
+        // TODO: split the pair into a name and a value, ignoring any
+        // surrounding spaces, and return the value if the name matches
+      }
+
+      return null;
+    }
+
+    console.log(readCookie('theme=dark; session=abc123', 'session'));
+    ```
+    ```+solution
+    function readCookie(cookieHeader, name) {
+      if (!cookieHeader) {
+        return null;
+      }
+
+      for (const pair of cookieHeader.split(';')) {
+        const parts = pair.trim().split('=');
+
+        if (parts[0] === name) {
+          return parts[1];
+        }
+      }
+
+      return null;
+    }
+
+    console.log(readCookie('theme=dark; session=abc123', 'session'));
+    ```
+    ```+test
+    wrap(readCookie('theme=dark; session=abc123', 'session')).should('equal', 'abc123').run('Return the value that follows the matching name', 'Read a cookie value');
+    wrap(readCookie('theme=dark; session=abc123', 'theme')).should('equal', 'dark').run('It should work for the first cookie as well as the last', 'Read the first cookie too');
+    wrap(readCookie('theme=dark; session=abc123', 'nothere')).should('equal', null).run('Return `null` when no cookie has that name', 'Handled a missing cookie');
+    wrap(readCookie(undefined, 'session')).should('equal', null).run('A request with no cookies at all has no `Cookie` header, so handle a missing header', 'Handled a missing header');
+    ```
+
+2. Write `buildSetCookie`, which produces the header value a server would send.
+
+    ```{javascript}
+    function buildSetCookie(name, value, maxAgeSeconds) {
+      // TODO: return a Set-Cookie value of the form
+      // 'name=value; Path=/; Max-Age=seconds'
+    }
+
+    console.log(buildSetCookie('userId', 'abc123', 3600));
+    console.log(buildSetCookie('userId', '', 0));
+    ```
+    ```+solution
+    function buildSetCookie(name, value, maxAgeSeconds) {
+      return name + '=' + value + '; Path=/; Max-Age=' + maxAgeSeconds;
+    }
+
+    console.log(buildSetCookie('userId', 'abc123', 3600));
+    console.log(buildSetCookie('userId', '', 0));
+    ```
+    ```+test
+    wrap(buildSetCookie('userId', 'abc123', 3600)).should('equal', 'userId=abc123; Path=/; Max-Age=3600').run('Join the name and value with `=`, then the attributes, separated by `; `', 'Built the header value');
+    wrap(buildSetCookie('theme', 'dark', 60)).should('equal', 'theme=dark; Path=/; Max-Age=60').run('It should work for any name, value, and lifetime', 'Works in general');
+    wrap(buildSetCookie('userId', '', 0)).should('equal', 'userId=; Path=/; Max-Age=0').run('With a `Max-Age` of `0` this is how a server asks the browser to delete a cookie', 'Produced a deleting header');
+    ```
+
+3. What is it about HTTP that makes cookies necessary, and how does that let an outside server track you across sites?
+
+    ```{mcq}
+    Pick the accurate account.
+    correct: Correct! Because HTTP forgets, something has to carry identity between requests. And because a page can pull resources from other servers, those servers get to set and read their own cookies, letting them recognize you on every site that embeds them.
+    wrong: Start with what HTTP does not do on its own, then think about who else gets to set a cookie when a page loads an image from elsewhere.
+    [x] HTTP is stateless, so each request is independent; and a page loading images or scripts from an outside server lets that server set and later read its own cookie
+    [ ] HTTP is stateful and tracks users already, so outside servers use cookies to get around that tracking
+    [ ] HTTP is encrypted by default, so cookies are needed to recover the client's IP address
+    [ ] HTTP is separate per tab, so cookies are used to link different browsers together
+    ```
+
+4. How does a server make a browser delete a cookie it previously set?
+
+    ```{mcq}
+    Which of these actually removes it?
+    correct: Correct! Send the same cookie again with `Max-Age=0`. The browser treats it as already expired and discards it.
+    wrong: The server cannot reach into the browser. It has to send something that the browser will act on.
+    [x] Send `Set-Cookie` again for the same name with `Max-Age=0`
+    [ ] Leave the `Set-Cookie` header out of the next response
+    [ ] Set the cookie's `Path` to an empty string
+    [ ] Run `document.cookie = null` in the server file
+    ```
+
+5. A page already has a `theme=dark` cookie, and your script runs `document.cookie = 'lang=en';`. What does `document.cookie` hold afterwards?
+
+    ```{mcq}
+    Does assigning replace the whole string?
+    correct: Correct! Assigning to `document.cookie` adds or updates one cookie and leaves the rest alone, even though reading it gives you all of them at once.
+    wrong: Reading and writing `document.cookie` are not symmetrical. Reading gives you everything; writing does something narrower.
+    [x] Both cookies, such as `theme=dark; lang=en`
+    [ ] Only `lang=en`, because the assignment replaced everything
+    [ ] An empty string, because assigning clears the cookies
+    [ ] Only `theme=dark`, because cookies cannot be written from JavaScript
+    ```
+
+## Resources
+
+- [MDN: using HTTP cookies](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Cookies)
+- [MDN: Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
+- [MDN: Document.cookie](https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie)
+- [MDN: third-party cookies](https://developer.mozilla.org/en-US/docs/Web/Privacy/Guides/Third-party_cookies)

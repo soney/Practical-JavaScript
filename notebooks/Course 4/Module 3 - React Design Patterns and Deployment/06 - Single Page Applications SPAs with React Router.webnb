@@ -1,0 +1,281 @@
+# Single Page Applications (SPAs) with React Router
+
+In the Element Hoisting lesson we made one React component behave like multiple pages: a `page` state variable started as `'home'`, clicking About changed it to `'about'`, and the component rendered a `HomePage` or an `AboutPage` accordingly. That pattern has a name. A **single page application**, or **SPA**, is an app where the entire application loads in a single page and the content updates dynamically as the user interacts, instead of the browser fetching a new HTML page for every screen.
+
+What that version was missing was URLs. The About screen existed, but there was no address for it: nothing to type in, nothing to bookmark, nothing to share. In the video we fixed that with **React Router**, one of the most popular libraries for building SPAs, and this reading walks through the result. The code is in your workspace, in the `library-demos/react-router/` folder next to this notebook. To watch it run, find that folder in the file explorer, right-click `index.html`, and choose "Show Preview", then click the links in the nav.
+
+Two differences from the video before we start. First, the video's project had a build step (Babel and webpack); the workspace copy runs with nothing but a preview, the same way the freact projects did: the libraries load as script-tag globals, an in-browser compiler translates the JSX, and comments in the files mark where the imports would go. Second, the video installed the newest React Router (version 7), while the copy packaged into your workspace is **version 5**, an older release of the same library that spells a few of its pieces differently. The ideas map one for one, the practice assignment at the end of this lesson uses the same version 5 names you will read here, and the end of this reading shows the newer spellings side by side.
+
+## Screens Without URLs
+
+Suppose we want the About screen to live at `localhost:3000/about`. Typing that into the address bar fails: the dev server goes looking for a file or directory literally named `about`, and our app only ships one `index.html`.
+
+The fix in the video was one flag in the webpack dev server configuration, `historyApiFallback`:
+
+```javascript
+// webpack.config.js
+module.exports = {
+  // ...
+  devServer: {
+    historyApiFallback: true
+  }
+};
+```
+
+It tells the server: when you do not have a page for a path, serve `index.html` as a fallback. Now visiting `/about` loads the app -- but it shows the *Home* screen, because nothing reads the URL yet.
+
+We could do that reading ourselves. The browser exposes the current path as `window.location.pathname` (it is `'/'` on the home page and `'/about'` on the about page), and in the video we wrote a function that turns a pathname into a page name. Here it is; try adding another page to it and running it again:
+
+```{javascript autorun}
+function getPageFromPathname(pathname) {
+  if (pathname === '/') {
+    return 'home';
+  } else if (pathname === '/about') {
+    return 'about';
+  } else {
+    return 'not-found';
+  }
+}
+
+console.log(getPageFromPathname('/'));
+console.log(getPageFromPathname('/about'));
+console.log(getPageFromPathname('/bananas'));
+```
+
+Swap the `page` state variable for `const page = getPageFromPathname(window.location.pathname)`, add plain `<a href="/">` and `<a href="/about">` links, and it works: the URL changes and the right screen shows. But click a link and watch closely -- the whole page reloads. Every click throws away the running app, downloads everything again, and starts over, which is exactly what a single page application is supposed to avoid. Browsers do provide a way to change the URL without reloading (the History API), but managing it by hand makes the code complex quickly. That is the job we hand to React Router.
+
+## React Router
+
+In the video we installed the library with `npm install react-router`; in your workspace it is already packaged. React Router's job is to connect our components to the browser's address bar and history, so the app gets real URLs, working back and forward buttons, and screen changes with no page reloads.
+
+```{walkthrough}
+title: The app, one piece at a time
+step: The page that loads it all
+file: library-demos/react-router/index.html
+The same no-build-step page shape as the freact projects, with the router added. Script order is dependency order: React and ReactDOM first, then the library that uses them, then the compiler.
+@"react-router-dom.js": The whole library as one script. In version 5, the browser half of React Router is published under the name `react-router-dom`, which is where this file name and the `ReactRouterDOM` global come from. After this line runs, everything the video imported is a property of that global.
+@"text/babel": The in-browser compiler can only handle one compiled JSX file per page, which is why every component in this project shares `App.jsx`.
+
+step: The library's pieces
+file: library-demos/react-router/App.jsx
+region: globals
+The import from the video becomes a destructure from the global, and this line is also where the version difference is visible.
+@"const { HashRouter": Version 5's names: `Switch` where the video said `Routes`, and `HashRouter` in place of `BrowserRouter` (the next step says why). `Route`, `Link`, and `useParams` keep their names in both versions.
+
+step: The page components
+file: library-demos/react-router/App.jsx
+region: page-components
+Three screens, one component each. Nothing in them knows that routing exists: the router decides which one renders, and the components stay ordinary.
+@"function NotFoundPage": The screen for URLs that match nothing. A route at the bottom of the file decides when it shows.
+
+step: The routes
+file: library-demos/react-router/App.jsx
+region: app-component
+This replaces the `page` state variable entirely. Read the `Switch` as a table: for each URL pattern, which screen?
+@"<HashRouter>": The connection to the browser's address bar and history. The video used `BrowserRouter`, which works with real paths like `/about` -- that is the flavor that needed `historyApiFallback` on the server. `HashRouter` keeps the route after a `#` in the URL (`index.html#/about`) so that any plain file server works with no configuration, which is why this preview and the practice assignment use it. Everything else works the same in both.
+@"<Switch>": The route list. A `Switch` renders the **first** route in the list whose `path` matches the current URL. (The video's `Routes` picks the *best* match instead of the first; same job, different tie-break.)
+@"exact path": In version 5 a path matches by prefix, and every URL begins with `/`, so the home route says `exact`: match `/` and nothing more.
+@":postId": A path segment starting with `:` is a wildcard. It matches any value in that position and captures it under that name, so `/posts/123` matches this route with `123` captured as `postId`.
+@"NotFoundPage": `path="*"` matches everything. Placed *last*, it catches every URL that no route above it matched -- our `not-found` fallback from earlier, now spelled as a route. Because a `Switch` takes the first match, putting this route first would make it win every time.
+@"createRoot": Rendering is unchanged. `App` is an ordinary component; all the routing lives inside it.
+```
+
+Preview the app and try it: click About, then Post 123, then use the browser's back button. The URL changes on every click, the right screen swaps in, and the page never reloads.
+
+## Links Without Reloads
+
+The nav is the other half of the trick, because plain `<a>` elements are what forced the full page reload.
+
+```{walkthrough}
+title: The nav
+step: Layout and Link
+file: library-demos/react-router/App.jsx
+region: layout
+The pieces every screen shares, and the hole the current screen renders into.
+@"<Link to=": `Link` is React Router's version of the anchor element, and `to` is its `href`. It still navigates -- the URL really changes and history really records it -- but without a full page reload, which is what keeps this a *single page* application.
+@"{props.children}": `Layout` wraps the `Switch`, so whichever screen the routes pick renders here, under the nav. The video did this job with a component called `Outlet`, which we will meet at the end of the reading.
+```
+
+Click the three links in the preview and watch the address bar step through `#/`, `#/about`, and `#/posts/123` with no reload in between. (A note for the curious: changing only the `#` part of a URL never reloads a page, so in this hash-based demo even a plain anchor would avoid the reload. With the video's `BrowserRouter` and real paths, a plain `<a href="/about">` re-downloads the whole app, and `Link` is what prevents that. `Link` behaves correctly in both worlds, so we use it everywhere.)
+
+### Try It: NavLink
+
+The practice assignment at the end of this lesson uses a variant of `Link` called **`NavLink`**: a link that knows whether it points at the screen currently showing, and adds a CSS class to itself when it does. Try it in the staged app:
+
+1. Add `NavLink` to the destructuring line at the top of `App.jsx`, after `Link`.
+2. In `Layout`, change the Home link to `<NavLink to="/" exact activeClassName="active">Home</NavLink>` and the About link to `<NavLink to="/about" activeClassName="active">About</NavLink>`.
+3. Save and reload the preview.
+
+`index.html` already contains a style rule that bolds elements with the `active` class, so whichever page you are on, its link now shows bold. `activeClassName` names the class to add, and `exact` on the home link keeps it from being marked active on every page -- the same prefix-matching story as the home route. Like `Switch`, this spelling is specific to version 5, the version your assignment uses.
+
+## URL Parameters with useParams
+
+The `/posts/:postId` route matches `/posts/123`, `/posts/456`, and anything else in that shape, so one component can serve every post. What that component needs is the captured value, and a hook built into React Router hands it over.
+
+```{walkthrough}
+title: Reading the captured value
+step: The Post component
+file: library-demos/react-router/App.jsx
+region: post-page
+One component for every post URL; the wildcard's value tells it which post to show.
+@"const { postId }": `useParams` returns an object holding everything the wildcards in the matched path captured, under the names they were given. For `/posts/123` that object is `{ postId: '123' }` -- and note the value arrives as a *string*, because URLs are text.
+@"Post {postId}": Visit `#/posts/123` in the preview and this heading reads "Post 123". Now edit the URL bar to `#/posts/999`: the heading re-renders as "Post 999", no reload, no new route needed.
+```
+
+## The Newest React Router
+
+The staged copy uses version 5 because that is what is packaged in this workspace and what the practice assignment uses. The video used version 7, so to close, here is the same app the way the video wrote it:
+
+```jsx
+import { BrowserRouter, Routes, Route, Link, Outlet, useParams } from 'react-router';
+
+function Layout() {
+  return <div>
+    <nav>
+      <Link to="/">Home</Link> | <Link to="/about">About</Link> | <Link to="/posts/123">Post 123</Link>
+    </nav>
+    <Outlet />
+  </div>;
+}
+
+export default function App() {
+  return <BrowserRouter>
+    <Routes>
+      <Route path="/" element={<Layout />}>
+        <Route index element={<HomePage />} />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/posts/:postId" element={<Post />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  </BrowserRouter>;
+}
+```
+
+Reading it against the version you now know:
+
+- `Routes` replaces `Switch`, and each `Route` names its screen in an `element` attribute instead of wrapping it as a child. When several routes could match, `Routes` renders the **best** match rather than the first: `/about` beats `*` because it is more specific, so the fallback works wherever it sits, and `/` needs no `exact`.
+- Routes **nest**: the `Layout` route wraps the four screen routes, so every screen renders inside the layout. The **`index`** attribute marks the child that renders when the URL is at the parent's path exactly -- here, `HomePage` at `/`.
+- **`Outlet`** is the piece nesting needs: rendered inside `Layout`, it marks the exact spot where the matched child screen should appear. It is the formal version of the `{props.children}` hole in our staged copy.
+- `BrowserRouter` connects to real paths, which is why the video also needed the `historyApiFallback` server flag. `Link` and `useParams` are unchanged.
+
+Same ideas, newer spellings. When you use React Router in your own projects, check which version is installed and read the matching documentation; both are linked below.
+
+## Exercises
+
+1. React Router keeps a list of routes and finds the screen for the current path, with `*` as the fallback when nothing matches. Model that matching: complete `findScreen` so unknown paths return `'Not Found'`.
+
+    ```{javascript}
+    const routes = [
+      { path: '/', screen: 'Home' },
+      { path: '/profile', screen: 'Profile' }
+    ];
+
+    function findScreen(path) {
+      for (const route of routes) {
+        if (route.path === path) {
+          return route.screen;
+        }
+      }
+      // TODO: nothing matched. Return 'Not Found', like a path="*" route would.
+    }
+
+    const knownScreen = findScreen('/profile');
+    const unknownScreen = findScreen('/missing');
+
+    console.log(knownScreen, unknownScreen);
+    ```
+    ```+solution
+    const routes = [
+      { path: '/', screen: 'Home' },
+      { path: '/profile', screen: 'Profile' }
+    ];
+
+    function findScreen(path) {
+      for (const route of routes) {
+        if (route.path === path) {
+          return route.screen;
+        }
+      }
+      return 'Not Found';
+    }
+
+    const knownScreen = findScreen('/profile');
+    const unknownScreen = findScreen('/missing');
+
+    console.log(knownScreen, unknownScreen);
+    ```
+    ```+test
+    wrap(knownScreen).should('equal', 'Profile').run('Keep returning the matching route\'s screen for known paths', 'Known paths still find their screen');
+    wrap(unknownScreen).should('equal', 'Not Found').run('Return `Not Found` when no route matches the path', 'Unknown paths fall back to `Not Found`');
+    ```
+
+2. Model the capture that `useParams` performs: finish `getPostId` so that for a path like `/posts/123` it returns only the wildcard segment (`'123'`) as a string.
+
+    ```{javascript}
+    function getPostId(path) {
+      // path looks like '/posts/123'. Split it on '/' and return the piece
+      // that the :postId wildcard would capture.
+      const parts = path.split('/');
+      return parts;
+    }
+
+    const postId = getPostId('/posts/123');
+
+    console.log(postId);
+    ```
+    ```+solution
+    function getPostId(path) {
+      // Splitting '/posts/123' on '/' gives ['', 'posts', '123'], so the
+      // captured segment is at index 2.
+      const parts = path.split('/');
+      return parts[2];
+    }
+
+    const postId = getPostId('/posts/123');
+
+    console.log(postId);
+    ```
+    ```+test
+    wrap(postId).should('equal', '123').run('Return only the ID segment, `123`, from the path', 'Captured the URL parameter');
+    wrap(getPostId('/posts/999')).should('equal', '999').run('The function should work for any post ID, not only `123`', 'Works for other post IDs too');
+    ```
+
+3. Route order in a `Switch`
+
+    ```{mcq}
+    In the packaged React Router, a `Switch` renders the first route in the list whose `path` matches. What renders at `/about` with the routes in this order?
+
+    ~~~jsx
+    <Switch>
+      <Route path="*"><NotFoundPage /></Route>
+      <Route path="/about"><AboutPage /></Route>
+    </Switch>
+    ~~~
+
+    correct: Correct! `path="*"` matches every URL, and a `Switch` stops at the first match, so the fallback wins even at `/about`. That is why the catch-all route always goes last. (The newest React Router's `Routes` picks the best match instead of the first, so it would render `AboutPage` here.)
+    wrong: `*` matches every URL, including `/about`. Think about which of the two matching routes a `Switch` reaches first, and look back at "The routes" step of the walkthrough.
+    [x] `NotFoundPage`, because `*` also matches `/about` and its route comes first
+    [ ] `AboutPage`, because its path is the more exact match
+    [ ] Both screens, one after the other
+    [ ] Neither; React Router reports an error because two routes match
+    ```
+
+4. The dev server flag
+
+    ```{mcq}
+    Before writing any router code, the video set `historyApiFallback: true` in the webpack dev server configuration. What does that flag do?
+    correct: Correct! For any path it has no file for, the server serves `index.html`, so the app loads at every URL and the JavaScript decides what to render. Without it, visiting `/about` directly fails, because the server goes looking for a file named `about`.
+    wrong: Recall what happened when we typed `localhost:3000/about` before setting the flag, and look back at "Screens Without URLs".
+    [x] For any path the server does not recognize, it serves `index.html` and lets the app decide what to show
+    [ ] It generates an `about.html` file on disk for every route in the app
+    [ ] It records each visitor's browsing history on the server
+    [ ] It makes the back and forward buttons work inside the app
+    ```
+
+## Resources
+
+- [React Router v5 documentation (the version in this workspace)](https://v5.reactrouter.com/web/guides/quick-start)
+- [React Router: current documentation](https://reactrouter.com/)
+- [MDN: History API](https://developer.mozilla.org/en-US/docs/Web/API/History_API)
+- [MDN: Window.location](https://developer.mozilla.org/en-US/docs/Web/API/Window/location)

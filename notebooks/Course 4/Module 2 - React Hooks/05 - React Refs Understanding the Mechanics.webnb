@@ -1,0 +1,237 @@
+# React Refs: Understanding the Mechanics
+
+`useRef` does two things that look unrelated: it holds a value across renders without causing one, and it gives you the real DOM node for an element. In the video, we built it into freact, [our fake React from Module 1](<../Module 1 - Manipulating the DOM/13 - React Components Understanding the Mechanics Part I.webnb>), and the build shows that they are the same feature.
+
+The updated project is in this module's `freact/05-refs/` folder, next to this notebook. It picks up exactly where Module 1's `freact/04-state/` left off, and the additions are small: one new hook function and one new branch in the props loop. To watch it run, right-click `index.html` in that folder, choose "Show Preview", and open the browser console.
+
+## Another Slot in the Same Array
+
+You saw where state lives in ["React State: Understanding the Mechanics"](<../Module 1 - Manipulating the DOM/22 - React State Understanding the Mechanics.webnb#where-the-value-actually-lives>): a `hooks` array outside every component, one slot per hook call, claimed in call order by a counter that resets each render.
+
+Refs go in that same array. There is no second system.
+
+```{walkthrough}
+title: useRef, whole
+step: One array for every kind of hook
+file: freact/05-refs/freact.js
+region: hooks
+The same two variables from the state reading. The only thing that changed is the comment: slots now hold state values *or* ref boxes, depending on which hook claimed them.
+@"let hooks": A slot's meaning comes entirely from which call claimed it, which is one more reason hook order must never change between renders.
+
+step: The whole hook
+file: freact/05-refs/freact.js
+region: use-ref
+Claim the next slot; on the first render, put an object there; return that object. That is the entire hook.
+@"hooks[idx] = { current": The box, created once. `{ current: initialVal }` is all a ref is.
+@"return hooks[idx]": Every render after the first finds the slot occupied and returns the **same object**. Your component gets back the identical box each time, which is what lets an assignment to `.current` survive from one render to the next.
+```
+
+Compare it with `useState` and two absences stand out.
+
+**There is no setter.** You change a ref by assigning to `.current` yourself.
+
+**Nothing schedules a render.** `useState`'s setter compares, stores, and calls for a re-render. `useRef` does none of that, which is exactly why changing a ref does not update the screen.
+
+That also explains why the box exists at all. If `useRef` returned the value directly, there would be no way to change it in a way the next render could see: the next render would call `useRef` again and get whatever was in the slot. Returning the same **object** every time means `ref.current = 5` writes into something that survives.
+
+## How a Ref Reaches a DOM Node
+
+`ref={inputRef}` looks like an attribute, and it travels like one: it is a prop, carried in the element description, holding the ref object. What is special is what `_createDomNode` does when it finds it.
+
+```{walkthrough}
+title: The ref prop
+step: One new branch in the props loop
+file: freact/05-refs/freact.js
+region: ref-prop
+Between `className` and the ordinary attributes, one new case. No attribute is written; the prop is consumed, like an event prop.
+@"propVal.current = dom": The node was created two lines up, and the ref that held `null` now points at it. One assignment is the entire connection between `useRef` in your component and the element on the page.
+
+step: Why the ref is null during render
+file: freact/05-refs/freact.js
+region: function-component
+Look at the order of operations. Your component function runs here, at the top of `_createDomNode` -- and the `input` it describes is created further down, on a later recursive call.
+@"element.type(element.props)": When this call runs, `useRef` hands back the box, and the box still holds `null`: no DOM node below this element exists yet. A ref read during render is a ref read too early. By the time an event handler runs, the nodes exist and the box has been filled in.
+```
+
+## The Component
+
+```{walkthrough}
+title: An input, a ref, and a caveat
+file: freact/05-refs/App.jsx
+The component from the video: an input that carries the ref, and a button whose handler reads it.
+@"useRef(null)": `null` until some node claims the ref, which is why `null` is the conventional starting value for a DOM ref.
+@"ref={inputRef}": The prop that triggers the new branch. When this input is built, the box gets filled.
+@"console.log(inputRef.current)": Runs when you click, long after the render. Preview the page, open the console, click the button, and the log shows the real `input` element.
+@"// setClickCount(clickCount": Commented out on purpose. Uncomment it, save, reload the preview, type something into the input, and click: the count goes up and *what you typed disappears*.
+```
+
+(While you are looking at the button, notice that it renders a count of `0` correctly. That is the `??` fix from the state reading still at work: the text branch reads `nodeValue ?? ''`, because `||` would have swallowed the falsy `0` into an empty string.)
+
+That disappearing text is the caveat from the video, and it is worth understanding rather than memorizing. Our freact rebuilds the entire DOM on every render, so the re-render throws the old input away, node and contents, and makes a brand new one; the ref is then pointed at the new node. Real React does not do this: it keeps the existing DOM nodes and updates them in place, so typed text survives a re-render and a ref stays valid across renders. That difference is the part of React we have not built, and it is why the real thing is more than a few dozen lines.
+
+## The Same in Real React
+
+```{react autorun}
+function FocusInput() {
+  const inputRef = React.useRef(null);
+
+  function focusInput() {
+    inputRef.current.focus();
+  }
+
+  return (
+    <section>
+      <input aria-label="Name" ref={inputRef} />
+      <button onClick={focusInput}>Focus input</button>
+    </section>
+  );
+}
+
+renderReact(<FocusInput />);
+```
+
+No `querySelector`, no `id`. The ref points at this component's own input, which keeps working when the component is rendered twice on one page.
+
+## Exercises
+
+1. Write `useRef`. It should claim a slot, create the box on the first call only, and return the same object every time.
+
+    ```{javascript}
+    const hooks = [];
+    let hookIndex = 0;
+
+    function useRef(initialVal) {
+      // TODO: take the current index and move hookIndex on by one.
+      // If the slot is empty, put { current: initialVal } in it.
+      // Return the object in the slot.
+    }
+
+    hookIndex = 0;
+    const first = useRef(null);
+
+    first.current = 'a DOM node';
+
+    // A second render calls the same hook again.
+    hookIndex = 0;
+    const second = useRef(null);
+
+    console.log(second.current, first === second);
+    ```
+    ```+solution
+    const hooks = [];
+    let hookIndex = 0;
+
+    function useRef(initialVal) {
+      const idx = hookIndex;
+
+      hookIndex = hookIndex + 1;
+
+      if (hooks[idx] === undefined) {
+        hooks[idx] = { current: initialVal };
+      }
+
+      return hooks[idx];
+    }
+
+    hookIndex = 0;
+    const first = useRef(null);
+
+    first.current = 'a DOM node';
+
+    // A second render calls the same hook again.
+    hookIndex = 0;
+    const second = useRef(null);
+
+    console.log(second.current, first === second);
+    ```
+    ```+test
+    wrap(first === second).should('equal', true).run('Both renders should get the very same object back, which is what lets `.current` survive', 'Returned the same object');
+    wrap(second.current).should('equal', 'a DOM node').run('The value written to `.current` should still be there on the next render', 'The value survived the render');
+    wrap(hooks.length).should('equal', 1).run('Two renders of one `useRef` call should use one slot, not two. Claim `hooks[idx]` rather than pushing a new entry', 'Used a single slot');
+    ```
+
+2. Complete the `ref` branch so the created node is written into the ref instead of being set as an attribute. (This cell reaches the real document as `window.document`, since a cell's own `document` has no `createElement`.)
+
+    ```{javascript}
+    const realDocument = window.document;
+
+    const inputRef = { current: null };
+
+    const element = {
+      type: 'input',
+      props: { id: 'name', ref: inputRef, children: [] }
+    };
+
+    const dom = realDocument.createElement(element.type);
+
+    for (const propName in element.props) {
+      if (propName === 'children') {
+        continue;
+      } else if (propName === 'ref') {
+        // TODO: point the ref's current at the dom node
+      } else {
+        dom.setAttribute(propName, element.props[propName]);
+      }
+    }
+
+    console.log(inputRef.current ? inputRef.current.tagName : 'still null');
+    ```
+    ```+solution
+    const realDocument = window.document;
+
+    const inputRef = { current: null };
+
+    const element = {
+      type: 'input',
+      props: { id: 'name', ref: inputRef, children: [] }
+    };
+
+    const dom = realDocument.createElement(element.type);
+
+    for (const propName in element.props) {
+      if (propName === 'children') {
+        continue;
+      } else if (propName === 'ref') {
+        element.props[propName].current = dom;
+      } else {
+        dom.setAttribute(propName, element.props[propName]);
+      }
+    }
+
+    console.log(inputRef.current ? inputRef.current.tagName : 'still null');
+    ```
+    ```+test
+    wrap(inputRef.current === dom).should('equal', true).run('Set the ref`s `current` to the node that was just created', 'Pointed the ref at the node');
+    wrap(dom.getAttribute('id')).should('equal', 'name').run('Other props should still become attributes', 'Set the ordinary attribute');
+    wrap(dom.hasAttribute('ref')).should('equal', false).run('`ref` should not be written to the DOM as an attribute', 'Did not set a ref attribute');
+    ```
+
+3. Why a box and not the value
+
+    ```{mcq}
+    `useRef` returns an object with a `current` property instead of the value itself. What would break if it returned the value directly?
+    correct: Correct! Returning the same object each render is what lets an assignment to `.current` survive. If the value itself came back, assigning to your local variable would change nothing that the next render could see.
+    wrong: Compare `useRef` with `useState` in the walkthrough: `useRef` has no setter, so something else has to make a change stick.
+    [x] Assigning to a returned value would not persist; assigning into a shared object does
+    [ ] React requires every hook to return an object
+    [ ] The object is what triggers the re-render
+    [ ] `current` is needed so the value can be garbage collected
+    ```
+
+4. The null during render
+
+    ```{mcq}
+    A component logs `inputRef.current` in its body, during render, and sees `null`. Why?
+    correct: Correct! The component runs first and produces a description; only afterwards does `_createDomNode` create nodes and fill in the refs. Reading the ref during render happens before that has taken place.
+    wrong: Think about the order: when does your function run, and when does the DOM node come into existence? Look at the second step of "The ref prop" walkthrough.
+    [x] The node has not been created yet when the component function runs
+    [ ] Refs are only readable inside effects, by design
+    [ ] The ref was not attached, so it stays `null` forever
+    [ ] React clears every ref at the start of each render
+    ```
+
+## Resources
+
+- [React Docs: Referencing values with refs](https://react.dev/learn/referencing-values-with-refs)
+- [React Docs: Manipulating the DOM with refs](https://react.dev/learn/manipulating-the-dom-with-refs)
+- [React Docs: useRef](https://react.dev/reference/react/useRef)

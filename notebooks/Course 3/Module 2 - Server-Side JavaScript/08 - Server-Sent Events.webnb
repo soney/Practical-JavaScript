@@ -1,0 +1,380 @@
+# Server-Sent Events
+
+Every server we have written answers a request once and closes the connection. That is the wrong shape for live data: a sports score, a build log, a dashboard. You would have to ask again and again, hoping to catch each change.
+
+**Server-Sent Events**, or SSE, changes one thing. The server responds as usual, and then **keeps the connection open**, sending more messages down it whenever it has something to say.
+
+## Some Data Worth Streaming
+
+To have something changing, here is a fake basketball game. A point goes to one side or the other, every three to five seconds:
+
+```{javascript autorun}
+const score = { home: 0, away: 0 };
+
+// A real game would run all evening. This one stops after five points
+// so the cell does not log forever.
+let pointsLeft = 5;
+
+function updateScore() {
+  if (Math.random() > 0.5) {
+    score.home++;
+  } else {
+    score.away++;
+  }
+
+  console.log('score is now ' + score.home + ' - ' + score.away);
+
+  pointsLeft--;
+
+  if (pointsLeft > 0) {
+    // Math.random() is between 0 and 1, so this is between 300 and 500 ms.
+    setTimeout(updateScore, Math.random() * 200 + 300);
+  }
+}
+
+updateScore();
+```
+
+In the real thing the delay is `Math.random() * 2000 + 3000`, a random three to five seconds, and the game never stops. This cell uses tenths of that so you do not have to wait around.
+
+`Math.random()` gives a number from 0 up to 1, so `> 0.5` is a fair coin, and `Math.random() * 2000 + 3000` is a delay somewhere between three and five seconds. `setTimeout` calling `updateScore` from inside itself keeps the game going.
+
+## The SSE Endpoint
+
+Add a route that streams the score. Three headers set it up:
+
+```javascript
+if (url === '/score') {
+  response.setHeader('Content-Type', 'text/event-stream');
+  response.setHeader('Cache-Control', 'no-cache');
+  response.setHeader('Connection', 'keep-alive');
+
+  // ...send messages
+}
+```
+
+- **`Content-Type: text/event-stream`** is the important one. It tells the client that what follows is a stream of events rather than a single response, which is what makes the browser hold the connection open and keep reading.
+- **`Cache-Control: no-cache`** stops anything between you and the client from holding messages back to serve them later.
+- **`Connection: keep-alive`** asks for the connection not to be closed after the first write.
+
+Then send a message with `response.write`, which we met in [Lesson 1](<02 - Handling Requests and Responses.webnb#what-is-in-the-response>) as "send part of a response without ending it":
+
+```javascript
+response.write('data: ' + JSON.stringify(score) + '\n\n');
+```
+
+The format matters. Each message is a line beginning with **`data: `**, and it is terminated by a **blank line**, which is what the `\n\n` provides. Leave off the second newline and the client waits, because as far as it knows the message has not finished.
+
+Note that we never call `response.end()` here. Ending the response is what closes the connection, and closing it is the one thing we do not want.
+
+## Receiving Them in the Browser
+
+The client side is small, because the browser has an API for exactly this:
+
+```javascript
+const eventSource = new EventSource('/score');
+
+eventSource.addEventListener('message', (scoreEvent) => {
+  const data = JSON.parse(scoreEvent.data);
+
+  document.querySelector('#home').textContent = data.home;
+  document.querySelector('#away').textContent = data.away;
+});
+```
+
+`new EventSource(url)` opens the connection. Every message the server writes fires a `message` event, whose **`data`** property is the text after `data: `. Because we sent JSON, `JSON.parse` turns it back into an object.
+
+```html
+Home: <span id="home">0</span> - Away: <span id="away">0</span>
+```
+
+## Sending More Than One Message
+
+The first version of this sends exactly one update and then goes quiet. Nothing is broken: the code wrote to the response once, and nothing ever writes again. The connection is open and idle.
+
+The blunt fix is a timer:
+
+```javascript
+const intervalId = setInterval(() => {
+  response.write('data: ' + JSON.stringify(score) + '\n\n');
+}, 1000);
+```
+
+Now the client is updated every second, whether or not anything happened.
+
+## Cleaning Up After a Client
+
+That interval will run forever, writing to a client that may have closed the tab. Requests tell you when that happens:
+
+```javascript
+request.on('close', () => {
+  clearInterval(intervalId);
+  response.end();
+});
+```
+
+`request.on('close', ...)` is the same event-listener shape as `'data'` and `'end'` from the previous reading. Without this, every visitor who leaves costs you a timer that never stops, which is a leak that will eventually matter.
+
+## Sending on Change Instead of on a Timer
+
+Once a second is wasteful when the score changes every four seconds, and slow if it changes twice in one second. What we actually want is to send **when the score changes**.
+
+The pattern is to keep a list of functions to call:
+
+```{javascript autorun}
+const score = { home: 0, away: 0 };
+const callbacks = [];
+
+function startListening(callback) {
+  callbacks.push(callback);
+}
+
+function stopListening(callback) {
+  const index = callbacks.indexOf(callback);
+
+  if (index !== -1) {
+    callbacks.splice(index, 1);
+  }
+}
+
+function updateScore() {
+  score.home++;
+
+  for (const callback of callbacks) {
+    callback(score);
+  }
+}
+
+// Two clients connect.
+function firstClient(newScore) {
+  console.log('client 1 sees ' + newScore.home);
+}
+
+function secondClient(newScore) {
+  console.log('client 2 sees ' + newScore.home);
+}
+
+startListening(firstClient);
+startListening(secondClient);
+
+updateScore();
+
+// The second client closes its tab.
+stopListening(secondClient);
+
+updateScore();
+```
+
+Two functions worth knowing here. **`indexOf`** returns the position of an item in an array, or **`-1`** if it is not there, which is why the check is needed. **`splice(index, 1)`** removes one item at that position.
+
+In the server, that replaces the interval entirely:
+
+```javascript
+if (url === '/score') {
+  response.setHeader('Content-Type', 'text/event-stream');
+  response.setHeader('Cache-Control', 'no-cache');
+  response.setHeader('Connection', 'keep-alive');
+
+  const onScoreChange = (newScore) => {
+    response.write('data: ' + JSON.stringify(newScore) + '\n\n');
+  };
+
+  startListening(onScoreChange);
+
+  request.on('close', () => {
+    stopListening(onScoreChange);
+    response.end();
+  });
+}
+```
+
+The callback has to be stored in a named variable, because `stopListening` needs the same function that `startListening` was given.
+
+Open the page in two browsers and both update at the same instant with the same score. Every client is watching one source of truth on the server.
+
+## Running It Yourself
+
+Two browser windows updating in lockstep is the whole point, and it is not something a notebook cell can show you. The finished scoreboard is `demo-server/score-server.js`, next to this notebook:
+
+```{walkthrough}
+title: demo-server/score-server.js
+file: demo-server/score-server.js
+region: source
+The thing being watched, and the list of functions waiting to hear about it.
+@"const listeners": Every connected client puts one function in here. The score itself is one object; there is one source of truth and many watchers.
+@"console.log": Prints how many clients are being told. Watch this number in the terminal as you open and close browser windows.
+@"setInterval(changeScore": Stands in for whatever would really change the score. In a live application this would be a referee's app, a database write, or another request arriving.
+
+step: The endpoint
+file: demo-server/score-server.js
+region: endpoint
+@"text/event-stream": The header that makes the browser hold the connection open and keep reading instead of treating the reply as finished.
+@"onScoreChange(score)": Sends the current score immediately, so a client that connects between changes is not staring at zeros until the next one.
+@"request.on('close'": Removes this client's callback when its tab closes. Delete these lines and the server keeps writing to connections nobody is reading.
+```
+
+Run it, then open `http://localhost:3000` in **two** windows side by side:
+
+```
+$ cd "demo-server"
+$ node score-server.js
+Listening on port 3000
+```
+
+Both windows change at the same instant, a few seconds apart, and neither one asked for anything. Watch the terminal while you do this:
+
+1. Open a second window and the log says it is telling 2 clients.
+2. Close one and the count drops back to 1, which is `request.on('close', ...)` running.
+3. Open the Network tab, find the request to `/score`, and look at it: it never completes. That one request is the whole connection, staying open and collecting messages.
+4. Comment out `onScoreChange(score)` and reload. The board sits at 0-0 until the next change arrives, which is the reason that line is there.
+
+## What SSE Cannot Do
+
+The connection carries messages **from the server to the client** and nothing in the other direction. For a scoreboard, a news ticker, or a dashboard, that is all you need.
+
+For anything where the client also has something to say as it happens, a chat, a shared document, a game, one-way is not enough. That is what WebSockets are for, and they are next.
+
+## Exercises
+
+1. Write `formatSseMessage`, which turns an object into one SSE message.
+
+    ```{node}
+    function formatSseMessage(data) {
+      // TODO: return a `data: ` line holding the object as JSON,
+      // terminated by a blank line
+    }
+
+    console.log(JSON.stringify(formatSseMessage({ home: 3, away: 5 })));
+    ```
+    ```+solution
+    function formatSseMessage(data) {
+      return 'data: ' + JSON.stringify(data) + '\n\n';
+    }
+
+    console.log(JSON.stringify(formatSseMessage({ home: 3, away: 5 })));
+    ```
+    ```+test
+    wrap(formatSseMessage({ home: 3, away: 5 })).should('equal', 'data: {"home":3,"away":5}\n\n').run('Return `data: `, then the object converted with `JSON.stringify`, then `\\n\\n`', 'Formatted the message');
+    wrap(formatSseMessage({ a: 1 }).endsWith('\n\n')).should('equal', true).run('Every message has to end with a blank line, which is what `\\n\\n` gives you', 'Terminated the message');
+    wrap(formatSseMessage({ a: 1 }).startsWith('data:')).should('equal', true).run('The line has to begin with `data:`', 'Used the data field');
+    ```
+
+2. Complete `startListening`, `stopListening`, and the notify loop.
+
+    ```{node}
+    const callbacks = [];
+
+    function startListening(callback) {
+      // TODO: add the callback to the list
+    }
+
+    function stopListening(callback) {
+      // TODO: find the callback and remove it, if it is there
+    }
+
+    function notify(score) {
+      // TODO: call every callback with the score
+    }
+
+    let seenByFirst = 0;
+    let seenBySecond = 0;
+
+    const firstClient = (score) => {
+      seenByFirst = score.home;
+    };
+
+    const secondClient = (score) => {
+      seenBySecond = score.home;
+    };
+
+    startListening(firstClient);
+    startListening(secondClient);
+
+    notify({ home: 1, away: 0 });
+
+    stopListening(secondClient);
+
+    notify({ home: 2, away: 0 });
+
+    console.log(seenByFirst, seenBySecond);
+    ```
+    ```+solution
+    const callbacks = [];
+
+    function startListening(callback) {
+      callbacks.push(callback);
+    }
+
+    function stopListening(callback) {
+      const index = callbacks.indexOf(callback);
+
+      if (index !== -1) {
+        callbacks.splice(index, 1);
+      }
+    }
+
+    function notify(score) {
+      for (const callback of callbacks) {
+        callback(score);
+      }
+    }
+
+    let seenByFirst = 0;
+    let seenBySecond = 0;
+
+    const firstClient = (score) => {
+      seenByFirst = score.home;
+    };
+
+    const secondClient = (score) => {
+      seenBySecond = score.home;
+    };
+
+    startListening(firstClient);
+    startListening(secondClient);
+
+    notify({ home: 1, away: 0 });
+
+    stopListening(secondClient);
+
+    notify({ home: 2, away: 0 });
+
+    console.log(seenByFirst, seenBySecond);
+    ```
+    ```+test
+    wrap(seenByFirst).should('equal', 2).run('The first client is still listening, so it should have seen both updates', 'The remaining listener kept receiving updates');
+    wrap(seenBySecond).should('equal', 1).run('The second client stopped listening after the first update, so it should have seen only that one', 'Removing a listener stopped its updates');
+    wrap(callbacks.length).should('equal', 1).run('One listener was added twice and one was removed, so one should be left', 'The list holds the right listeners');
+    wrap((function () { const before = callbacks.length; stopListening(() => {}); return callbacks.length === before; })()).should('equal', true).run('Removing a callback that was never added should change nothing. `indexOf` returns `-1` when an item is absent', 'Handled removing an unknown listener');
+    ```
+
+3. The first version of the server writes the score once and the client never sees another update. Why?
+
+    ```{mcq}
+    The connection is open. Why is nothing else arriving?
+    correct: Correct! The server wrote to the response a single time. Keeping the connection open does not generate messages on its own; something has to call `response.write` again, whether a timer or a change listener.
+    wrong: The headers were right and the connection stayed open. Look at how many times the server actually sends anything.
+    [x] The server only writes once, and has nothing set up to send anything after that
+    [ ] The browser closes the connection after the first message
+    [ ] `EventSource` is limited to one message per session
+    [ ] The `Content-Type` was `text/html` rather than `text/event-stream`
+    ```
+
+4. SSE carries messages in one direction only. Which of these is the poorest fit for SSE on its own?
+
+    ```{mcq}
+    Which one needs the client to send data as well?
+    correct: Correct! In a collaborative editor every client is also a source of changes, so one-way delivery cannot express it. The other three are the server broadcasting to readers, which is exactly what SSE is for.
+    wrong: Three of these have a server with news and clients who only listen. One does not.
+    [x] A collaborative document editor where several people type at once
+    [ ] A live news ticker showing headlines as they happen
+    [ ] A dashboard showing server CPU usage in real time
+    [ ] A cryptocurrency price tracker updating every few seconds
+    ```
+
+## Resources
+
+- [MDN: using server-sent events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
+- [MDN: EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource)
+- [MDN: Array.prototype.splice()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice)
+- [Node.js: response.setHeader()](https://nodejs.org/api/http.html#responsesetheadername-value)

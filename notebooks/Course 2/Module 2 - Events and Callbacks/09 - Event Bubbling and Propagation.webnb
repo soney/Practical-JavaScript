@@ -1,0 +1,205 @@
+# Event Bubbling and Propagation
+
+Every listener we have written has been attached to the element the user actually interacts with. But an event does not stay on that element. It travels, and listeners anywhere along its route get to run.
+
+Take this structure: an outer div containing an inner div containing a button.
+
+```html id=nestboxes
+<div id="outer">Outer
+  <div id="inner">Inner
+    <button>Click me</button>
+  </div>
+</div>
+```
+
+When the user clicks the button, that click event does not go straight to the button. It travels **down** from the window, through `html`, to the outer div, to the inner div, and finally to the button. Then it turns around and travels **back up** the same way.
+
+![The chain of elements the event travels through, drawn as a stack of boxes from top to bottom: window, document, html, body, outer div, inner div, and button. A green arrow labeled Capture runs down the left side to the button, and a blue arrow labeled Bubbling runs back up the right side. The button box at the bottom is outlined in red and labeled Target.](images/capture-bubbling-elements.png =x420)
+
+Those two journeys have names:
+
+- The **capture phase** is the trip down, from the root toward the specific element that was clicked.
+- The **bubbling phase** is the trip back up, from that element out to the root. The event "bubbles up" to the top.
+
+![The same trip drawn on the page itself: nested boxes labeled Outer and Inner with a Click me button inside, and a hand cursor clicking the button. A red path runs down through the boxes to the button and back up again. A green ellipse around the downward half is labeled Capture, and a blue ellipse around the upward half is labeled Bubbling.](images/capture-bubbling-dom.png =x300)
+
+It probably seems odd to have both. There is a historical reason: early on, some browsers ran events downward and others ran them upward. When the behavior was standardized, the compromise was to keep both, in that order.
+
+## Bubbling, the Default
+
+**`addEventListener` attaches to the bubbling phase by default.** So if we put a listener on all three elements and click the button, they run innermost first:
+
+```{javascript autorun}
+const outer = document.querySelector('#outer');
+const inner = document.querySelector('#inner');
+const button = document.querySelector('button');
+
+outer.addEventListener('click', () => {
+  console.log('outer bubbling');
+});
+
+inner.addEventListener('click', () => {
+  console.log('inner bubbling');
+});
+
+button.addEventListener('click', () => {
+  console.log('button bubbling');
+});
+```
+```+id=nestboxes
+```
+```+css
+#outer { background-color: #aaa; padding: 20px; }
+#inner { background-color: #ccc; padding: 20px; }
+```
+
+Click the button and you get three log lines from one click: `button bubbling`, `inner bubbling`, `outer bubbling`. The single click ran three listeners, because the button really is inside both divs.
+
+Now click the **inner** div instead, in the gray area beside the button. You get only `inner bubbling` and `outer bubbling`. The event's target was the inner div, so it never reached the button at all.
+
+Click the **outer** div and you get only `outer bubbling`.
+
+## The Capture Phase
+
+`addEventListener` takes an optional **third argument**, `useCapture`. It is `false` by default. Pass `true` and the listener is attached to the capture phase instead:
+
+```javascript
+inner.addEventListener('click', callback);         // bubbling (default)
+inner.addEventListener('click', callback, true);   // capturing
+```
+
+With listeners on all three elements in *both* phases, one click on the button runs six of them:
+
+```{javascript autorun}
+const outer = document.querySelector('#outer');
+const inner = document.querySelector('#inner');
+const button = document.querySelector('button');
+
+outer.addEventListener('click', () => console.log('outer capture'), true);
+inner.addEventListener('click', () => console.log('inner capture'), true);
+button.addEventListener('click', () => console.log('button capture'), true);
+
+outer.addEventListener('click', () => console.log('outer bubbling'));
+inner.addEventListener('click', () => console.log('inner bubbling'));
+button.addEventListener('click', () => console.log('button bubbling'));
+```
+```+id=nestboxes
+```
+```+css
+#outer { background-color: #aaa; padding: 20px; }
+#inner { background-color: #ccc; padding: 20px; }
+```
+
+Click the button and read the order:
+
+1. `outer capture`
+2. `inner capture`
+3. `button capture`
+4. `button bubbling`
+5. `inner bubbling`
+6. `outer bubbling`
+
+Down through the ancestors from outermost to innermost, then back up from innermost to outermost. Note that the order the listeners were *registered* in makes no difference; the phase and the position in the tree decide everything.
+
+## Any Descendant Counts
+
+The element clicked does not need to have a listener of its own. Clicking *anything* inside a listening element triggers that element's listener, because the event passes through on its way in and out.
+
+```{javascript autorun}
+const outer = document.querySelector('#outer');
+
+outer.addEventListener('click', (event) => {
+  console.log('outer heard a click on: ' + event.target.tagName);
+});
+```
+```+id=nestboxes
+```
+```+css
+#outer { background-color: #aaa; padding: 20px; }
+#inner { background-color: #ccc; padding: 20px; }
+```
+
+There is one listener here, on the outer div. Click the button, the inner div, or the outer div, and it runs every time, reporting a different `event.target` each time. This is why `event.target` matters: it is the element that was actually clicked, which is often not the element the listener is attached to.
+
+That property is the foundation of a technique called event delegation, where one listener on a container handles clicks on all of its children, including children added later.
+
+## Exercises
+
+1. Add listeners to the button and to the outer div so that clicking the button logs `button` and then `outer`, in that order.
+
+    ```html id=page1
+    <div id="outer" style="background-color: #ddd; padding: 16px;">
+      <button id="child">Click</button>
+    </div>
+    ```
+
+    ```{javascript}
+    const outer = document.querySelector('#outer');
+    const button = document.querySelector('#child');
+
+    // Write your code here
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const outer = document.querySelector('#outer');
+    const button = document.querySelector('#child');
+
+    button.addEventListener('click', () => {
+      console.log('button');
+    });
+
+    outer.addEventListener('click', () => {
+      console.log('outer');
+    });
+    ```
+    ```+test
+    assert('#child').click().run('Could not find the `#child` button', 'Clicked the button');
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'button,outer').run('One click should log `button` and then `outer`. Both listeners are on the bubbling phase, so the innermost one runs first', 'Both listeners ran, innermost first');
+    ```
+
+2. Add a **capture-phase** listener on the outer div that logs `capture`, plus a normal bubbling listener on the button that logs `bubble`, so that one click logs `capture` and then `bubble`.
+
+    ```{javascript}
+    const outer = document.querySelector('#outer');
+    const button = document.querySelector('#child');
+
+    // Write your code here
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const outer = document.querySelector('#outer');
+    const button = document.querySelector('#child');
+
+    outer.addEventListener('click', () => {
+      console.log('capture');
+    }, true);
+
+    button.addEventListener('click', () => {
+      console.log('bubble');
+    });
+    ```
+    ```+test
+    assert('#child').click().run('Could not find the `#child` button', 'Clicked the button');
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'capture,bubble').run('`capture` should be logged first. Pass `true` as the third argument to `addEventListener` on the outer div', 'The capture listener ran before the target listener');
+    ```
+
+3. A div has a click listener. Inside it is an image with no listener at all. The user clicks the image. What happens?
+
+    ```{mcq}
+    Clicking an element that has no listener of its own, inside a div that does have one.
+    correct: Correct! The event travels through the div on its way to the image and back, so the div's listener runs. `event.target` will be the image, which is how the callback can tell what was actually clicked.
+    wrong: Look back at "Any Descendant Counts".
+    [x] The div's listener runs, and `event.target` is the image
+    [ ] Nothing happens, because the image has no listener
+    [ ] The div's listener runs, and `event.target` is the div
+    [ ] An error is reported, because the image cannot handle a click
+    ```
+
+## Resources
+
+- [MDN: Event bubbling and capture](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling)
+- [MDN: Event.target](https://developer.mozilla.org/en-US/docs/Web/API/Event/target)
+- [MDN: Event.currentTarget](https://developer.mozilla.org/en-US/docs/Web/API/Event/currentTarget)
+- [MDN: addEventListener() options](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener#options)

@@ -1,0 +1,187 @@
+# Updating State
+
+State should be updated with its setter function.
+
+When the next state depends on the previous state, use an updater function:
+
+```jsx
+setCount((count) => count + 1);
+```
+
+This is especially useful when several updates can happen close together.
+
+## Why the Updater Form Exists
+
+Here is the problem it solves. `count` starts at `0`, and this handler calls the setter **twice**:
+
+```jsx
+function addTwo() {
+  setCount(count + 1);
+  setCount(count + 1);
+}
+```
+
+You would expect `2`. You get **`1`**.
+
+The reason is that `count` is a value captured when this render ran, and it is `0` for the whole of that render. Calling the setter does not change it; nothing reassigns `count`. So both lines compute `0 + 1` and both say "make the next count 1". React obliges, twice, and the answer is 1.
+
+The updater form fixes it because React passes each update the value produced by the one before:
+
+```jsx
+function addTwo() {
+  setCount((currentCount) => currentCount + 1);
+  setCount((currentCount) => currentCount + 1);
+}
+```
+
+Now the first receives `0` and returns `1`, the second receives `1` and returns `2`.
+
+The rule that follows: **when the next state is computed from the current state, pass a function.** When you are setting a value that does not depend on the old one, passing the value directly is fine.
+
+Watch both versions side by side:
+
+```{react autorun}
+function TwoCounters() {
+  const [direct, setDirect] = React.useState(0);
+  const [updater, setUpdater] = React.useState(0);
+
+  function addTwoDirectly() {
+    setDirect(direct + 1);
+    setDirect(direct + 1);
+  }
+
+  function addTwoWithUpdater() {
+    setUpdater((current) => current + 1);
+    setUpdater((current) => current + 1);
+  }
+
+  return (
+    <section>
+      <p>
+        <button onClick={addTwoDirectly}>setDirect(direct + 1) twice</button> gives {direct}
+      </p>
+      <p>
+        <button onClick={addTwoWithUpdater}>the updater form twice</button> gives {updater}
+      </p>
+    </section>
+  );
+}
+
+renderReact(<TwoCounters />);
+```
+
+Click each button once. The first climbs by one per click; the second climbs by two.
+
+## Functional Updates
+
+```{react}
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  function addOne() {
+    setCount((currentCount) => currentCount + 1);
+  }
+
+  return <button onClick={addOne}>Count: {count}</button>;
+}
+
+renderReact(<Counter />);
+```
+
+The updater receives the current state value and returns the next value.
+
+## Updating Objects
+
+When state is an object, create a new object instead of mutating the existing one.
+
+```{javascript}
+const user = { name: 'Ada', online: false };
+const updatedUser = { ...user, online: true };
+
+console.log(updatedUser);
+```
+
+## Exercises
+
+1. When is a functional state update useful?
+
+   ```{mcq}
+   When is a functional state update useful?
+   correct: Correct. It is useful when the next state depends on the previous state.
+   wrong: Think about `count + 1`.
+   [x] When the next state depends on the previous state.
+   [ ] When state never changes.
+   [ ] When you are only writing CSS.
+   [ ] When there is no setter function.
+   ```
+
+2. Use a functional update to increment the count.
+
+   ```{react}
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     function addOne() {
+       setCount(count);
+     }
+
+     return <button onClick={addOne}>Count: {count}</button>;
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+solution
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     function addOne() {
+       setCount((currentCount) => currentCount + 1);
+     }
+
+     return <button onClick={addOne}>Count: {count}</button>;
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('=>') && source.includes('+ 1')).should('equal', true).run('Use a functional updater that adds 1', 'Used a functional updater');
+     assert('button').click().run('Click the counter', 'Clicked the counter');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('button').should('have.text', 'Count: 1').run('Increment the count to 1', 'Incremented the count');
+     }, 50);
+   }, 50);
+   ```
+
+3. Why create a new object when updating object state?
+
+   ```{mcq}
+   Why create a new object when updating object state?
+   correct: Correct. A new object makes the state change explicit to React and avoids mutating old state.
+   wrong: Think about avoiding mutation.
+   [x] It avoids mutating old state and makes the change explicit.
+   [ ] Objects cannot be used in React.
+   [ ] New objects disable rendering.
+   [ ] State setters only accept strings.
+   ```
+
+5. `count` starts at `0`. A click handler runs `setCount(count + 1);` twice in a row. What does `count` become?
+
+   ```{mcq}
+   Two identical calls, one render. What is the result?
+   correct: Correct! `count` is `0` throughout that render, so both calls compute `0 + 1` and both ask for the same next value. The updater form, `setCount((c) => c + 1)`, is what makes the second one see the first one's result.
+   wrong: Ask what the value of `count` is on the second line. Did anything reassign it?
+   [x] 1
+   [ ] 2
+   [ ] 0
+   [ ] It throws an error for updating state twice
+   ```
+
+## Resources
+
+- [React Docs: Queueing a series of state updates](https://react.dev/learn/queueing-a-series-of-state-updates)
+- [React Docs: Updating objects in state](https://react.dev/learn/updating-objects-in-state)
+- [MDN: Spread syntax](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)

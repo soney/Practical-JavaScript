@@ -1,0 +1,172 @@
+# Course 3 Welcome
+
+Welcome back. In Course 1 we learned the foundations of HTML, CSS, and JavaScript, and in Course 2 we used them to build interactive pages. This course is about everything *around* that code: the libraries you did not write, the tools that assemble your project, the server that sends it out, and the other people on the other end of it.
+
+That is a real shift. Until now every line of code in these notebooks has been ours, and everything has happened inside one browser tab. From here on, neither is true.
+
+## Why JavaScript, Still
+
+It is not an exaggeration to say you can build pretty much anything with JavaScript. It runs in browsers, on servers, on phones, on tablets, in virtual reality headsets, and more. This course is where the "on servers" part starts to matter: the same language you have been writing in the browser is about to run on the other side of the connection too.
+
+Front-end code is valuable because the front end is the *face* of any system you build. It is what users interact with, and it often decides whether they stick around. It is also rewarding work, because your output is something you can see, try out, and share with other people.
+
+## What Is in Course 3
+
+**Module 1: Libraries and Modules.** Using code other people wrote, and splitting your own code into pieces. External libraries, minified files, CDNs, script loading attributes, semantic versioning, and licensing. Then modules: `export`, `import`, default exports, and file paths. Then the console, Node.js, and npm, including publishing a package of your own. Then bundlers, with Webpack as the worked example, plus source maps, loaders, plugins, and deployment.
+
+**Module 2: Server-Side JavaScript.** Writing a web server in JavaScript. Handling requests and responses, serving static files, HTTP methods, `GET` versus `POST`, and query parameters. Then real-time communication with server-sent events and WebSockets.
+
+**Module 3: Multi-User Applications.** Storing data that outlives a page load, and sharing it between people. `localStorage`, cookies, privacy law, databases, registration and login, password security, sessions, and Passport. Then real-time collaboration: operational transformations with ShareDB, peer-to-peer connections and video chat with WebRTC, and CRDTs with Yjs.
+
+**Module 4: Internationalization and Accessibility.** Making an application usable by people who do not share your language or your abilities. Character encodings, locale codes, the internationalization API, then the WCAG guidelines and ARIA.
+
+By the end you will have built things that run in more than one place at once, which is what most real software does.
+
+## A Note on These Notebooks
+
+Much of Course 3 happens in a terminal or on a server, and a notebook cell is a browser. So this course has more cells that *show* a command or a server file without running it, alongside the runnable ones. Where a cell cannot run, the notebook says so and tells you where to type it instead.
+
+The JavaScript itself is the same language. Here is the asynchronous code from Course 2, which underlies most of Modules 2 and 3:
+
+```{javascript autorun}
+function fetchUserName(id) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve('user-' + id);
+    }, 300);
+  });
+}
+
+async function showUser() {
+  console.log('asking...');
+
+  const name = await fetchUserName(7);
+
+  console.log('got back: ' + name);
+}
+
+showUser();
+```
+
+`Promise`, `async`, and `await` were about waiting for data in Course 2. In Course 3 they are about waiting for a file to be read, a database to answer, or another person to finish typing.
+
+## Practice Is the Point
+
+I want to keep emphasizing hands-on learning. Like learning a language or a musical instrument, you get better by practicing: by solving problems, by making mistakes, and by figuring things out.
+
+That matters more here, not less. Tooling is the part of programming people most often try to learn by reading, and it is the part that punishes reading the hardest. A command you have run, watched fail, and fixed is a command you understand. A command you have only read about is not.
+
+So run the cells, change them, and break them on purpose to see what the error says.
+
+## Learning Programming in the Age of Generative AI
+
+This came up in the earlier courses, and it is worth restating here, because Course 3 is where the temptation gets strongest. Setting up a bundler or a login system is exactly the kind of task an LLM will happily produce a hundred lines of code for.
+
+The terminology, briefly:
+
+- **Generative AI**, or GenAI, is artificial intelligence that can create new content: text, images, audio, and, most relevant for us, code.
+- **Large language models**, or LLMs, are AI models trained to understand and generate text, including code. ChatGPT, Claude, and Gemini are examples.
+- A **prompt** is the instruction or input you give one of these systems.
+
+### Why Learn to Program At All?
+
+It is a fair question: why learn programming if an AI can write it? You could ask the analogous question, why learn addition if I have a calculator?
+
+- It develops problem-solving and logical thinking, which make you write better code whether or not you use AI.
+- AI models still have real limitations, and knowing how to program is how you get past them.
+- Understanding the fundamentals is what lets you **guide and evaluate** what an AI produces, rather than hoping it is right.
+- And if you like knowing how things work under the hood, this is how you find out.
+
+Picture a graph with program complexity across the bottom and how hard something is to build up the side. Writing code with an LLM *alone* starts out very easy, then ramps up as you have to prompt more and more precisely, and eventually reaches a point where writing the right prompt is nearly as hard as programming, but with extra steps. Writing code *without* an LLM rises too, but more gently, and with no cliff. A programmer working *with* an LLM has the flattest of the three curves: saving time on the easy parts, prompting well because they know exactly what they want, and correcting faulty output on sight.
+
+The material in this specialization sits toward the simpler end of that graph, and it is the part you have to know before the complex end is reachable at all. It is also worth noting that few people get hired purely to prompt, without foundational knowledge of what they are prompting about.
+
+### Using AI While Learning
+
+Most programmers will, and should, work with AI. While *learning*, be selective, because an AI will by default try to solve the problem for you, and having the problem solved is not the same as learning to solve it.
+
+Prompt it to **explain** rather than to answer:
+
+- "Explain how I could do this."
+- "Can you break down this function definition?"
+- "Give me some practice problems to test this concept."
+
+Ask it to explain a concept, help you debug when you are stuck, or suggest a different approach, and then make sure you are still thinking the code through yourself. Used thoughtfully it is a good partner. Used as a shortcut, it quietly skips the part where you get better.
+
+## Submitting Assignments
+
+The workflow has not changed since Course 2, so here it is in short.
+
+Open a practice problem and click **Launch Lab**, which opens Visual Studio Code inside Coursera. The **Instructions** tab, also reachable from the navigation button, says what to do. Write your code, and use the **preview** button to see your page.
+
+**Mark as completed** is only a note to yourself. To get credit you have to click **Submit assignment**, confirm the work is your own, check that the listed files are the ones you edited and that the assignment is the one you expect, and then submit.
+
+An automatic grader then runs, which takes a little while. Click **View grades**: first you see "grading your submission", then a test results pane with how many tests ran, how many passed, and how many failed. Scroll down for the detail on each failing test, and for screenshots of the page the grader actually saw. Those screenshots are the fastest way to spot the difference between the page you meant to build and the page you built.
+
+Then go back, fix it, and submit again. When everything passes you will see "Passed, grade received 100%". Some labs contain several problems, so mark this one completed and move on to the next.
+
+Attempt every practice problem you can, not only the graded assessments.
+
+## Exercises
+
+1. Log each of the four module topics, one per line, using a loop.
+
+    ```{javascript}
+    const topics = [
+      'libraries and modules',
+      'server-side JavaScript',
+      'multi-user applications',
+      'internationalization and accessibility'
+    ];
+
+    // Write your loop here
+    ```
+    ```+solution
+    const topics = [
+      'libraries and modules',
+      'server-side JavaScript',
+      'multi-user applications',
+      'internationalization and accessibility'
+    ];
+
+    for (const topic of topics) {
+      console.log(topic);
+    }
+    ```
+    ```+test
+    check.consoleLogged('libraries and modules').run('Log each topic from the array', 'Logged the first topic');
+    check.consoleLogged('server-side JavaScript').run('Every topic should be logged, not only the first', 'Logged the second topic');
+    check.consoleLogged('internationalization and accessibility').run('The loop should reach the last topic too', 'Logged every topic');
+    wrap(console.history().length).should('equal', 4).run('Log exactly four lines, one per topic', 'Logged one line per topic');
+    ```
+
+2. According to that complexity graph, what happens when you use an LLM alone on a genuinely complex program?
+
+    ```{mcq}
+    Prompting alone gets harder as complexity grows. How far does that go?
+    correct: Correct! At the complex end, getting the prompt right is nearly as hard as writing the code, with the extra step of describing it in English first. Knowing how to program is what flattens that curve.
+    wrong: Look back at the description of the three curves.
+    [x] Writing the right prompt becomes almost as hard as programming it yourself
+    [ ] It stays easy, because complexity only slows down human programmers
+    [ ] The model refuses prompts above a certain length
+    [ ] It becomes impossible, so complex programs cannot use AI at all
+    ```
+
+3. Your submission comes back failing. Besides the error message for each test, what does the grader give you?
+
+    ```{mcq}
+    What else is in the test results pane?
+    correct: Correct! The grader includes screenshots of the page it actually loaded. Comparing that with the page you expected usually finds the problem faster than rereading your code does.
+    wrong: Revisit "Submitting Assignments" and what appears when you scroll down.
+    [x] Screenshots of the page the grader saw
+    [ ] A corrected version of your code
+    [ ] The other learners' scores on the same problem
+    [ ] A copy of the test source code
+    ```
+
+## Resources
+
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+- [Node.js documentation](https://nodejs.org/en/docs/)
+- [npm documentation](https://docs.npmjs.com/)
+- [MDN: Web APIs](https://developer.mozilla.org/en-US/docs/Web/API)

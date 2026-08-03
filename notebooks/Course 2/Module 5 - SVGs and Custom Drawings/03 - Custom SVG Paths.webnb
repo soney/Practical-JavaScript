@@ -1,0 +1,218 @@
+# Custom SVG Paths
+
+Circles, rectangles, and lines get us a long way, and they cannot draw a triangle. For shapes of our own we need two more elements: **`<polygon>`** and **`<path>`**.
+
+## `<polygon>`
+
+A polygon is a shape defined by a list of **points**, joined by straight lines, with the last point automatically joined back to the first. The `points` attribute holds them as `x,y` pairs separated by spaces.
+
+```{html autorun}
+<svg width="360" height="260">
+  <polygon points="100,200 200,60 300,200" fill="red"></polygon>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Three points, one triangle. Add more points for any straight-sided shape:
+
+```{html autorun}
+<svg width="300" height="260">
+  <polygon points="50,150 150,50 250,150 200,250 100,250"
+           fill="orange" stroke="black" stroke-width="2"></polygon>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Polygons take `fill`, `stroke`, and `stroke-width` like any other shape.
+
+## `<path>`
+
+A polygon can only draw straight lines. The **`<path>`** element can draw anything, and the price is that it has its own small language.
+
+That language lives in the **`d`** attribute, and it is a list of **commands**. The way to think about it is that you are directing a pencil.
+
+### Moving and Drawing Straight
+
+- **`M x y`** *moves* the pencil to a position **without drawing**.
+- **`L x y`** draws a **line** from where the pencil is to the position given.
+- **`Z`** *closes* the shape by drawing back to where the path started. It takes no arguments.
+
+```{html autorun}
+<svg width="360" height="360">
+  <path d="M 100 100 L 300 100 L 200 300 Z" fill="lightblue" stroke="black" stroke-width="2"></path>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Move to a corner, line to the second, line to the third, close. That is a triangle, the same shape a polygon could have made.
+
+### Curves Are the Point
+
+Where `path` earns its complexity is curves. A **cubic Bezier curve** is written **`C x1 y1 x2 y2 x y`**: two **control points**, then the end point.
+
+Control points are not on the curve. They pull it. The curve leaves the start heading toward the first control point, and arrives at the end coming from the direction of the second.
+
+The cell below draws the curve in blue, and marks the two control points in red with dashed guide lines so you can see the pull:
+
+```{html autorun}
+<svg width="400" height="400">
+  <path d="M 40 210 C 70 20 280 375 360 210" stroke="blue" stroke-width="3" fill="none"></path>
+
+  <line x1="40" y1="210" x2="70" y2="20" stroke="red" stroke-dasharray="4 4"></line>
+  <line x1="360" y1="210" x2="280" y2="375" stroke="red" stroke-dasharray="4 4"></line>
+  <circle cx="70" cy="20" r="5" fill="red"></circle>
+  <circle cx="280" cy="375" r="5" fill="red"></circle>
+  <circle cx="40" cy="210" r="5" fill="black"></circle>
+  <circle cx="360" cy="210" r="5" fill="black"></circle>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Note `fill="none"` on the path. Without it the browser fills the region the curve encloses, which is rarely what you want for a line.
+
+Move the control points in the `d` attribute and rerun the cell to feel how they steer the curve.
+
+A **quadratic Bezier curve**, **`Q x1 y1 x y`**, uses a **single** control point, which both ends bend toward:
+
+```{html autorun}
+<svg width="400" height="260">
+  <path d="M 40 210 Q 200 20 360 210" stroke="blue" stroke-width="3" fill="none"></path>
+  <circle cx="200" cy="20" r="5" fill="red"></circle>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+And **`A`** draws an **arc**, a section of an oval, written `A rx ry angle large-arc-flag sweep-flag x y`. The first two numbers are the oval's radii and `angle` tilts it. The two flags choose between the four possible arcs that could connect the same two points; they are worth reading up on when you need them rather than memorizing now.
+
+```{html autorun}
+<svg width="400" height="400">
+  <path d="M 150 150 A 150 100 45 0 1 300 300" stroke="blue" stroke-width="3" fill="none"></path>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+### Shortcuts
+
+- **Lowercase means relative.** `M 50 90` moves *to* the point (50, 90). `m 50 90` moves 50 to the right and 90 down **from wherever the pencil is**. Every command has a lowercase form.
+- **`H x`** draws a horizontal line, keeping `y` the same. **`V y`** draws a vertical line, keeping `x` the same.
+- **`S`** and **`T`** are smooth versions of `C` and `Q`. They infer one control point from the previous curve, which keeps a chain of curves smooth without your having to work out matching control points by hand.
+
+## A Worked Example: A Chat Bubble
+
+Here is a real shape built from those commands. Read the `d` attribute one command at a time:
+
+```{html autorun}
+<svg width="320" height="320">
+  <path d="M 230 280
+           l -80 -40
+           H 120
+           Q 100 240 100 220
+           V 120
+           Q 100 100 120 100
+           H 280
+           Q 300 100 300 120
+           V 220
+           Q 300 240 280 240
+           H 230
+           Z"
+        fill="#00274c"></path>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Walking through it: move to the tip of the tail; draw a **relative** line up and to the left; a horizontal line left; a **quadratic curve** to round the bottom-left corner; a vertical line up; another rounded corner; across the top; round the top-right; down the right side; round the bottom-right; back to the tail; close.
+
+Nine of those eleven commands are `H`, `V`, or `Q`. Rounded rectangles and speech bubbles are mostly straight lines with small curves at the corners, and that is what most real path data looks like.
+
+You will rarely write a complicated path by hand. Drawing tools export SVG, and the `d` attribute they produce can be thousands of characters long. Knowing the language means you can read it, adjust it, and generate it from code.
+
+## Exercises
+
+1. Draw a triangle using a `<polygon>` with three points, filled orange.
+
+    ```{html}
+    <svg width="120" height="120">
+      <!-- Write your polygon here -->
+    </svg>
+    ```
+    ```+solution
+    <svg width="120" height="120">
+      <polygon points="60,10 110,100 10,100" fill="orange"></polygon>
+    </svg>
+    ```
+    ```+test
+    assert('polygon').should('exist').run('Create a `polygon` element', 'Created the polygon');
+    wrap(document.querySelector('polygon').getAttribute('points').trim().split(/\s+/).length).should('equal', 3).run('Give it exactly three points, so it forms a triangle', 'Gave it three points');
+    wrap(document.querySelector('polygon').getAttribute('fill')).should('equal', 'orange').run('Fill it `orange`', 'Filled it orange');
+    ```
+
+2. Draw a closed triangle using a `<path>` instead: move to `10 10`, line to `90 10`, line to `50 90`, and close the shape.
+
+    ```{html}
+    <svg width="100" height="100">
+      <!-- Write your path here -->
+    </svg>
+    ```
+    ```+solution
+    <svg width="100" height="100">
+      <path d="M 10 10 L 90 10 L 50 90 Z" fill="lightblue" stroke="black"></path>
+    </svg>
+    ```
+    ```+test
+    assert('path').should('exist').run('Create a `path` element', 'Created the path');
+    wrap(/^\s*M\s*10[ ,]+10/.test(document.querySelector('path').getAttribute('d'))).should('equal', true).run('Start the `d` attribute by moving to `10 10` with `M`', 'Moved to the start');
+    wrap((document.querySelector('path').getAttribute('d').match(/L/gi) || []).length).should('equal', 2).run('Use two `L` commands, one for each of the other two corners', 'Drew both lines');
+    wrap(/Z/i.test(document.querySelector('path').getAttribute('d'))).should('equal', true).run('End with `Z` to close the shape back to the start', 'Closed the path');
+    ```
+
+3. Draw a curved line from `20 100` to `180 100` that bows upward, using a single control point at `100 20`. Make sure the curve is not filled.
+
+    ```{html}
+    <svg width="200" height="120">
+      <!-- Write your path here -->
+    </svg>
+    ```
+    ```+solution
+    <svg width="200" height="120">
+      <path d="M 20 100 Q 100 20 180 100" stroke="blue" stroke-width="3" fill="none"></path>
+    </svg>
+    ```
+    ```+test
+    assert('path').should('exist').run('Create a `path` element', 'Created the path');
+    wrap(/Q/i.test(document.querySelector('path').getAttribute('d'))).should('equal', true).run('Use a `Q` command, which takes one control point', 'Used a quadratic curve');
+    wrap(document.querySelector('path').getAttribute('fill')).should('equal', 'none').run('Set `fill="none"`, or the browser will fill the area the curve encloses', 'Turned off the fill');
+    wrap(document.querySelector('path').getAttribute('stroke') !== null).should('equal', true).run('Give it a `stroke` so the line is visible', 'Gave it a stroke');
+    ```
+
+4. What is the difference between `M` and `m` in path data?
+
+    ```{mcq}
+    A path contains `m 50 90` rather than `M 50 90`. What does that do?
+    correct: Correct! An uppercase command uses absolute coordinates; a lowercase one is relative to the pencil's current position. That applies to every path command, not only `M`.
+    wrong: Look back at the first item under "Shortcuts".
+    [x] Moves 50 right and 90 down from the current position, rather than to the point (50, 90)
+    [ ] Moves to (50, 90) but without drawing, while `M` draws a line
+    [ ] Moves to (50, 90) measured from the bottom-left instead of the top-left
+    [ ] Nothing; the case of a path command is ignored
+    ```
+
+## Resources
+
+- [MDN: The path element](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/path)
+- [MDN: The d attribute](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/d)
+- [MDN: The polygon element](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/polygon)
+- [MDN: Paths tutorial](https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorials/SVG_from_scratch/Paths)

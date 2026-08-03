@@ -1,0 +1,168 @@
+# React Hooks
+
+We can render components, respond to events, and hold state. What we cannot yet do is control **when** our code runs.
+
+That gap is worth stating plainly, because it comes from something we saw in [Lesson 1](<../Module 1 - Manipulating the DOM/04 - Libraries and Frameworks.webnb#who-calls-whom>). React is a **framework**: you hand it your components and it decides when to call them. You never call `Counter()` yourself. React does, whenever it decides a render is needed.
+
+Living inside somebody else's control flow costs you three things:
+
+- **You cannot control timing.** Code that has to run after the DOM exists has nowhere obvious to go.
+- **Local variables reset on every call.** Anything a component wants to remember is gone by the next render.
+- **State is hard to share.** Two components that both need the same value have no way to reach it.
+
+**Hooks** are how you get those back. A hook is a function that lets a component **hook into** React's own machinery, adding capabilities that a plain function does not have: memory, shared state, code with side effects, and more.
+
+You have used one already. `useState` is a hook, and it solves exactly the second problem in that list.
+
+## The Hooks You Will Meet
+
+By convention, **every hook name starts with `use`**. That is not decoration; linters use the prefix to check the rules below.
+
+| Hook | What it adds |
+| --- | --- |
+| `useState` | A value the component remembers across renders |
+| `useRef` | A remembered value that does *not* cause a re-render when it changes |
+| `useEffect` | Code that runs after render, for side effects like timers and network calls |
+| `useContext` | Data shared across many components without passing props down by hand |
+| `useReducer` | State updated through actions, when several events change one shape |
+| `useCallback`, `useMemo` | A function or a value remembered across renders |
+
+Each gets its own reading. In these notebooks the React library is a global, so they are written `React.useState(...)`, `React.useEffect(...)`, and so on.
+
+## The Rules
+
+Two rules apply to every hook, no matter which one.
+
+**Hooks must be called at the top level of a component.** Not inside an `if`, not inside a `for`, not inside a nested function or a callback. Directly in the component body.
+
+**Hooks must run in the same order on every render.** This is the reason for the first rule, and it also means that hook calls go **before any `return`**, including early returns. A `return` that happens before a hook call would skip that call on some renders.
+
+```jsx
+function Broken({ isLoggedIn }) {
+  if (!isLoggedIn) {
+    return <p>Please log in</p>;      // an early return...
+  }
+
+  const [name, setName] = React.useState('');   // ...that skips this hook
+
+  return <p>Hello, {name}</p>;
+}
+```
+
+```jsx
+function Fixed({ isLoggedIn }) {
+  const [name, setName] = React.useState('');   // always called
+
+  if (!isLoggedIn) {
+    return <p>Please log in</p>;
+  }
+
+  return <p>Hello, {name}</p>;
+}
+```
+
+Both versions render the same thing when logged in. The first one breaks as soon as `isLoggedIn` changes, because the number of hook calls changed between renders.
+
+This is the habit behind something you have already been doing without being told why: `useState` goes at the top of the component.
+
+## Why Order Is the Rule
+
+React does not track your state by name. It tracks it **by call order**: the first hook call in a component gets the first slot, the second gets the second, and so on, every render. Skip a call and every later hook reads the slot belonging to something else.
+
+You saw the machinery in Module 1's ["React State: Understanding the Mechanics"](<../Module 1 - Manipulating the DOM/22 - React State Understanding the Mechanics.webnb#where-the-value-actually-lives>), where the counter that assigns those slots was a variable called `hookIndex`. That reading is what makes this rule feel like a consequence rather than a decree.
+
+## Exercises
+
+1. Fix the component so its hooks follow the rules.
+
+   ```{react}
+   function Greeting({ isLoggedIn }) {
+     if (!isLoggedIn) {
+       return <p>Please log in</p>;
+     }
+
+     const [name, setName] = React.useState('Ada');
+
+     return <p>Hello, {name}</p>;
+   }
+
+   renderReact(<Greeting isLoggedIn={true} />);
+   ```
+   ```+solution
+   function Greeting({ isLoggedIn }) {
+     const [name, setName] = React.useState('Ada');
+
+     if (!isLoggedIn) {
+       return <p>Please log in</p>;
+     }
+
+     return <p>Hello, {name}</p>;
+   }
+
+   renderReact(<Greeting isLoggedIn={true} />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.indexOf('React.useState') < source.indexOf('if (!isLoggedIn)')).should('equal', true).run('Move the `React.useState` call above the early `return`, so it runs on every render', 'Hook is called before any return');
+     assert('p').should('have.text', 'Hello, Ada').run('The component should still greet by name when logged in', 'Still renders the greeting');
+   }, 50);
+   ```
+
+2. Use `React.useState` so `Status` renders the initial text `Ready`.
+
+   ```{react}
+   function Status() {
+     const text = 'Waiting';
+
+     return <p>{text}</p>;
+   }
+
+   renderReact(<Status />);
+   ```
+   ```+solution
+   function Status() {
+     const [text, setText] = React.useState('Ready');
+
+     return <p>{text}</p>;
+   }
+
+   renderReact(<Status />);
+   ```
+   ```+test
+   setTimeout(function () {
+     wrap(source.includes('React.useState')).should('equal', true).run('Use `React.useState`', 'Used useState');
+     assert('p').should('have.text', 'Ready').run('Render the initial state value', 'Rendered the state value');
+   }, 50);
+   ```
+
+3. Why do hooks exist at all?
+
+   ```{mcq}
+   What problem do hooks solve for a function component?
+   correct: Correct! React decides when to call your component, so a plain function cannot remember anything between calls or run code at a particular moment. Hooks are the way into React's own machinery, where those capabilities live.
+   wrong: Think about who calls your component function, and what that costs you. Look back at the three points near the top.
+   [x] React controls when components run, so a plain function cannot remember values or control timing on its own
+   [ ] They make components render faster
+   [ ] They replace JSX with plain JavaScript
+   [ ] They let components be written as classes
+   ```
+
+4. Where may a hook be called?
+
+   ```{mcq}
+   Which of these is a legal place to call `useState`?
+   correct: Correct! At the top level of the component body, before any return. Anywhere conditional would let the number of hook calls differ between renders, and React identifies state by call order.
+   wrong: The requirement is that the same hooks run in the same order every single render. Which of these could vary from one render to the next?
+   [x] Directly in the component body, before any `return`
+   [ ] Inside an `if` block, so the state is only created when needed
+   [ ] Inside a `for` loop, once per item
+   [ ] Inside a click handler, so it runs when the user acts
+   ```
+
+## Resources
+
+- [React Docs: Built-in React hooks](https://react.dev/reference/react/hooks)
+- [React Docs: Rules of hooks](https://react.dev/reference/rules/rules-of-hooks)
+- [React Docs: State: a component's memory](https://react.dev/learn/state-a-components-memory)

@@ -1,0 +1,255 @@
+# The Internationalization API
+
+Beyond translating words, an application for a global audience has to format data the way each region expects. Dates, numbers, currencies, lists, and even the rules for plurals all vary by locale. JavaScript ships with the `Intl` API built in so we do not have to assemble these strings by hand.
+
+You can use `Intl` for:
+
+- dates and times,
+- numbers,
+- currencies,
+- lists,
+- plural and ordinal categories,
+- relative time,
+- and more.
+
+The general pattern is the same for every part of the API: create a formatter object with a locale identifier (like `'en-US'` or `'de-DE'`) plus an options object, then call `.format()` (or `.select()`) to produce the localized result.
+
+One important caveat up front: `Intl` formats the *structure* of your data for a locale. It does not translate the words themselves. Formatting a list still leaves each item in whatever language you passed in, so translation of the actual text is a separate job.
+
+## Formatting Currency
+
+```{javascript autorun}
+const formatter = new Intl.NumberFormat('en-US', {
+  style: 'currency',
+  currency: 'USD'
+});
+
+const price = formatter.format(19.99);
+console.log(price);
+```
+
+The formatter handles details such as currency symbol, decimal separator, and grouping. In the United States we write `1,579.01` with a comma for grouping and a period for the decimal. Format the same number for `'fr-FR'` or `'de-DE'` and those roles change: France uses a space to group and a comma for the decimal, and German reverses the US convention.
+
+Which character marks the decimal is not a small regional quirk. It splits the world roughly in half:
+
+![A world map of decimal separators. Blue countries, including the United States, the United Kingdom, China, India, and Australia, use a period. Green countries, covering most of Europe, Africa, and South America, use a comma. Canada and Peru are orange for using both. Several Middle Eastern countries are red for the Momayyez, the Arabic decimal separator.](images/number-i18n.png =x320)
+
+## Formatting Dates
+
+```{javascript autorun}
+const date = new Date('2026-05-21T12:00:00Z');
+
+const formatted = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric'
+}).format(date);
+
+console.log(formatted);
+```
+
+Date order varies across the world. The United States commonly uses month, then day, then year, while many other countries use day, then month, then year, and some use year, then month, then day:
+
+![A world map of the order in which countries write dates. Most of the world is blue for day, month, year. China, Japan, and a few neighbors are orange for year, month, day. The United States is red for using month, day, year alongside year, month, day, and many countries are green or gray for accepting more than one order.](images/date-i18n.png =x320)
+
+Passing a different locale changes the order and separators for you. You can also use higher-level options like `dateStyle` and `timeStyle`:
+
+```javascript
+new Intl.DateTimeFormat('en-GB', {
+  dateStyle: 'full',
+  timeStyle: 'long'
+}).format(new Date());
+// e.g. "Tuesday 24 March 2026 at 13:45:12 GMT"
+```
+
+Use `Intl` instead of building locale-specific date or currency strings by hand.
+
+## Formatting Lists
+
+`Intl.ListFormat` joins an array of items using the conventions of a locale. In English we separate three items with commas and add "and" before the last one (with an Oxford comma): `Motorcycle, Bus, and Car`. In German the joining words and punctuation differ: `Motorcycle, Bus und Car`.
+
+```{javascript autorun}
+const items = ['Motorcycle', 'Bus', 'Car'];
+
+const english = new Intl.ListFormat('en-US', {
+  style: 'long',
+  type: 'conjunction'
+}).format(items);
+
+console.log(english);
+```
+
+- `type: 'conjunction'` joins with "and"; `type: 'disjunction'` joins with "or".
+- The items themselves are not translated. `Intl.ListFormat` only handles the separators and joining words, so you still translate each item separately.
+
+## Plural and Ordinal Rules
+
+Different languages group numbers into different plural categories. English has two: we say `1 apple` (the "one" category) and `0 apples`, `2 apples`, `3 apples` (the "other" category). Arabic has six categories: `zero`, `one`, `two`, `few`, `many`, and `other`. `Intl.PluralRules` tells us which category a number falls into for a locale.
+
+```{javascript autorun}
+const englishPlurals = new Intl.PluralRules('en-US');
+
+console.log(englishPlurals.select(1));  // "one"
+console.log(englishPlurals.select(2));  // "other"
+
+const arabicPlurals = new Intl.PluralRules('ar');
+console.log(arabicPlurals.select(3));   // "few"
+```
+
+The same object handles ordinals (first, second, third, ...) when you pass `type: 'ordinal'`:
+
+```{javascript autorun}
+const englishOrdinals = new Intl.PluralRules('en-US', { type: 'ordinal' });
+
+console.log(englishOrdinals.select(1));  // "one"  -> 1st
+console.log(englishOrdinals.select(2));  // "two"  -> 2nd
+console.log(englishOrdinals.select(3));  // "few"  -> 3rd
+console.log(englishOrdinals.select(4));  // "other" -> 4th
+```
+
+`select()` returns a category name like `one`, `few`, or `other`. It does not produce the final word or suffix. You still map that category to the correct text yourself: in English, mapping the ordinal categories to the suffixes `st`, `nd`, `rd`, and `th`.
+
+## Browser Support and Polyfills
+
+`Intl` is available in essentially every current browser. For older browsers that lack a specific formatter, polyfills fill the gap. For example, the [format.js](https://formatjs.github.io/) project provides polyfills such as one for `Intl.DateTimeFormat` so the API works consistently even on older engines.
+
+Combined with translation tools, `Intl` lets us present dates, numbers, lists, and plurals in a way that is appropriate for each locale, which is a core part of building applications for a global audience.
+
+## Exercises
+
+1. What does the `Intl` API do for us?
+
+   ```{mcq}
+   What does the `Intl` API do for us?
+   correct: Correct. `Intl` formats values for different locales.
+   wrong: Think about dates, numbers, currencies, lists, and plural rules.
+   [x] Formats values (dates, numbers, currencies, lists) for different locales.
+   [ ] Translates the words in your text into other languages.
+   [ ] Creates CSS selectors.
+   [ ] Opens WebSocket connections.
+   ```
+
+2. Complete the formatter so it formats prices as Euros for `de-DE`.
+
+   ```{javascript}
+   const formatter = new Intl.NumberFormat('de-DE', {
+     style: 'currency',
+     currency: ''
+   });
+
+   const price = formatter.format(12);
+   ```
+   ```+solution
+   const formatter = new Intl.NumberFormat('de-DE', {
+     style: 'currency',
+     currency: 'EUR'
+   });
+
+   const price = formatter.format(12);
+   ```
+   ```+test
+   wrap(price.includes('12')).should('equal', true).run('The formatted price should include the amount', 'Formatted the number');
+   wrap(/currency\s*:\s*['"]EUR['"]/.test(source)).should('equal', true).run('Set `currency` to the code `EUR`', 'Chose the currency');
+   wrap(price.replace(/[0-9.,\s]/g, '').length > 0).should('equal', true).run('With a currency style, the output should carry a currency symbol as well as the digits', 'Included the currency symbol');
+   ```
+
+3. Build a list formatter for `en-US` that joins the items with "and". Assign the formatted string to `result`.
+
+   ```{javascript}
+   const items = ['red', 'green', 'blue'];
+
+   const formatter = new Intl.ListFormat('en-US', {
+     style: 'long',
+     type: ''
+   });
+
+   const result = formatter.format(items);
+   ```
+   ```+solution
+   const items = ['red', 'green', 'blue'];
+
+   const formatter = new Intl.ListFormat('en-US', {
+     style: 'long',
+     type: 'conjunction'
+   });
+
+   const result = formatter.format(items);
+   ```
+   ```+test
+   wrap(result.includes('and')).should('equal', true).run('The list should be joined with "and"', 'Joined the list with "and"');
+   wrap(result.includes('red')).should('equal', true).run('The list should include each item', 'Included the items');
+   ```
+
+4. Format a fixed date for `en-US` so it shows the full month name. Assign the result to `formatted`.
+
+   ```{javascript}
+   const releaseDate = new Date(2026, 2, 5); // March 5, 2026
+
+   const formatter = new Intl.DateTimeFormat('en-US', {
+     year: 'numeric',
+     month: '',
+     day: 'numeric'
+   });
+
+   const formatted = formatter.format(releaseDate);
+   ```
+   ```+solution
+   const releaseDate = new Date(2026, 2, 5); // March 5, 2026
+
+   const formatter = new Intl.DateTimeFormat('en-US', {
+     year: 'numeric',
+     month: 'long',
+     day: 'numeric'
+   });
+
+   const formatted = formatter.format(releaseDate);
+   ```
+   ```+test
+   wrap(formatted.includes('March')).should('equal', true).run('The formatted date should show the full month name', 'Formatted the month');
+   wrap(formatted.includes('2026')).should('equal', true).run('The formatted date should include the year', 'Included the year');
+   ```
+
+5. Format `1250.5` for German, with two decimal places, and see what happens to the separators.
+
+   ```{javascript}
+   const amount = 1250.5;
+
+   const german = /* format amount for 'de-DE' with a minimum of 2 fraction digits */;
+
+   console.log(german);
+   ```
+   ```+solution
+   const amount = 1250.5;
+
+   const german = new Intl.NumberFormat('de-DE', {
+     minimumFractionDigits: 2
+   }).format(amount);
+
+   console.log(german);
+   ```
+   ```+test
+   wrap(german).should('equal', '1.250,50').run('German reverses the roles of the two separators, so the result is `1.250,50`: a period groups thousands and a comma marks the decimal', 'Formatted the number for German');
+   wrap(/de-DE/.test(source)).should('equal', true).run('Pass the locale `de-DE` to the formatter', 'Used the German locale');
+   wrap(/minimumFractionDigits/.test(source)).should('equal', true).run('Use `minimumFractionDigits: 2` so the trailing zero is kept', 'Kept two decimal places');
+   ```
+
+   That is the reason to never assemble such a string yourself: a US reader sees `1.250,50` as slightly over one.
+
+6. In English, what category does `Intl.PluralRules('en-US').select(2)` return, and what does that tell you?
+
+   ```{mcq}
+   What category does `Intl.PluralRules('en-US').select(2)` return, and what does it mean?
+   correct: Correct. English puts 2 in the "other" category, and you still map that category to the actual wording yourself.
+   wrong: English has two plural categories, "one" and "other". Remember that `Intl` returns a category name, not the finished word.
+   [x] "other", the category name, which you then map to the correct wording (like adding an "s").
+   [ ] "two", the fully translated plural word, ready to display.
+   [ ] "apples", because `Intl` translates the noun for you.
+   [ ] "one", because 2 is close to 1.
+   ```
+
+## Resources
+
+- [MDN: Intl](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl)
+- [MDN: Intl.NumberFormat](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/NumberFormat)
+- [MDN: Intl.DateTimeFormat](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat)
+- [MDN: Intl.PluralRules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/PluralRules)

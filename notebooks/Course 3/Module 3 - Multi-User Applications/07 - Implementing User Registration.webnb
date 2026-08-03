@@ -1,0 +1,324 @@
+# Implementing User Registration
+
+Now that we have a database, let's put it to use. Almost every application has accounts, so registration and login are the most common features there are. Two things before we build them.
+
+**In real work, use a library or a service for authentication.** Passwords, sessions, and account recovery are areas where small mistakes are expensive, and the well-tested options are free. We will get to one of them, Passport, later in this lesson.
+
+**And it is worth building once yourself**, because you cannot judge a library for something you do not understand.
+
+The server from the video is in your workspace, in the `auth-demo/01-registration/` folder next to this notebook, and this reading walks through it. It is the first of seven snapshots in `auth-demo/`: the server grows one reading at a time, the way it grew one video at a time, and you can run any stage while you read.
+
+## The Starting Point
+
+Nothing here starts from zero. The base is the static file server from Module 2, with the database from Lesson 2 attached, and two small changes made before any new features:
+
+```{walkthrough}
+title: The server, before any registration code
+step: From require to import
+file: auth-demo/01-registration/server.js
+region: setup
+The Module 2 servers loaded `http`, `fs`, and `path` with `require()`. This one uses `import` statements instead, because lowdb is a pure ESM package: it can only be loaded with `import`, and one file cannot mix the two styles.
+@"fileURLToPath": One catch: `__dirname`, which the static-file code uses to build paths, comes for free with `require()` but not with `import`. These two lines rebuild it, and they are the standard recipe for doing so.
+
+step: The users database
+file: auth-demo/01-registration/server.js
+region: database
+The lowdb setup from "Setting Up a Database", with `users` in place of `posts`.
+@"path.join(__dirname, 'users.json')": The video passed plain `'users.json'`. Joining with `__dirname` puts the file next to `server.js` no matter which folder you start the server from, since every stage in `auth-demo` is started from the `auth-demo` folder itself.
+@"!db.data": These two checks are belt and braces. The default data should make them unnecessary, and they cost nothing: the first covers a missing file, the second covers a `users.json` written by some earlier version of the code that had a different shape.
+```
+
+## The Registration Page
+
+The home page, `static/index.html`, is nothing but two links: `register.html` and `login.html`. Registration is this reading; the login half of the site is the next one. Here is the page the Register link goes to:
+
+```{walkthrough}
+title: static/register.html
+step: The form
+file: auth-demo/01-registration/static/register.html
+region: form
+@'type="email"': There is an input type specifically for email addresses. On a phone it brings up the right keyboard, and the browser checks the shape of the address for free.
+@'type="password"': This is what makes the input show dots instead of characters. Each input also gets an `id`, so the script below can find it, and a `placeholder`, the gray hint text shown while the input is empty.
+@"submit": A button inside a form submits the form when clicked, which fires the `submit` event the script listens for.
+@"status": An empty `div` where the script will put whatever answer the server sends back.
+
+step: The script
+file: auth-demo/01-registration/static/register.html
+region: script
+@'addEventListener("submit"': Submitting a form normally navigates to another page. That can be useful, but here we want to stay put, so the handler's first act is `e.preventDefault()`.
+@"emailInput.value": Reading `.value` works exactly the same on the password input as on any other. The dots are only a display.
+@'fetch("/register"': The request to the endpoint we are about to write on the server. Three options and all three matter: `method: 'POST'` because we are sending data rather than asking for it, a `Content-Type` header announcing JSON so the server knows how to read the body, and the body itself, turned into text with `JSON.stringify`.
+@"{ email, password }": The shorthand from the WebSockets reading: when the key and the variable have the same name, `{ email, password }` means `{ email: email, password: password }`.
+@"status.textContent": Whatever text the server answers with lands in the status `div`, so the person registering sees it.
+```
+
+Be clear about what `type="password"` does and does not do. It hides the characters **from someone looking over the user's shoulder**. It does not encrypt anything and it does not change what is sent: the password crosses the network as plain text unless HTTPS is protecting the connection, which is HTTPS's job, as in the previous reading. Try it:
+
+```{javascript autorun}
+document.querySelector('#read').addEventListener('click', () => {
+  const typed = document.querySelector('#secret').value;
+
+  document.querySelector('#result').textContent =
+    'JavaScript reads: "' + typed + '"';
+});
+```
+```+html
+<input type="password" id="secret" placeholder="Type a fake password">
+<button id="read">What can JavaScript see?</button>
+<p id="result"></p>
+```
+
+Type into the input and click the button. You see dots; the code sees every character.
+
+## The `/register` Endpoint
+
+Now the server's side of that `fetch`:
+
+```{walkthrough}
+title: POST /register
+file: auth-demo/01-registration/server.js
+region: register
+A new branch in the request handler: a `POST` to `/register` creates an account. Reading the body chunk by chunk and `JSON.parse`-ing it at the end is the pattern from Module 2, unchanged.
+@"req.on('end'": The callback is `async` because everything interesting in it has an `await`.
+@"await db.read();": Re-reading here, *before* the duplicate check, matters. Another request may have added a user since the server last read the file, and checking against stale data is how you end up with two accounts on one email. The video added this call further down the handler first, then moved it up here for exactly that reason.
+@"user.email === email": `find` runs your function on each item of the array and returns the **first item** for which it returns true, or `undefined` if none does. So `userExists` is either a user object or `undefined`, which is why a plain `if` can test it.
+@"writeHead(409": `409 Conflict` is the right status for "your request is fine, but it conflicts with what is already here". Not `404`, which would be untrue, and not `400`, which would blame the shape of the request. The `return` on the same line stops the handler so both branches cannot try to answer.
+@"console.log(data)": Prints what arrived. Watch the terminal while you register and you will see the email and password cross from browser to server.
+@"TODO: fix": The password is stored exactly as typed, and the comment admits it. This is a real security flaw, it is the subject of "Securing User Data" two readings from now, and leaving it visible with a note is better than quietly pretending it is fine.
+@"Date.now()": A timestamp recording when the account was created, along for the ride.
+@"writeHead(201": `201 Created` is the status for "a resource was created successfully", and the text after it is what the page's status `div` will show.
+```
+
+Run it and `users.json` fills up:
+
+```json
+{
+  "users": [
+    { "created": 1717000000000, "email": "user@company.com", "password": "abc123" }
+  ]
+}
+```
+
+Your own password, legible, in a file. Which is the point being made.
+
+## The Handler, Running
+
+The heart of the endpoint, with the server and database stripped away so it can run right here:
+
+```{node autorun}
+const db = { data: { users: [] } };
+
+db.read = function () {
+  return Promise.resolve();
+};
+
+db.write = function () {
+  return Promise.resolve();
+};
+
+function makeFakeResponse() {
+  const sent = { statusCode: null, body: '' };
+
+  sent.writeHead = function (code) {
+    sent.statusCode = code;
+  };
+
+  sent.end = function (text) {
+    sent.body = text;
+  };
+
+  return sent;
+}
+
+function register(data, response) {
+  const userExists = db.data.users.find((user) => user.email === data.email);
+
+  if (userExists) {
+    response.writeHead(409);
+    response.end('User already exists');
+    return;
+  }
+
+  db.data.users.push({ email: data.email, password: data.password, created: 0 });
+
+  response.writeHead(201);
+  response.end('User registered successfully');
+}
+
+const first = makeFakeResponse();
+register({ email: 'user@company.com', password: 'abc123' }, first);
+console.log(first.statusCode + ' ' + first.body);
+
+const second = makeFakeResponse();
+register({ email: 'user@company.com', password: 'different' }, second);
+console.log(second.statusCode + ' ' + second.body);
+
+console.log('users stored: ' + db.data.users.length);
+```
+
+The same email twice: created once, refused once. Try registering a third user with a new email and printing the count again.
+
+## Running It Yourself
+
+The stages in `auth-demo` share one set of dependencies, so the install happens once, in `auth-demo` itself. Open a terminal (Terminal > New Terminal) and run:
+
+```
+$ cd "auth-demo"
+$ npm install
+$ node 01-registration/server.js
+Listening on port 3000
+```
+
+Then open `http://localhost:3000`, follow the Register link, and watch the page, the terminal, and the folder all at once:
+
+1. Register an account. The page says `User registered successfully`, and the terminal prints the object the browser sent, password included.
+2. A `users.json` appears in `01-registration/`. Open it: there is your email, your timestamp, and your password, readable by anyone who can read the file.
+3. Register the same email again. The page says `User already exists`, and if you look in the Network tab, the response status is `409`.
+4. Register a different email, and it works: one account per address, as many addresses as you like.
+
+Stop the server with `Ctrl+C` when you are done: every stage uses port 3000, so only one can run at a time. Delete `users.json` whenever you want a clean slate.
+
+Users can now register, but the site cannot do anything with an account yet. Next we let people log in, and after that we fix the plain-text problem.
+
+## Exercises
+
+1. Write the `fetch` call that sends the registration to the server.
+
+    ```{javascript}
+    const email = 'user@company.com';
+    const password = 'abc123';
+
+    function registerRequest() {
+      // TODO: return the fetch call for a POST to /register,
+      // announcing JSON and sending { email, password } as the body
+    }
+
+    console.log(typeof registerRequest);
+    ```
+    ```+solution
+    const email = 'user@company.com';
+    const password = 'abc123';
+
+    function registerRequest() {
+      return fetch('/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+    }
+
+    console.log(typeof registerRequest);
+    ```
+    ```+test
+    wrap(/fetch\s*\(\s*['"]\/register['"]/.test(source)).should('equal', true).run('Call `fetch` with the URL `/register`', 'Called the right endpoint');
+    wrap(/method\s*:\s*['"]POST['"]/.test(source)).should('equal', true).run('Registration sends data, so the method is `POST`', 'Used the POST method');
+    wrap(/['"]Content-Type['"]\s*:\s*['"]application\/json['"]/.test(source)).should('equal', true).run('Announce the body format with a `Content-Type` of `application/json`', 'Announced the content type');
+    wrap(/body\s*:\s*JSON\.stringify/.test(source)).should('equal', true).run('The body has to be text, so convert the object with `JSON.stringify`', 'Sent the body as JSON');
+    wrap(/email/.test(source) && /password/.test(source)).should('equal', true).run('Send both the email and the password', 'Sent both fields');
+    ```
+
+2. Complete `register` so a new email is created and a repeated one is refused.
+
+    ```{node}
+    const db = { data: { users: [{ email: 'taken@company.com', password: 'x', created: 0 }] } };
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, body: '' };
+
+      sent.writeHead = function (code) {
+        sent.statusCode = code;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function register(data, response) {
+      // TODO: if a user with data.email already exists, answer 409 with
+      // 'User already exists' and stop. Otherwise store
+      // { email, password, created: 0 } and answer 201 with
+      // 'User registered successfully'.
+    }
+
+    const created = makeFakeResponse();
+    register({ email: 'new@company.com', password: 'abc123' }, created);
+
+    console.log(created.statusCode + ' ' + created.body);
+    ```
+    ```+solution
+    const db = { data: { users: [{ email: 'taken@company.com', password: 'x', created: 0 }] } };
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, body: '' };
+
+      sent.writeHead = function (code) {
+        sent.statusCode = code;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function register(data, response) {
+      const userExists = db.data.users.find((user) => user.email === data.email);
+
+      if (userExists) {
+        response.writeHead(409);
+        response.end('User already exists');
+        return;
+      }
+
+      db.data.users.push({ email: data.email, password: data.password, created: 0 });
+
+      response.writeHead(201);
+      response.end('User registered successfully');
+    }
+
+    const created = makeFakeResponse();
+    register({ email: 'new@company.com', password: 'abc123' }, created);
+
+    console.log(created.statusCode + ' ' + created.body);
+    ```
+    ```+test
+    wrap(created.statusCode + '|' + created.body).should('equal', '201|User registered successfully').run('A new email should get `201` and the body `User registered successfully`', 'Registered a new user');
+    wrap(db.data.users.length).should('equal', 2).run('The new user should be added to `db.data.users`', 'Stored the new user');
+    wrap((function () { const r = makeFakeResponse(); register({ email: 'taken@company.com', password: 'y' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '409|User already exists').run('An email already in the database should get `409` and the body `User already exists`. Use `find` to look for it', 'Refused the duplicate');
+    wrap(db.data.users.length).should('equal', 2).run('The refused registration must not add a user, so `return` after answering with the 409', 'Stopped after refusing');
+    ```
+
+3. Does `type="password"` encrypt the password before `fetch` sends it?
+
+    ```{mcq}
+    What does the input type actually do?
+    correct: Correct! It hides the characters on screen and nothing more. The value your JavaScript reads is the password as typed, and it crosses the network as text unless HTTPS is protecting the connection.
+    wrong: Think about what changes when you switch the type, and what does not. The demo cell in this reading shows it directly.
+    [x] No, it only hides the characters visually; the password is still sent as plain text
+    [ ] Yes, the browser turns it into a secure hash before sending
+    [ ] Yes, as long as the `application/json` header is present
+    [ ] No, and it only works with a `GET` request
+    ```
+
+4. What is the `409` for in the registration handler?
+
+    ```{mcq}
+    Why answer a repeated email with 409?
+    correct: Correct! `409 Conflict` says the request was understood but clashes with what already exists, which is exactly the situation when the email is taken.
+    wrong: The request was well formed and the URL exists. Something else is wrong.
+    [x] It signals a conflict: a user with that email address already exists
+    [ ] It confirms the new user was created
+    [ ] It reports that the server is down for maintenance
+    [ ] It asks the browser to reload the registration page
+    ```
+
+## Resources
+
+- [MDN: input type=password](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/input/password)
+- [MDN: 409 Conflict](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/409)
+- [MDN: Array.prototype.find()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/find)
+- [MDN: using fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)

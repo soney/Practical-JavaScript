@@ -1,0 +1,198 @@
+# What Is a Database?
+
+Our servers can answer requests. They cannot remember anything, and a multi-user application is mostly remembering: who has registered, what they are allowed to do, what they wrote.
+
+This reading is about why the two obvious approaches are not enough.
+
+## Attempt One: A Variable
+
+```javascript
+let users = [];
+
+// when someone registers
+users.push({ email: 'ada@example.com', name: 'Ada' });
+```
+
+We tried this with the hit counter in Module 2, and it fails the same way. A variable lives in the server's memory, so **every restart empties it**. Deploy a change and your users are gone. That is not a storage system; it is a cache that clears itself at the worst moment.
+
+## Attempt Two: A File
+
+Also from Module 2: keep the array, and write it to `users.json` whenever it changes.
+
+```javascript
+fs.writeFile('users.json', JSON.stringify(users), () => {});
+```
+
+This genuinely fixes persistence. It has three problems, and they get worse as the application grows.
+
+**Searching is awkward.** "Is someone already registered with this email?" means reading the whole file, parsing it, and looking through every entry. With ten users that is nothing. With a million it is a lot of work for a question you ask on every registration.
+
+**Updating is expensive.** To add one user, the server rewrites **the entire file**. Every existing user is read out and written back so that one line can be added. That is fine for a demonstration and hopeless in production.
+
+**Simultaneous requests lose data.** This is the serious one. Two people register at nearly the same moment:
+
+```{javascript autorun}
+// Our whole "database", as one file.
+let fileContents = JSON.stringify([{ name: 'user1' }, { name: 'user2' }]);
+
+function readWholeFile() {
+  return JSON.parse(fileContents);
+}
+
+function writeWholeFile(users) {
+  fileContents = JSON.stringify(users);
+}
+
+// Request A arrives and reads the file.
+const requestA = readWholeFile();
+
+// Request B arrives before A has finished, and reads the same file.
+const requestB = readWholeFile();
+
+// Each adds its own user and writes the whole file back.
+requestA.push({ name: 'user5' });
+writeWholeFile(requestA);
+
+requestB.push({ name: 'user6' });
+writeWholeFile(requestB);
+
+console.log(fileContents);
+```
+
+`user5` is gone. Nothing errored; request B was working from a copy taken before A wrote, so its write erased A's. That user's registration succeeded as far as they know, and their account does not exist. Bugs of this kind are hard to reproduce and easy to ship.
+
+## The Answer: A Database
+
+A **database** is software built for this job. It gives you three things the file did not.
+
+**Persistence.** Data survives restarts and deployments.
+
+**Fast queries.** Databases are organized so that "find the user with this email" does not mean reading everything. That is the difference between a filing cabinet and a pile.
+
+**Safe concurrent access.** Two simultaneous writes do not destroy each other. The database is responsible for that, which is exactly the responsibility you do not want in your request handler.
+
+The conventional picture of a database is a stack of disks, and you will see that icon everywhere.
+
+## Where It Lives
+
+While you are learning, the database sits on the same computer as the server, which is also the computer running your browser. In production it is usually a separate machine that the server talks to over the network. At larger scale several servers, perhaps one per region, share a database, or several databases connect to each other.
+
+The reassuring part is that **your code does not change much across those arrangements**. You ask the database for data and it answers, whether it is a file beside your server or a cluster on another continent.
+
+## Two Families
+
+**Relational**, or **SQL**, databases store data in **tables**: rows and columns, like a spreadsheet, with a fixed shape your data has to fit. You talk to them in **SQL**, Structured Query Language, which is a language of its own to learn. Examples: **PostgreSQL**, **MySQL**, **SQLite**.
+
+**Non-relational**, or **NoSQL**, databases store data that is not tabular. They are more flexible about shape, which suits rapid development and means you can often store something that looks much like a JavaScript object. Examples: **MongoDB**, **CouchDB**, **Firebase**.
+
+Both families have real advantages, and the choice in a real project deserves more thought than this paragraph. For this specialization we will use NoSQL, so that learning about databases does not also mean learning SQL.
+
+Specifically we will use **LowDB**, which is written for JavaScript. It is **not intended for production**, and it is a good teacher: what you learn about how to structure and query data through LowDB carries over to MongoDB and the rest.
+
+A database is the memory of your server. The next reading sets one up.
+
+## Exercises
+
+1. Write `findUser`, which looks up a user by email.
+
+    ```{javascript}
+    const users = [
+      { email: 'ada@example.com', name: 'Ada' },
+      { email: 'grace@example.com', name: 'Grace' }
+    ];
+
+    function findUser(emailToFind) {
+      // TODO: return the matching user, or null if there is no match
+    }
+
+    console.log(findUser('grace@example.com'));
+    console.log(findUser('nobody@example.com'));
+    ```
+    ```+solution
+    const users = [
+      { email: 'ada@example.com', name: 'Ada' },
+      { email: 'grace@example.com', name: 'Grace' }
+    ];
+
+    function findUser(emailToFind) {
+      for (const user of users) {
+        if (user.email === emailToFind) {
+          return user;
+        }
+      }
+
+      return null;
+    }
+
+    console.log(findUser('grace@example.com'));
+    console.log(findUser('nobody@example.com'));
+    ```
+    ```+test
+    wrap(findUser('grace@example.com')).should('equal', { email: 'grace@example.com', name: 'Grace' }).run('Return the user whose email matches', 'Found a user');
+    wrap(findUser('ada@example.com').name).should('equal', 'Ada').run('It should find the first user as well as the last', 'Found the first user');
+    wrap(findUser('nobody@example.com')).should('equal', null).run('Return `null` when nobody matches', 'Handled a missing user');
+    ```
+
+    Note what this costs: every lookup walks the whole list. A database keeps an index so that it does not have to.
+
+2. Write `isRelational`, sorting these databases into the two families.
+
+    ```{javascript}
+    const relational = ['PostgreSQL', 'MySQL', 'SQLite'];
+
+    function isRelational(name) {
+      // TODO: return true for the relational (SQL) databases above
+    }
+
+    for (const name of ['PostgreSQL', 'MongoDB', 'SQLite', 'Firebase']) {
+      console.log(name + ' relational? ' + isRelational(name));
+    }
+    ```
+    ```+solution
+    const relational = ['PostgreSQL', 'MySQL', 'SQLite'];
+
+    function isRelational(name) {
+      return relational.includes(name);
+    }
+
+    for (const name of ['PostgreSQL', 'MongoDB', 'SQLite', 'Firebase']) {
+      console.log(name + ' relational? ' + isRelational(name));
+    }
+    ```
+    ```+test
+    wrap(isRelational('PostgreSQL')).should('equal', true).run('PostgreSQL is a relational, SQL database', 'Classified PostgreSQL');
+    wrap(isRelational('MySQL')).should('equal', true).run('MySQL is relational too', 'Classified MySQL');
+    wrap(isRelational('MongoDB')).should('equal', false).run('MongoDB is non-relational, a NoSQL database', 'Classified MongoDB');
+    wrap(isRelational('Firebase')).should('equal', false).run('Firebase is NoSQL as well', 'Classified Firebase');
+    ```
+
+3. Why is storing data in a JSON file described as computationally expensive?
+
+    ```{mcq}
+    What makes a single small change costly?
+    correct: Correct! There is no way to change one entry in place: the server reads the whole file, changes the array in memory, and writes the whole file back. The cost of adding one user grows with the number of users you already have.
+    wrong: Think about what has to happen on disk in order to add one user to an array stored in a file.
+    [x] Updating one user means reading and rewriting the entire file
+    [ ] A file can only be read by one user at a time anywhere in the world
+    [ ] Files delete themselves when the server restarts
+    [ ] JavaScript cannot read files larger than one megabyte
+    ```
+
+4. Why start with a NoSQL database in a JavaScript course?
+
+    ```{mcq}
+    What is the advantage here?
+    correct: Correct! A NoSQL database can be worked with using ordinary JavaScript ideas, so learning about databases does not also require learning SQL. That is a teaching choice, not a claim that NoSQL is better.
+    wrong: Think about what a relational database would additionally require you to learn.
+    [x] You can work with the data using JavaScript, without also learning SQL
+    [ ] NoSQL databases are the only ones that work with Node
+    [ ] It stores data in strict rows and columns, like a spreadsheet
+    [ ] LowDB is the industry standard for large production sites
+    ```
+
+## Resources
+
+- [MDN: server-side databases](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/First_steps/Website_security)
+- [LowDB](https://github.com/typicode/lowdb)
+- [MongoDB: what is NoSQL?](https://www.mongodb.com/nosql-explained)
+- [PostgreSQL: about](https://www.postgresql.org/about/)

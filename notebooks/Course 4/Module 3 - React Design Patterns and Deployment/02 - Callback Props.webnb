@@ -1,0 +1,232 @@
+# Callback Props
+
+Props send data **down**: a parent writes an attribute, a child reads it. The last reading left us needing the opposite. State lives in a common ancestor, and a click three levels down has to change it.
+
+The answer is still props. The trick is that **a prop can hold a function**.
+
+## The Idea
+
+The parent writes a function and passes it as a prop. The child, when something happens, calls it.
+
+```text
+Parent ---- clicked={handleClick} ----> Child      (a function goes down)
+Parent <--- handleClick() called ------ Child      (a call comes back up)
+```
+
+Nothing new is being introduced. A prop's value can be a string, a number, an object, or a function, and a function is the useful case here because the child can *call* it.
+
+## A Child Reporting a Click
+
+```{react autorun}
+function ChatInput({ clicked }) {
+  return (
+    <div>
+      <input placeholder="Type a message" />
+      <button onClick={() => clicked()}>Send</button>
+    </div>
+  );
+}
+
+function App() {
+  function handleSend() {
+    console.log('The parent knows the child button was clicked.');
+  }
+
+  return <ChatInput clicked={handleSend} />;
+}
+
+renderReact(<App />);
+```
+
+Click Send and read the console. `handleSend` is defined in `App` and runs because `ChatInput` called it.
+
+Follow the path once, because it is the whole pattern:
+
+1. `App` defines `handleSend`.
+2. `App` passes it down as the `clicked` prop.
+3. `ChatInput` puts its own handler on the button's `onClick`.
+4. That handler calls `clicked()`, which is `handleSend`, back up in `App`.
+
+The child does not know what happens next, and does not need to. It reports; the parent decides.
+
+## Sending Data, Not Only Events
+
+A callback takes arguments like any function, so the child can pass information along with the news:
+
+```{react autorun}
+function ItemButton({ item, onChoose }) {
+  return <button onClick={() => onChoose(item)}>{item}</button>;
+}
+
+function App() {
+  const [selected, setSelected] = React.useState('None');
+
+  return (
+    <section>
+      <ItemButton item="Apple" onChoose={setSelected} />
+      <ItemButton item="Grape" onChoose={setSelected} />
+      <ItemButton item="Pear" onChoose={setSelected} />
+
+      <p>Selected: {selected}</p>
+    </section>
+  );
+}
+
+renderReact(<App />);
+```
+
+Each button reports *which* item was chosen. Note what `App` passed as `onChoose`: `setSelected`, the state setter itself. A setter is an ordinary function, so it can be handed down as a callback prop directly, with no wrapper.
+
+And notice where the state is. `selected` belongs to `App`, not to the buttons. The buttons cannot change it and do not try to; they call a function and `App` does the changing. That keeps one component in charge of one piece of state, however many children can trigger a change.
+
+## Naming
+
+Handler props are conventionally named for the event they report, from the parent's point of view: `onChoose`, `onSend`, `onDelete`, `onValueChange`. Naming them for the child's internal mechanics, like `buttonClicked`, ties the parent to how the child happens to be built today.
+
+The `on` prefix here is convention, not machinery. For a real DOM element, `onClick` is understood by React; for your own component, `onChoose` is a prop name like any other, and it means whatever the child does with it.
+
+## Exercises
+
+1. Wire the callback so clicking the child's button tells the parent.
+
+   ```{react}
+   function SendButton({ onSend }) {
+     // TODO: call onSend when the button is clicked
+     return <button>Send</button>;
+   }
+
+   function App() {
+     const [sends, setSends] = React.useState(0);
+
+     function handleSend() {
+       setSends(sends + 1);
+     }
+
+     return (
+       <section>
+         <SendButton onSend={handleSend} />
+         <p>Sent {sends} times</p>
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function SendButton({ onSend }) {
+     return <button onClick={() => onSend()}>Send</button>;
+   }
+
+   function App() {
+     const [sends, setSends] = React.useState(0);
+
+     function handleSend() {
+       setSends(sends + 1);
+     }
+
+     return (
+       <section>
+         <SendButton onSend={handleSend} />
+         <p>Sent {sends} times</p>
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('p').should('have.text', 'Sent 0 times').run('The count should start at zero', 'Starts at zero');
+     assert('button').click().run('Click Send', 'Clicked Send');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('p').should('have.text', 'Sent 1 times').run('Clicking the child`s button should run the parent`s `onSend` callback', 'The parent heard the click');
+     }, 50);
+   }, 50);
+   ```
+
+2. Pass data up as well as the event: each button should report its own label.
+
+   ```{react}
+   function ItemButton({ item, onChoose }) {
+     // TODO: call onChoose with this button's item when it is clicked
+     return <button>{item}</button>;
+   }
+
+   function App() {
+     const [selected, setSelected] = React.useState('None');
+
+     return (
+       <section>
+         <ItemButton item="Apple" onChoose={setSelected} />
+         <ItemButton item="Grape" onChoose={setSelected} />
+
+         <p>Selected: {selected}</p>
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function ItemButton({ item, onChoose }) {
+     return <button onClick={() => onChoose(item)}>{item}</button>;
+   }
+
+   function App() {
+     const [selected, setSelected] = React.useState('None');
+
+     return (
+       <section>
+         <ItemButton item="Apple" onChoose={setSelected} />
+         <ItemButton item="Grape" onChoose={setSelected} />
+
+         <p>Selected: {selected}</p>
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('p').should('have.text', 'Selected: None').run('Nothing should be selected at the start', 'Nothing selected yet');
+     wrap(document.querySelectorAll('button')[1].textContent).should('equal', 'Grape').run('Both item buttons should render, labelled from their `item` prop', 'Both buttons render');
+     document.querySelectorAll('button')[1].click();
+     setTimeout(function () {
+       assert('p').should('have.text', 'Selected: Grape').run('Call `onChoose(item)` so the parent learns which button was clicked, not only that one was', 'Reported which item was chosen');
+     }, 50);
+   }, 50);
+   ```
+
+3. How does a child send information to its parent?
+
+   ```{mcq}
+   Props go from parent to child. What carries information the other way?
+   correct: Correct! The parent passes a function down as a prop, and the child calls it. Arguments to that call are how data travels up.
+   wrong: Nothing new is added for this. Think about what kinds of values a prop is allowed to hold.
+   [x] The parent passes a function as a prop, and the child calls it
+   [ ] The child sets a prop on its parent
+   [ ] The child modifies the prop object it received
+   [ ] React copies child state up automatically
+   ```
+
+4. Why does the state stay in the parent?
+
+   ```{mcq}
+   Three buttons can all change the selection. Why does `selected` live in `App` rather than in the buttons?
+   correct: Correct! One piece of state in one place, changed through a callback by whichever child needs to. If each button held its own, there would be three selections and no single answer to what is selected.
+   wrong: Ask what "selected" would even mean if each of the three buttons kept its own copy.
+   [x] There is one selection, so it needs one owner that all three buttons report to
+   [ ] Children are not allowed to call `useState`
+   [ ] Callback props only work when the parent holds the state
+   [ ] It makes the buttons render faster
+   ```
+
+## Resources
+
+- [React Docs: Sharing state between components](https://react.dev/learn/sharing-state-between-components)
+- [React Docs: Passing props to a component](https://react.dev/learn/passing-props-to-a-component)
+- [React Docs: Responding to events](https://react.dev/learn/responding-to-events)

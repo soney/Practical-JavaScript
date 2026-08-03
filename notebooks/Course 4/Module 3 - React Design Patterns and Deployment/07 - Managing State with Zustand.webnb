@@ -1,0 +1,303 @@
+# Managing State with Zustand
+
+We have spent a lot of this course on state management. When several components need the same state, we have lifted it up to a common parent and passed it back down -- props going one way, callback props coming back -- and in the `useReducer` and `useContext` lessons we centralized updates so that distant components could reach the same values without prop drilling. All of that works, but the setup adds up: providers to create, components to wire together, updates to thread through the tree.
+
+**Zustand** (German for "state") takes a different approach. It gives us a small shared **store** that lives *outside* the component tree. Any component can read from the store and call its update functions directly, with no props or callbacks in between.
+
+The code from the video is in your workspace, in the `library-demos/react-zustand/` folder next to this notebook. To watch it run, right-click `index.html` in that folder and choose "Show Preview", then add some fruit to the cart and clear it again. Like the React Router demo before it, the workspace copy runs with no build step: the library loads as a script-tag global, one in-browser-compiled `App.jsx` holds the pieces that were separate files in the video, and comments in the file mark where each piece came from.
+
+## A Cart Passed Through Props
+
+The video starts from a version with no Zustand in it. `App` owns an `items` state variable -- the cart -- plus a function for adding an item and a function for clearing the cart. `CartSummary` renders what is in the cart, and each `Product` can add to it, so `App` passes `items` and a `clearCart` callback down to `CartSummary`, and an `onAddToCart` callback down to every `Product`. Here is that version, live; click around in it:
+
+```{react autorun}
+function CartSummary({ items, clearCart }) {
+  return (
+    <header>
+      {items.length === 0 && <span>Cart is empty</span>}
+      {items.length > 0 && <p>Cart items: {items.map((item) => item.type).join(", ")}</p>}
+      <button onClick={clearCart}>Clear Cart</button>
+      <hr />
+    </header>
+  );
+}
+
+function Product({ type, price, onAddToCart }) {
+  return (
+    <article>
+      <span>{type}: ${price.toFixed(2)}</span>
+      <button onClick={() => onAddToCart({ type, price })}>Add to cart</button>
+    </article>
+  );
+}
+
+function App() {
+  const [items, setItems] = React.useState([]);
+
+  function addToCart(item) {
+    setItems((prevItems) => [...prevItems, item]);
+  }
+
+  function clearCart() {
+    setItems([]);
+  }
+
+  return (
+    <div>
+      <CartSummary items={items} clearCart={clearCart} />
+      <Product type="Apple" price={0.99} onAddToCart={addToCart} />
+      <Product type="Orange" price={0.79} onAddToCart={addToCart} />
+      <Product type="Banana" price={0.49} onAddToCart={addToCart} />
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+It works. But look at how much of `App` is plumbing: it holds state it never displays, and the components under it take attributes whose only job is to move that state around. Even at this size it is a little bit messy, and as an app grows, it only gets messier.
+
+## Creating a Store with `create`
+
+In the video we installed the library with `npm install zustand` and made a new file, `useCartStore.js`. Two small decisions there are worth noticing before the code. The store gets a file of its own, because it belongs to the whole app rather than to any one component. And that file ends in `.js`, not `.jsx`, because a store renders nothing.
+
+```{walkthrough}
+title: The store
+step: Loading the library
+file: library-demos/react-zustand/index.html
+The same no-build-step page shape as the React Router demo, with one library swapped in.
+@"zustand.js": zustand as a script-tag global. It builds its hook out of React, so it loads after the two React scripts.
+@"text/babel": The one compiled JSX file per page. In the video this was several files importing each other; here they share `App.jsx`.
+
+step: The import that became a destructure
+file: library-demos/react-zustand/App.jsx
+region: globals
+Everything the app needs from the library is one function.
+@"const { create }": In the video, this line was the import at the top of `useCartStore.js`. `create` is the only piece of zustand this app uses.
+
+step: create, set, and the store object
+file: library-demos/react-zustand/App.jsx
+region: cart-store
+We call `create` with a function. That function receives a `set` function for making updates, and it returns an object. The returned object *is* the store: state variables, plus functions -- usually called **actions** -- for updating them.
+@"create((set)": The shape to remember: `create` takes a function of `set`, and that function returns the store object.
+@"items: [],": A state variable with its starting value. The cart begins empty.
+@"[...state.items, item]": `addItem` calls `set` with a **function of the previous state**, because the new value depends on the old one: copy the previous items, with the new item on the end. Note that it builds a new array instead of changing the old one -- the same rule as `useState`.
+@"set({ items: [] })": `clearCart` passes `set` a **plain object** instead, because an empty cart does not depend on what was in it. In either form, `set` merges what you give it into the store, so only the keys you name change.
+```
+
+## Reading the Store with Selectors
+
+`create` returns a **hook**, which is why we named the result `useCartStore`. A component calls that hook with a **selector**: a function that takes the whole store state and returns only the part that component cares about.
+
+```{walkthrough}
+title: The components, reading the store directly
+step: CartSummary selects what it shows
+file: library-demos/react-zustand/App.jsx
+region: cart-summary
+Compare this with the props version at the top of the reading: the `({ items, clearCart })` parameter is gone. Nothing arrives from the parent, because the component asks the store directly.
+@"(state) => state.items": The selector: given the whole state, return `state.items`. The component receives the current items and is now subscribed -- more on that below.
+@"state.clearCart": Actions are selected the same way as values. This pulls the `clearCart` function out of the store...
+@"onClick={clearCart}": ...and wires it straight to the button. No callback prop, no parent involved.
+
+step: Product selects an action
+file: library-demos/react-zustand/App.jsx
+region: product
+The video's last step: `Product` stops taking an `onAddToCart` attribute and reaches into the store itself.
+@"state.addItem": Every `Product` on the page selects the same `addItem` action from the same shared store.
+@"addToCart({ type, price })": Clicking any product's button updates the one shared `items` array, and the summary -- a completely different component, with no connection through props -- shows the change immediately.
+
+step: What is left of App
+file: library-demos/react-zustand/App.jsx
+region: app-component
+@"<CartSummary />": No state variable, and not one attribute for passing state down or callbacks up. `App` describes the layout, the store handles the sharing, and all of the cart logic sits in one file that is much easier to modify and keep track of.
+```
+
+In the video this conversion happened in two stages. First `App` swapped its `useState` for store selectors but kept passing props down. Then came the better step: since any component can call `useCartStore` itself, `CartSummary` and `Product` read the store directly, and the props came out entirely. The staged copy is that final state.
+
+One really nice thing React does here: when a selected value like `items` changes -- no matter which component changed it -- React re-renders every component that selects it. You never register anything; selecting a value from the store is what subscribes a component to its changes.
+
+## A Store You Can Poke
+
+The real zustand cannot load inside a notebook cell, but the store idea fits in a few lines of plain JavaScript. This model implements `create` and both forms of `set`. Run it, then try adding a `"Banana"` before the log:
+
+```{javascript autorun}
+// A stand-in for zustand's create(). The real one also gives you the React
+// hook and the automatic re-rendering; this models the store and set().
+function create(build) {
+  let state;
+  const set = (partial) => {
+    const next = typeof partial === "function" ? partial(state) : partial;
+    state = { ...state, ...next };
+  };
+  state = build(set);
+  return { getState: () => state };
+}
+
+const useCartStore = create((set) => ({
+  items: [],
+  addItem: (item) => set((state) => ({ items: [...state.items, item] })),
+  clearCart: () => set({ items: [] })
+}));
+
+useCartStore.getState().addItem("Apple");
+useCartStore.getState().addItem("Orange");
+
+console.log(useCartStore.getState().items);
+```
+
+`addItem` uses the function form of `set` because the new array depends on the previous one; `clearCart` uses the plain-object form because it does not. Those are the same two forms you read in the walkthrough, and the exercises below build on this model.
+
+## A Store Is Not a Replacement for Local State
+
+Zustand is at its best when state needs to be read and updated across distant parts of an app, the way the cart is shared by a summary in the header and every product on the page. It is *not* a replacement for local component state. A value that one component alone cares about -- whether a dropdown is open, the text currently in an input -- still belongs in that component with `useState`. Reach for a store when the alternative is threading props through components that do not care about them.
+
+## Exercises
+
+1. Finish the `addItem` action so it appends the new item to `items`, using the function form of `set`. After the two calls below, `items` should be `["Apple", "Orange"]`.
+
+    ```{javascript}
+    function create(build) {
+      let state;
+      const set = (partial) => {
+        const next = typeof partial === "function" ? partial(state) : partial;
+        state = { ...state, ...next };
+      };
+      state = build(set);
+      return { getState: () => state };
+    }
+
+    const useCartStore = create((set) => ({
+      items: [],
+      // TODO: make addItem append `item` to the end of the previous items array.
+      addItem: (item) => set((state) => ({ items: state.items })),
+      clearCart: () => set({ items: [] })
+    }));
+
+    useCartStore.getState().addItem("Apple");
+    useCartStore.getState().addItem("Orange");
+
+    const items = useCartStore.getState().items;
+
+    console.log(items);
+    ```
+    ```+solution
+    function create(build) {
+      let state;
+      const set = (partial) => {
+        const next = typeof partial === "function" ? partial(state) : partial;
+        state = { ...state, ...next };
+      };
+      state = build(set);
+      return { getState: () => state };
+    }
+
+    const useCartStore = create((set) => ({
+      items: [],
+      addItem: (item) => set((state) => ({ items: [...state.items, item] })),
+      clearCart: () => set({ items: [] })
+    }));
+
+    useCartStore.getState().addItem("Apple");
+    useCartStore.getState().addItem("Orange");
+
+    const items = useCartStore.getState().items;
+
+    console.log(items);
+    ```
+    ```+test
+    wrap(items).should('be.an', 'array').run('`items` should still be an array', '`items` is still an array');
+    wrap(items.join(",")).should('equal', 'Apple,Orange').run('Append the new item to the end of the previous items array', '`addItem` appends to the cart');
+    ```
+
+2. A store holds whatever actions the app needs. Add a body to `removeItem` so it removes the item whose `id` matches `itemId`, using `filter` inside the function form of `set`. After removing item `2`, the cart should hold `Apple` and `Banana`.
+
+    ```{javascript}
+    function create(build) {
+      let state;
+      const set = (partial) => {
+        const next = typeof partial === "function" ? partial(state) : partial;
+        state = { ...state, ...next };
+      };
+      state = build(set);
+      return { getState: () => state };
+    }
+
+    const useCartStore = create((set) => ({
+      items: [
+        { id: 1, type: "Apple" },
+        { id: 2, type: "Orange" },
+        { id: 3, type: "Banana" }
+      ],
+      // TODO: keep only the items whose id is NOT itemId.
+      removeItem: (itemId) => set((state) => ({ items: state.items }))
+    }));
+
+    useCartStore.getState().removeItem(2);
+
+    const remaining = useCartStore.getState().items;
+
+    console.log(remaining.map((item) => item.type).join(", "));
+    ```
+    ```+solution
+    function create(build) {
+      let state;
+      const set = (partial) => {
+        const next = typeof partial === "function" ? partial(state) : partial;
+        state = { ...state, ...next };
+      };
+      state = build(set);
+      return { getState: () => state };
+    }
+
+    const useCartStore = create((set) => ({
+      items: [
+        { id: 1, type: "Apple" },
+        { id: 2, type: "Orange" },
+        { id: 3, type: "Banana" }
+      ],
+      removeItem: (itemId) => set((state) => ({
+        items: state.items.filter((item) => item.id !== itemId)
+      }))
+    }));
+
+    useCartStore.getState().removeItem(2);
+
+    const remaining = useCartStore.getState().items;
+
+    console.log(remaining.map((item) => item.type).join(", "));
+    ```
+    ```+test
+    wrap(remaining.length).should('equal', 2).run('Removing one item from three should leave two', 'Two items remain');
+    wrap(remaining.map((item) => item.type).join(",")).should('equal', 'Apple,Banana').run('Remove only the item whose `id` matches `itemId`', 'Removed the matching item and kept the rest');
+    ```
+
+3. Selecting from the store
+
+    ```{mcq}
+    A store was created with `const useCartStore = create(...)` and holds an `items` state variable. Inside a component, how do you read only `items` out of the store?
+    correct: Correct! The hook that `create` returns takes a selector: a function that receives the whole state and returns only the part this component cares about. Selecting a value is also what subscribes the component to its changes.
+    wrong: The store is read through the hook that `create` returned, and that hook takes a selector function. Look back at "Reading the Store with Selectors".
+    [x] `const items = useCartStore((state) => state.items);`
+    [ ] `const items = useCartStore.items;`
+    [ ] `const items = useState(useCartStore);`
+    [ ] `const items = create((state) => state.items);`
+    ```
+
+4. Store state or component state?
+
+    ```{mcq}
+    An app has two pieces of state: (a) the shopping cart, which a `CartSummary` in the header and `Product` components all over the page read and update, and (b) an `isOpen` flag for whether one dropdown menu is showing. Where does each belong?
+    correct: Correct! State shared across distant parts of the app belongs in the store; a value only one component cares about stays local with `useState`. A store is not a replacement for local state.
+    wrong: Think about which value distant components share and which one a single component owns, then look back at "A Store Is Not a Replacement for Local State".
+    [x] The cart in a shared store; the dropdown flag in local `useState`
+    [ ] Both in the store, so that all state lives in one place
+    [ ] The dropdown flag in the store; the cart in local `useState`
+    [ ] Neither; both should be threaded through props instead
+    ```
+
+## Resources
+
+- [Zustand documentation](https://zustand.docs.pmnd.rs/)
+- [Zustand: Updating state](https://zustand.docs.pmnd.rs/guides/updating-state)
+- [React Docs: Passing Data Deeply with Context](https://react.dev/learn/passing-data-deeply-with-context)
+- [React Docs: Sharing State Between Components](https://react.dev/learn/sharing-state-between-components)

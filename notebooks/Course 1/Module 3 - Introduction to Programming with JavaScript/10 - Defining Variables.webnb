@@ -1,0 +1,196 @@
+# Defining Variables
+
+So far we have only logged the values of the expressions we write. **Variables** let us store a value and reuse it later, which means they let us give a *name* to a value we have computed.
+
+Think of a variable as a labeled storage box. You create a box, put a label on it, and put a value inside. Later you can go back to the box by name and take the value out.
+
+Note that I said *values* and not *expressions*. A variable always stores the value, never the expression that produced it. Write `let x = 10 + 20;` and the box labeled `x` contains `30`. The `10 + 20` is gone the moment the engine finishes evaluating it.
+
+## Declaring a Variable
+
+Using a variable is two steps. First we **declare** it, which is like creating a box and labeling it. Then we **assign** it with an equals sign, which is like putting something inside the box.
+
+```{javascript autorun}
+let x;        // declare: a box labeled x, with nothing in it yet
+x = 30;       // assign: put the value 30 in the box
+console.log(x);
+```
+
+Almost always we do both at once, on one line:
+
+```{javascript autorun}
+let y = 10 + 20;
+console.log(y);
+```
+
+That declares `y` and assigns it in a single step. Again, `y` holds `30`, not `10 + 20`.
+
+Notice that declaring and assigning a variable does not display anything on its own. Nothing shows up until we ask for it with `console.log`. Getting a value back out of a variable is called *referencing* it, and it is the subject of the next lesson.
+
+## `let` and `const`
+
+There are two keywords for declaring a variable, and the difference is whether the value is allowed to change afterwards.
+
+**`let`** declares a variable you can reassign later:
+
+```{javascript autorun}
+let temperature = 30;
+temperature = 'something else';
+console.log(temperature);
+```
+
+Reassigning uses the same equals sign, with no keyword in front of it. Note that the second line replaced a number with a string; JavaScript is happy to let a variable hold a different type of value than it held before.
+
+**`const`** is short for *constant*, and it declares a variable whose value will not change:
+
+```{javascript autorun}
+const pi = 3.14;
+const name = 'Steve';
+console.log(pi);
+console.log(name);
+```
+
+Try to reassign a `const` and the engine reports an error. Run this cell and read what it says:
+
+```{javascript}
+const z = 90;
+z = -5;
+console.log(z);
+```
+
+The message tells you that `z` cannot be reassigned. Change `const` to `let` and run it again to see the difference.
+
+### Which One Should You Use?
+
+Use `const` whenever you can, and reach for `let` only when you know you need to reassign. I declare everything with `const` until something forces me to change it, and that is a good habit to pick up.
+
+You might ask why you would ever choose `const`, when `let` does everything `const` does and more. The answer is that being permissive is not always a good thing. If a value is not supposed to change, `const` makes it impossible to change it by accident, and the engine tells you at the moment you slip rather than three screens later when the value is mysteriously wrong.
+
+### The Old Keyword: `var`
+
+There is a third keyword, `var`, which is how variables were declared before `let` and `const` existed. We met it briefly when we talked about backwards compatibility. It has some quirky behavior, so we will not use it in this course, but you will see it in older code and you should know what it is.
+
+You should also always declare your variables. If you forget the keyword entirely and write `total = 5;`, JavaScript will let you, and things will appear to work. What you get instead is a variable with a wider reach than you intended, and the resulting bugs are hard to track down. It will not go wrong every time, but it will go wrong.
+
+## Naming Variables
+
+You cannot use just any name. There are two rules:
+
+1. A variable name must **start with a letter**. For this purpose, the underscore `_` and the dollar sign `$` both count as letters.
+2. After that, it may contain only letters (again including `_` and `$`) and the digits `0` through `9`.
+
+```{javascript autorun}
+const x = 1;
+const value123 = 2;
+const $ = 3;
+const my_variable = 4;
+
+console.log(x, value123, $, my_variable);
+```
+
+All four of those are valid. These are not:
+
+| Name          | Valid? |
+| ------------- | ------ |
+| `x`           | Yes |
+| `value123`    | Yes |
+| `$value`      | Yes, because `$` counts as a letter |
+| `my_variable` | Yes, because `_` counts as a letter |
+| `5x`          | No: it starts with a number |
+| `a&b`         | No: `&` is not a letter or a number |
+| `a+b`         | No: `+` is not a letter or a number |
+| `my variable` | No: a space is not allowed |
+| `why?`        | No: `?` is not allowed |
+
+A name can never contain a space, which is why the underscore turns up so often: it is what people reach for *in place of* a space. `my_variable` is how you write "my variable", and `num_players` is how you write "num players". The other common way to mark the boundary between words is a capital letter, as in `numPlayers`, and that is the style we use in this course.
+
+### Capitalization Matters
+
+Variable names are **case sensitive**, so `myvar` and `myVar` are two completely different variables:
+
+```{javascript autorun}
+const myvar = 'lowercase v';
+const myVar = 'uppercase V';
+
+console.log(myvar);
+console.log(myVar);
+```
+
+That is a genuinely easy mistake to make, and the error you get from it ("myVar is not defined") is at least a clear one.
+
+### Choose Short, Meaningful Names
+
+Within the rules, aim for names that are short *and* say what the box holds. `myVar` and `x` are legal but tell a reader nothing. `wordCount` and `num_players` are barely longer and explain themselves. You will spend far more time reading your code than writing it, and your future self is one of those readers.
+
+## Exercises
+
+1. Declare a variable named `age` using `let` and set it to `25`. Then declare a variable named `birthYear` using `const` and set it to `1999`.
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+solution
+    let age = 25;
+    const birthYear = 1999;
+    ```
+    ```+test
+    wrap(age).should('equal', 25).run('Declare `age` with `let` and set it to `25`', 'Declared age');
+    wrap(birthYear).should('equal', 1999).run('Declare `birthYear` with `const` and set it to `1999`', 'Declared birthYear');
+    wrap(source.includes('const birthYear')).should('equal', true).run('Use `const` for `birthYear`, since it will not be reassigned', 'Used const for birthYear');
+    ```
+
+2. Both declarations below use names JavaScript will not accept. Rename the first to `secondScore` and the second to `playerCount`, keeping their values.
+
+    ```{javascript}
+    const 2ndScore = 10;
+    const player count = 4;
+    ```
+    ```+solution
+    const secondScore = 10;
+    const playerCount = 4;
+    ```
+    ```+test
+    wrap(secondScore).should('equal', 10).run('Rename the first variable to `secondScore`, keeping the value `10`', 'Renamed the first variable');
+    wrap(playerCount).should('equal', 4).run('Rename the second variable to `playerCount`, keeping the value `4`', 'Renamed the second variable');
+    ```
+
+3. Which of these names would JavaScript accept?
+
+    ```{mcq}
+    Select all the valid variable names. (Select all that apply)
+    correct: Correct! A name has to start with a letter, `_`, or `$`, and after that it can hold only letters, digits, `_`, and `$`.
+    wrong: Check each name against the two rules: what is the first character, and is every character after it a letter, a digit, `_`, or `$`?
+    [x] `firstName`
+      correct: Right, letters only, starting with a letter.
+      wrong: This one is fine: it starts with a letter and the rest are letters.
+    [x] `_count`
+      correct: Right, an underscore counts as a letter, so it is allowed to start a name.
+      wrong: The underscore counts as a letter for this purpose, so `_count` is a perfectly valid name.
+    [x] `total2024`
+      correct: Right, digits are allowed as long as the name does not start with one.
+      wrong: Digits are allowed after the first character, so this name is valid.
+    [ ] `9lives`
+      wrong: A name cannot start with a digit.
+    [ ] `user-name`
+      wrong: A hyphen is not a letter or a digit. It is fine in a CSS class name, but in JavaScript the engine reads it as the minus sign, so this is not one name.
+    [ ] `my.total`
+      wrong: A dot is not allowed inside a variable name. You have seen dots in `console.log`, but that is one thing reaching inside another, not a single name.
+    ```
+
+4. What is actually stored in the box?
+
+    ```{mcq}
+    After the line `const total = 10 + 20;` runs, what does `total` contain?
+    correct: Correct! A variable stores the value the engine computed, so `total` holds `30`. The expression `10 + 20` was evaluated once and is not kept around.
+    wrong: Look back at the third paragraph of this lesson, about values rather than expressions.
+    [x] The value `30`
+    [ ] The expression `10 + 20`, which is recalculated each time `total` is used
+    [ ] Both the expression and its value
+    [ ] Nothing, until `total` is logged
+    ```
+
+## Resources
+
+- [MDN: let](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let)
+- [MDN: const](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/const)
+- [MDN: Grammar and types](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types)

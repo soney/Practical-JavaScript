@@ -1,0 +1,254 @@
+# Deploying React Applications to GitHub Pages
+
+Everything so far has run on your own machine. A dev server on `localhost` is reachable by you and nobody else, so to let other people open the app we have to **deploy** it: build it into plain files and put those files somewhere public.
+
+GitHub Pages is a free static host built into GitHub. It serves files from a repository at a URL like `https://your-username.github.io/repo-name/`. A built React app is only HTML, CSS, and JavaScript, so Pages can serve it directly.
+
+This reading picks up where Course 3 left off. You already know how to bundle with Webpack and publish a `dist/` folder; here we do it for a React project, and we automate it so every push redeploys.
+
+## Building for Production
+
+React code with JSX and modules cannot run in a browser as written. Webpack compiles it:
+
+```text
+$ npx webpack --mode production
+```
+
+`--mode production` asks for a build meant for shipping rather than for debugging. The result lands in `dist/`, and for a React project that is usually two files:
+
+- **`index.html`**, the page itself.
+- **`bundle.js`**, all of the JavaScript combined into one file: React, any libraries, and your own components.
+
+The production build is **minified**: whitespace removed, names shortened, everything squeezed together. Opening it is unpleasant and that is fine, because nobody is meant to read it. It is your code, compressed.
+
+```{javascript}
+const deployment = {
+  buildCommand: 'npx webpack --mode production',
+  outputFolder: 'dist',
+  builtFiles: ['index.html', 'bundle.js'],
+  host: 'GitHub Pages'
+};
+
+console.log(deployment.buildCommand);
+```
+
+Run that cell to see the command. `--mode development` would also produce a working bundle, but a much larger and slower one, which is not what you want on a public site.
+
+## Do Not Commit `dist/`
+
+The first instinct is to build locally and upload `dist/` to GitHub along with everything else. Resist it. Build output is generated: it has no history worth reading, it conflicts on every merge, and anyone can recreate it from your source. Add it to `.gitignore`:
+
+```text
+node_modules
+dist
+```
+
+That leaves the repository holding only what you wrote. The build then has to happen somewhere else, which is what the next section is for.
+
+## Deploying with GitHub Actions
+
+In the repository's **Settings**, under **Pages**, the **Source** setting starts as "Deploy from a branch". Change it to **GitHub Actions**. Pages will now publish whatever a workflow hands it, instead of serving a branch as-is.
+
+A **workflow** is a YAML file under `.github/workflows/` describing steps GitHub runs on its own machines. GitHub offers starting points (the Jekyll one is a reasonable base) and you edit it into a React build:
+
+```yaml
+# .github/workflows/deploy.yaml
+name: Deploy my React page
+
+on:
+  push:
+    branches: ['main']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Install dependencies
+        run: npm ci
+      - name: Build with webpack
+        run: npx webpack --mode production
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+```
+
+The exact syntax matters less than what each piece is doing:
+
+- **`on: push`** runs the whole thing whenever you push to `main`. No manual deploy step ever again.
+- **`checkout`** fetches your source onto GitHub's build machine.
+- **`npm ci`** installs dependencies. It stands for "clean install": unlike `npm install`, it wipes `node_modules` and installs exactly the versions recorded in `package-lock.json`. That is what you want on a build machine, where reproducibility beats convenience.
+- **`npx webpack --mode production`** is the same command you would run locally, now running there.
+- **`upload-pages-artifact`** with `path: ./dist` hands the built folder to Pages. The path has to point at your output directory; the default in the starter workflow will not be `dist`.
+- The **`deploy`** job takes that artifact and publishes it.
+
+Push, and the Actions tab shows the run. When it finishes green, the site is live.
+
+## The Bug Everyone Hits: `publicPath`
+
+The first deploy of a project site usually shows a blank page. The console says something like:
+
+```text
+GET https://your-username.github.io/bundle.js  404 (Not Found)
+```
+
+Look at the built `index.html` and the reason is there:
+
+```html
+<script defer src="/bundle.js"></script>
+```
+
+The leading slash means **the root of the domain**. But a project site is not at the root: your app lives at `https://your-username.github.io/react-project/`, so the bundle is at `/react-project/bundle.js`. The browser looked in the wrong place and found nothing. Locally this never came up, because locally the app *was* at the root.
+
+The fix is to tell Webpack to write **relative** links instead of absolute ones, with `publicPath: './'`:
+
+```javascript
+// webpack.config.js
+module.exports = {
+  entry: './src/main.jsx',
+  output: {
+    filename: 'bundle.js',
+    path: __dirname + '/dist',
+    publicPath: './'   // look for files next to index.html, not at the domain root
+  }
+};
+```
+
+Now the built HTML says `src="./bundle.js"`, which resolves next to `index.html` wherever the app happens to be hosted. Commit, push, and the redeploy works.
+
+`publicPath: '/react-project/'` would also work, and it hardcodes the repository name into the build. The relative form keeps working if the repo is renamed or the app is served from somewhere else, so prefer it.
+
+## Practice Commands
+
+```{external}
+title: React deployment commands
+interval: off
+- command: npx webpack --mode production | Build the React app into dist/ for deployment
+- command: npm ci | Clean install of the exact locked dependency versions
+```
+```+terminal
+welcome: Practice the two commands the deploy workflow runs.
+prompt: $
+```
+
+After all of this, the loop is: edit, commit, push. GitHub builds and publishes, and visitors see the new version a minute later.
+
+## Exercises
+
+1. What command builds the React source into optimized, minified files in `dist/`?
+
+   ```{mcq}
+   Which one produces the production bundle?
+   correct: Correct! `npx webpack --mode production` compiles and minifies everything into `dist/`, which is the folder that gets deployed.
+   wrong: Two of these do not build anything, and one runs a development build.
+   [x] `npx webpack --mode production`
+   [ ] `npm start --dev`
+   [ ] `git push origin main`
+   [ ] `node server.js`
+   ```
+
+2. Complete the deployment description with the production build command and its output folder.
+
+   ```{javascript}
+   const deployment = {
+     buildCommand: '',
+     outputFolder: ''
+   };
+
+   console.log(deployment);
+   ```
+   ```+solution
+   const deployment = {
+     buildCommand: 'npx webpack --mode production',
+     outputFolder: 'dist'
+   };
+
+   console.log(deployment);
+   ```
+   ```+test
+   wrap(deployment.buildCommand).should('equal', 'npx webpack --mode production').run('Set `buildCommand` to the production build command', 'Set the build command');
+   wrap(deployment.outputFolder).should('equal', 'dist').run('Webpack writes the build into `dist` by default', 'Set the output folder');
+   ```
+
+3. The first deploy fails with a 404 for `bundle.js`. What went wrong, and what fixes it?
+
+   ```{mcq}
+   The console shows a request for `your-username.github.io/bundle.js`.
+   correct: Correct! The built HTML asked for `/bundle.js` at the domain root, while the app is served from the `/repo-name/` subpath. Setting `publicPath: './'` makes the links relative to `index.html`, so they resolve wherever the app is hosted.
+   wrong: Compare the URL in the error with the URL your app is actually served from.
+   [x] The HTML looked for `/bundle.js` at the domain root instead of the project subpath; setting `publicPath: './'` in the Webpack configuration fixes it
+   [ ] The repository name contained capital letters; renaming it to lower case fixes it
+   [ ] The site was missing a certificate; buying a domain name fixes it
+   [ ] GitHub Pages does not support JavaScript; rewriting the app in plain HTML fixes it
+   ```
+
+4. Write `shouldCommit(path)`, which decides whether a file belongs in the repository. Generated folders stay out.
+
+   ```{javascript}
+   const ignored = ['node_modules', 'dist'];
+
+   function shouldCommit(path) {
+     // TODO: return false when the path is inside any ignored folder,
+     // and true otherwise
+   }
+
+   console.log(shouldCommit('src/main.jsx'), shouldCommit('dist/bundle.js'));
+   ```
+   ```+solution
+   const ignored = ['node_modules', 'dist'];
+
+   function shouldCommit(path) {
+     for (const folder of ignored) {
+       if (path.startsWith(folder + '/')) {
+         return false;
+       }
+     }
+
+     return true;
+   }
+
+   console.log(shouldCommit('src/main.jsx'), shouldCommit('dist/bundle.js'));
+   ```
+   ```+test
+   wrap(shouldCommit('src/main.jsx')).should('equal', true).run('Source files are what the repository is for, so they should be committed', 'Kept the source files');
+   wrap(shouldCommit('dist/bundle.js')).should('equal', false).run('Anything inside `dist` is build output and can be recreated, so leave it out', 'Ignored the build output');
+   wrap(shouldCommit('node_modules/react/index.js')).should('equal', false).run('`node_modules` is reinstalled from `package.json`, so it does not belong in the repository either', 'Ignored the dependencies');
+   wrap(shouldCommit('webpack.config.js')).should('equal', true).run('The configuration file is something you wrote, so it should be committed', 'Kept the configuration');
+   ```
+
+5. Why does the workflow run `npm ci` rather than `npm install`?
+
+   ```{mcq}
+   What does the "ci" version do differently?
+   correct: Correct! `npm ci` is a clean install: it removes any existing `node_modules` and installs exactly the versions recorded in `package-lock.json`, so every build machine gets the same dependencies.
+   wrong: The difference is about which versions get installed, and how repeatable that is.
+   [x] It reinstalls from scratch using the exact versions in `package-lock.json`
+   [ ] It runs the app's continuous integration tests
+   [ ] It installs only the dependencies React needs
+   [ ] It is the only command that works inside GitHub Actions
+   ```
+
+## Resources
+
+- [GitHub Docs: GitHub Pages](https://docs.github.com/en/pages)
+- [GitHub Docs: Publishing with a custom GitHub Actions workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+- [Webpack: output.publicPath](https://webpack.js.org/configuration/output/#outputpublicpath)
+- [Webpack: mode](https://webpack.js.org/configuration/mode/)
+- [npm Docs: npm ci](https://docs.npmjs.com/cli/commands/npm-ci)

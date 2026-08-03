@@ -1,0 +1,212 @@
+# Debugging Strategies
+
+Debugging is a crucial part of software engineering. Studies have found that developers spend nearly half of their time debugging and fixing errors, so learning to do it well is one of the most valuable skills you can build.
+
+The examples below are tiny, for illustration. Imagine a codebase thousands of times larger and how much harder tracking a problem down would be without a plan. This lesson gives you three strategies, in order of importance:
+
+1. Always keep the developer tools open while you write code.
+2. Add `console.log` statements to see what your code is actually doing.
+3. Use breakpoints to pause and inspect the exact state of your program.
+
+## Tip 1: Always Keep the Console Open
+
+This is the single most important habit. Trying to debug JavaScript without the developer tools open is like looking for something in a dark room without flipping on the light switch. Error messages appear *only* in the JavaScript console, so with the console closed, the most useful clue about what went wrong is invisible.
+
+Consider this snippet. We expect an alert saying `Good game!`, and nothing happens at all:
+
+```javascript
+let totalScore = 95;
+
+totalScoore++;
+
+alert('Good game!');
+```
+
+With the console closed, the page silently does nothing and we have no idea why. With the console open, we get:
+
+```text
+Uncaught ReferenceError: totalScoore is not defined
+```
+
+The error names the variable and the line. There is a typo: we declared `totalScore` and then wrote `totalScoore`. The console turned a hidden failure into a specific, fixable message.
+
+Fix that and the console may hand us the next one:
+
+```text
+Uncaught TypeError: Assignment to constant variable.
+```
+
+That says we declared the value with `const` but then tried to change it. Since this variable needs to change, we declare it with `let`. Reading each error in turn walks us straight to working code.
+
+## Tip 2: Add `console.log` Statements
+
+When the code runs but behaves wrong, or when the error message does not say enough on its own, the next tool is `console.log`. Print a value and see what your code is really working with at that moment.
+
+Here, clicking the button is supposed to set the span's text to `clicked!`, and nothing happens:
+
+```html id=page1
+<button>Click me</button>
+<span id="el"></span>
+```
+
+```{javascript autorun}
+const btn = document.querySelector('button');
+
+function onClick() {
+  const el = document.querySelector('el');
+  el.innerText = 'clicked!';
+}
+
+btn.addEventListener('click', onClick);
+```
+```+id=page1
+```
+
+Click the button and read the output. The error is something like `Cannot set properties of null (setting 'innerText')`. That tells us `el` is `null`, but not why. So we ask the obvious question: what *is* `el`?
+
+```javascript
+const el = document.querySelector('el');
+console.log(el);
+el.innerText = 'clicked!';
+```
+
+Now the log says `null`. We expected an element and got nothing, which means the selector matched nothing. Looking hard at `document.querySelector('el')`, we see the problem: that selector looks for an element whose *tag* is `el`, but our element has `id="el"`. Selecting by ID needs a `#`:
+
+```{javascript autorun}
+const btn = document.querySelector('button');
+
+function onClick() {
+  const el = document.querySelector('#el');
+  console.log(el);
+  el.innerText = 'clicked!';
+}
+
+btn.addEventListener('click', onClick);
+```
+```+id=page1
+```
+
+Reading the error told us something was `null`. The `console.log` told us *which* thing, and that pointed at the bug.
+
+## Tip 3: Use Breakpoints to Inspect State
+
+Sometimes even a log leaves you puzzled about how the program reached a state. A breakpoint freezes execution on a line so you can look at every variable at that instant.
+
+Here `gameOver` starts as `false` and `score` starts as `0`. Since the game is not over, we expect to land in the `else` branch and finish with a score of `100`. Instead we get `0`:
+
+```{javascript autorun}
+let gameOver = false;
+let score = 0;
+
+if (gameOver = true) {
+  console.log('if');
+} else {
+  score += 100;
+  console.log('else');
+}
+
+console.log('Final score: ' + score);
+```
+
+The logs in each branch show it is entering the `if` block, which makes no sense when `gameOver` is `false`. To find out why, we put a `debugger;` statement just above the `if` and step through.
+
+Paused there, `gameOver` is `false` and `score` is `0`, exactly as expected. Then we step one line, into the `if` block, and notice something: **`gameOver` is now `true`.** Something between those two lines changed it, and the only thing between them is the condition itself.
+
+Looking closely at `gameOver = true`, there is a single `=`. That is assignment, not comparison. The line sets `gameOver` to `true` and then uses that as the condition, which is always true. What we meant was `===`:
+
+```{javascript autorun}
+let gameOver = false;
+let score = 0;
+
+if (gameOver === true) {
+  console.log('if');
+} else {
+  score += 100;
+  console.log('else');
+}
+
+console.log('Final score: ' + score);
+```
+
+The breakpoint narrowed a whole program down to a single character. This particular bug, `=` where `===` was meant, is common enough that it is worth training your eye for it.
+
+## Putting It Together
+
+Above everything else: keep the developer tools open while writing JavaScript, so you can see error messages and console output. From there, `console.log` shows you individual values, and breakpoints show you the whole state at a chosen moment. Debugging is a skill that grows with practice, and these three habits are a reliable place to start.
+
+## Exercises
+
+1. This code should set the span's text to `clicked`, and instead it finds nothing. Read the log, then correct the selector.
+
+    ```html id=page2
+    <span id="message">waiting</span>
+    ```
+
+    ```{javascript}
+    const message = document.querySelector('message');
+
+    console.log('message is:', message);
+
+    message.innerText = 'clicked';
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const message = document.querySelector('#message');
+
+    console.log('message is:', message);
+
+    message.innerText = 'clicked';
+    ```
+    ```+test
+    assert('#message').should('have.text', 'clicked').run('The span should read `clicked`. Check whether your selector targets an id or a tag name', 'The selector matched the element and the text updated');
+    ```
+
+2. `finalScore` should return `0` when the game is over and `score + 100` when it is not. Right now it always returns `0`. Find why the `if` always runs, then fix it.
+
+    ```{javascript}
+    function finalScore(gameOver, score) {
+      if (gameOver = true) {
+        return 0;
+      }
+
+      return score + 100;
+    }
+
+    console.log(finalScore(false, 0));
+    ```
+    ```+solution
+    function finalScore(gameOver, score) {
+      if (gameOver === true) {
+        return 0;
+      }
+
+      return score + 100;
+    }
+
+    console.log(finalScore(false, 0));
+    ```
+    ```+test
+    wrap(finalScore(false, 0)).should('equal', 100).run('`finalScore(false, 0)` should be `100`, since the game is not over', 'The not-over case works');
+    wrap(finalScore(true, 250)).should('equal', 0).run('`finalScore(true, 250)` should be `0`', 'The game-over case works');
+    wrap(finalScore(false, 250)).should('equal', 350).run('`finalScore(false, 250)` should be `350`', 'The score is added correctly');
+    ```
+
+3. According to this lesson, what is the single most important debugging habit?
+
+    ```{mcq}
+    Which habit does the lesson call the most important?
+    correct: Correct! Error messages and console output appear only when the developer tools are open, so keeping them open is the foundation everything else rests on.
+    wrong: Reread "Tip 1". Without the developer tools open, the most useful clue is invisible.
+    [x] Keep the developer tools and console open while you write code
+    [ ] Delete code until the error goes away
+    [ ] Rename variables until something works
+    [ ] Reload the page repeatedly without reading any output
+    ```
+
+## Resources
+
+- [MDN: What went wrong? Troubleshooting JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_went_wrong)
+- [MDN: console.log()](https://developer.mozilla.org/en-US/docs/Web/API/console/log_static)
+- [MDN: Equality comparisons and sameness](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Equality_comparisons_and_sameness)
+- [MDN: Debugging JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Debugging_JavaScript)

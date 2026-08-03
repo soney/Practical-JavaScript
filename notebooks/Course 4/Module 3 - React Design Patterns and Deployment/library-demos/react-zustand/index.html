@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zustand demo</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- React and ReactDOM, as browser globals. With a build step these would
+         be imports; here they are script tags, loaded before any code that
+         uses them. -->
+    <script src="../react/react.development.js"></script>
+    <script src="../react/react-dom.development.js"></script>
+
+    <!-- zustand, as the browser global window.zustand. In the video this was
+         installed with npm install zustand and imported. It reads the React
+         global, so it has to load after the React script above. -->
+    <script src="../react/zustand.js"></script>
+
+    <!-- The in-browser JSX compiler. It finds the text/babel script below,
+         translates the JSX, and runs the result. In the video, Babel and
+         webpack did this job before the page ever loaded. -->
+    <script src="../react/jsx.min.js"></script>
+
+    <script type="text/babel" data-presets="react" src="App.jsx"></script>
+  </body>
+</html>

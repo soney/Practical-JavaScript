@@ -1,0 +1,205 @@
+# The `return` Statement
+
+We know how to feed input into a function call. This lesson is about the other end: how a function specifies its **output**, which is the value of the call expression itself.
+
+## The Problem With Logging
+
+Here is the `add` function from last lesson. It works, in the sense that it prints the right number:
+
+```{javascript autorun}
+function add(x, y) {
+  console.log(x + y);
+}
+
+const sum = add(4, 5);
+
+console.log(sum);
+```
+
+`9` is logged, and then `sum` turns out to be `undefined`. That is worth staring at for a second.
+
+Recall that a function call is an expression whose value is whatever the function spits out. Our `add` function never says what to spit out, and **a function that does not say returns `undefined` automatically**. So `add(4, 5)` logs `9` as a side effect along the way, but the value of the expression `add(4, 5)` is `undefined`, and that is what lands in `sum`.
+
+Logging a value and handing it back are two completely different things.
+
+## Returning a Value
+
+To specify the output, we use the **`return`** statement. Whatever expression follows `return` becomes the value of the call.
+
+```{javascript autorun}
+function add(x, y) {
+  return x + y;
+}
+
+const sum = add(4, 5);
+
+console.log(sum);
+```
+
+![Diagram connecting the code to the box picture of a function. On the left is the code: function add(x, y) { return x + y; } with the expression x + y highlighted, and below it const sum = add(4, 5); with the call add(4, 5) highlighted. On the right is the gray box labeled add, with the arguments 4 and 5 dropping into two funnels on top and the value 9 coming out of the opening at the bottom. Dotted lines join the highlighted x + y and the highlighted add(4, 5) to that 9.](images/add-return-value.png)
+
+Now `add(4, 5)` *is* `9`, in the same way that `4 + 5` is `9`, and `sum` holds `9`.
+
+The dotted lines are the whole idea: the expression after `return` is what comes out of the box, and what comes out of the box is what the call is worth.
+
+The output is whatever you return, and nothing else about the function influences it. The name does not matter and neither does your intent:
+
+```{javascript autorun}
+function add(x, y) {
+  return 'XYZ';
+}
+
+console.log(add(4, 5));
+```
+
+We called it `add` and passed it two numbers, and it hands back the string `XYZ`, because that is what the `return` statement says.
+
+## `return` Exits Immediately
+
+The second thing `return` does is just as important: as soon as the engine hits a `return`, it leaves the function. Nothing after it in the body runs.
+
+```{javascript autorun}
+function add(x, y) {
+  console.log('before the return');
+  return x + y;
+  console.log('after the return');
+}
+
+console.log(add(4, 5));
+```
+
+`before the return` is logged and `after the return` never is. The engine jumped out of the function the moment it reached the `return`.
+
+## Early Returns
+
+That behavior is not an annoyance to work around; it is genuinely useful. A `return` inside an `if` lets a function deal with a special case up front and get out, without wrapping everything else in an `else`.
+
+```{javascript autorun}
+function divide(x, y) {
+  if (y === 0) {
+    return 'invalid';
+  }
+
+  return x / y;
+}
+
+console.log(divide(4, 2));
+console.log(divide(4, 0));
+```
+
+The first call skips the `if`, reaches the second `return`, and gives `2`. The second call matches the `if`, returns `'invalid'` straight away, and never reaches the division at all. Guarding against a bad input like this, at the top of a function, is a very common pattern.
+
+Here is one more, which builds a greeting:
+
+```{javascript autorun}
+function getGreeting(name) {
+  if (name === undefined) {
+    return 'hi';
+  }
+
+  const greeting = 'hello ' + name + '!';
+  return greeting;
+}
+
+console.log(getGreeting());
+console.log(getGreeting('world'));
+```
+
+Calling `getGreeting()` with no argument leaves `name` as `undefined`, as we saw [last lesson](<22 - Function arguments and parameters.webnb#what-if-the-counts-do-not-match>), so the guard matches and the function returns `'hi'` without running another line. Calling `getGreeting('world')` skips the guard and returns `'hello world!'`.
+
+You will often see that guard written as `if (!name)` instead. That shorter form asks whether `name` is missing or empty rather than comparing it to `undefined` specifically. Both are common; we will use the explicit comparison for now.
+
+## Returning Nothing
+
+Sometimes we want the leave-immediately half of `return` without any output to go with it. For that, write `return;` on its own, with no expression after it. The function stops right there, and the value of the call is `undefined`: exactly what a function gives back when it never returns anything at all.
+
+That is what we want when the function's job is a side effect, such as logging, and there is a case where it should simply not do it:
+
+```{javascript autorun}
+function announce(name) {
+  if (name === undefined) {
+    return;
+  }
+
+  console.log('Welcome, ' + name + '!');
+}
+
+announce();
+announce('Alice');
+
+console.log(announce());
+```
+
+`announce()` hits the guard and leaves without logging anything, while `announce('Alice')` skips the guard and logs its greeting. The last line then logs the value of a call that took the bare `return;`, which is `undefined`.
+
+Because running off the end of the body also gives back `undefined`, a `return;` as the final line of a function accomplishes nothing. It is worth writing only when you are getting out early.
+
+## Exercises
+
+1. Update `multiply` so that it **returns** the product of `a` and `b` rather than logging it.
+
+    ```{javascript}
+    function multiply(a, b) {
+      console.log(a * b);
+    }
+
+    console.log(multiply(4, 5));
+    ```
+    ```+solution
+    function multiply(a, b) {
+      return a * b;
+    }
+
+    console.log(multiply(4, 5));
+    ```
+    ```+test
+    wrap(multiply(4, 5)).should('equal', 20).run('`multiply(4, 5)` should return `20`. Use `return` rather than `console.log`', 'multiply returns the product');
+    wrap(multiply(3, 3)).should('equal', 9).run('`multiply(3, 3)` should return `9`', 'It works for other arguments too');
+    ```
+
+2. Write `getTicketPrice`, which returns `0` for anyone under `5` years old and `12` for everyone else. Use an early return for the free case.
+
+    ```{javascript}
+    function getTicketPrice(age) {
+      // Write your code here
+    }
+
+    console.log(getTicketPrice(3));
+    console.log(getTicketPrice(30));
+    ```
+    ```+solution
+    function getTicketPrice(age) {
+      if (age < 5) {
+        return 0;
+      }
+
+      return 12;
+    }
+
+    console.log(getTicketPrice(3));
+    console.log(getTicketPrice(30));
+    ```
+    ```+test
+    wrap(getTicketPrice(3)).should('equal', 0).run('`getTicketPrice(3)` should return `0`', 'Children under 5 are free');
+    wrap(getTicketPrice(4)).should('equal', 0).run('`getTicketPrice(4)` should return `0`, since 4 is under 5', 'The boundary is handled correctly');
+    wrap(getTicketPrice(5)).should('equal', 12).run('`getTicketPrice(5)` should return `12`, since the free price is only for ages under 5', 'Five-year-olds pay full price');
+    wrap(getTicketPrice(30)).should('equal', 12).run('`getTicketPrice(30)` should return `12`', 'Adults pay full price');
+    ```
+
+3. What does a function that has no `return` statement give back?
+
+    ```{mcq}
+    A function's body logs a value but contains no `return` statement. What is the value of a call to it?
+    correct: Correct! A function with no `return` statement hands back `undefined`, no matter what it printed along the way. Logging and returning are different things.
+    wrong: Revisit "The Problem With Logging" at the top of this lesson, and what `sum` held there.
+    [x] `undefined`
+    [ ] The last value it logged
+    [ ] `0`
+    [ ] Nothing at all, since a call with no `return` is not an expression
+    ```
+
+## Resources
+
+- [MDN: return](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/return)
+- [MDN: Functions guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions)
+- [MDN: undefined](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined)

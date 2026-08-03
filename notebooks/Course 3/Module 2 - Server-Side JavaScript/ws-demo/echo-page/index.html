@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WebSocket Round Trip</title>
+  </head>
+  <body>
+    <h1>WebSocket round trip</h1>
+    <p>
+      Open the browser console: the conversation happens there. The
+      variable holding the socket is reachable from the console too, so
+      you can keep the conversation going yourself once the page loads.
+    </p>
+
+    <script>
+      // #region script
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(wsProtocol + '//' + location.host + location.pathname);
+
+      ws.binaryType = 'arraybuffer';
+
+      ws.addEventListener('open', () => {
+        ws.send('Hello server');
+      });
+
+      ws.addEventListener('message', (messageEvent) => {
+        const data = typeof messageEvent.data === 'string'
+          ? messageEvent.data
+          : new TextDecoder().decode(messageEvent.data);
+
+        console.log('server said: ' + data);
+      });
+      // #endregion
+    </script>
+  </body>
+</html>

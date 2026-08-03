@@ -1,0 +1,226 @@
+# Callback Functions
+
+We react to events by handing `addEventListener` a **callback function**. A callback function is a function passed into another function as an argument, to be called (or "called back") at a later time. This lesson is about those functions themselves: why we pass them the way we do, and the several ways JavaScript lets us write them.
+
+## Why No Parentheses
+
+Here is the pattern we have been writing:
+
+```html id=page1
+<button id="target">Click me</button>
+```
+
+```{javascript autorun}
+const el = document.querySelector('#target');
+
+function callback() {
+  console.log('reacted to the click');
+}
+
+el.addEventListener('click', callback);
+```
+```+id=page1
+```
+
+The part worth explaining is why `callback` has no parentheses after it.
+
+Recall from [Course 1](<../../Course 1/Module 3 - Introduction to Programming with JavaScript/21 - Invoking functions.webnb#referencing-versus-calling>) that `callback` and `callback()` are different expressions:
+
+- `callback` is the **function object itself**.
+- `callback()` **calls** the function, and the value of that expression is whatever the function returned.
+
+`addEventListener` needs a function object, because it is going to hold onto it and call it later. If we write `callback()`, the function runs immediately, and what gets handed to `addEventListener` is its return value. Our callback has no `return` statement, so that value is `undefined`, and we end up registering `undefined` as the listener. Nothing is listening.
+
+Watch it fail:
+
+```{javascript autorun}
+const el = document.querySelector('#target');
+
+function callback() {
+  console.log('reacted to the click');
+}
+
+el.addEventListener('click', callback());
+```
+```+id=page1
+```
+
+The message appears the moment the cell runs, before you touch anything, and then clicking the button does nothing at all. Those two symptoms together always mean a stray pair of parentheses.
+
+## Four Ways to Write a Function
+
+We have been declaring functions one way. There are several, and all four of these define the same `add` function.
+
+**A traditional function declaration**, with a name:
+
+```{javascript autorun}
+function add(a, b) {
+  return a + b;
+}
+
+console.log(add(2, 3));
+```
+
+**An anonymous function**, which is the same thing with the name left off. A function with no name is called **anonymous**. On its own an anonymous function has to be used immediately or stored somewhere, so here we give it a name by assigning it to a variable:
+
+```{javascript autorun}
+const add = function (a, b) {
+  return a + b;
+};
+
+console.log(add(2, 3));
+```
+
+**An arrow function**, which drops the `function` keyword entirely and puts `=>` between the parameters and the body:
+
+```{javascript autorun}
+const add = (a, b) => {
+  return a + b;
+};
+
+console.log(add(2, 3));
+```
+
+**An arrow function with an implicit return.** When the whole body is a single expression, we can leave off the curly braces and the `return`. The value of that expression is returned automatically:
+
+```{javascript autorun}
+const add = (a, b) => a + b;
+
+console.log(add(2, 3));
+```
+
+All four take two numbers and give back their sum. In this specialization we will mostly use the first form, a named function declaration, and the anonymous arrow function.
+
+## Callbacks Written Inline
+
+Anonymous functions matter for callbacks because a callback often does not need a name. It is used in exactly one place, as the second argument to `addEventListener`, so naming it can be more ceremony than it is worth.
+
+Compare these three. They behave identically:
+
+```html id=page2
+<button id="named">Named</button>
+<button id="expression">Anonymous</button>
+<button id="arrow">Arrow</button>
+<p id="log">Click a button.</p>
+```
+
+```{javascript autorun}
+const named = document.querySelector('#named');
+const expression = document.querySelector('#expression');
+const arrow = document.querySelector('#arrow');
+const log = document.querySelector('#log');
+
+function showNamed() {
+  log.textContent = 'named function callback';
+}
+
+named.addEventListener('click', showNamed);
+
+expression.addEventListener('click', function () {
+  log.textContent = 'anonymous function callback';
+});
+
+arrow.addEventListener('click', () => {
+  log.textContent = 'arrow function callback';
+});
+```
+```+id=page2
+```
+
+The last one, an anonymous arrow function written directly inside the call, is what you will see most often in real code and in the rest of this course.
+
+Use a named function when the callback is long, when you want to reuse it, or when you will need to remove the listener later, which is the subject of a lesson coming up shortly. Use an inline arrow function when it is a couple of lines that belong to this one listener.
+
+## Exercises
+
+1. Write `double` as an arrow function with an implicit return, so that `double(5)` gives `10`.
+
+    ```{javascript}
+    // Write your code here
+
+    console.log(double(5));
+    ```
+    ```+solution
+    const double = (n) => n * 2;
+
+    console.log(double(5));
+    ```
+    ```+test
+    wrap(double(5)).should('equal', 10).run('`double(5)` should return `10`', 'double works');
+    wrap(double(0)).should('equal', 0).run('`double(0)` should return `0`', 'double works for zero');
+    wrap(source.includes('=>')).should('equal', true).run('Write it as an arrow function, using `=>`', 'Used arrow syntax');
+    wrap(source.includes('return')).should('equal', false).run('Use an implicit return, with no curly braces and no `return` keyword', 'Used an implicit return');
+    ```
+
+2. Rewrite this listener to use an anonymous arrow function written directly inside the `addEventListener` call, with no separate named function.
+
+    ```html id=page3
+    <button id="go">Go</button>
+    <p id="out">Waiting</p>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#go');
+    const out = document.querySelector('#out');
+
+    function handleClick() {
+      out.textContent = 'Done';
+    }
+
+    button.addEventListener('click', handleClick);
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const button = document.querySelector('#go');
+    const out = document.querySelector('#out');
+
+    button.addEventListener('click', () => {
+      out.textContent = 'Done';
+    });
+    ```
+    ```+test
+    assert('#go').click().run('Could not find the `#go` button', 'Clicked the button');
+    assert('#out').should('have.text', 'Done').run('Clicking should still set the paragraph to `Done`', 'The listener still works');
+    wrap(source.includes('=>')).should('equal', true).run('Use an arrow function', 'Used arrow syntax');
+    wrap(source.includes('function handleClick')).should('equal', false).run('Remove the separate named function and write the callback inline', 'Removed the named function');
+    ```
+
+3. This listener never fires, and its message appears as soon as the cell runs. Fix it.
+
+    ```html id=page4
+    <button id="fixme">Demo</button>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#fixme');
+
+    function handleClick() {
+      console.log('Handled');
+    }
+
+    button.addEventListener('click', handleClick());
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const button = document.querySelector('#fixme');
+
+    function handleClick() {
+      console.log('Handled');
+    }
+
+    button.addEventListener('click', handleClick);
+    ```
+    ```+test
+    wrap(console.history().length).should('equal', 0).run('Nothing should be logged until the button is clicked. Remove the parentheses so the function is passed rather than called', 'The callback waits for the click');
+    assert('#fixme').click().run('Could not find the `#fixme` button', 'Clicked the button');
+    check.consoleLogged('Handled').run('Clicking the button should log `Handled`', 'The listener fires on click');
+    ```
+
+## Resources
+
+- [MDN: Callback function](https://developer.mozilla.org/en-US/docs/Glossary/Callback_function)
+- [MDN: Arrow function expressions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions)
+- [MDN: Function expressions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/function)
+- [MDN: Functions guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions)

@@ -1,0 +1,198 @@
+# React Function Components
+
+Components are the building blocks of a React application. Once you define one, you use it the way you use a built-in element: `<Greeting />` sits in your markup next to `<h1>` and `<p>`.
+
+There are two kinds. **Class components** are the older style, written with JavaScript classes, and you will run into them in existing code. **Function components** are how React is written now, and they are all we use here.
+
+A function component is not a special kind of function. It is **a plain JavaScript function that returns React elements**, which is why you already know most of what there is to know about it.
+
+## A Component Function
+
+```{react autorun}
+function ProfileCard() {
+  return (
+    <article>
+      <h2>Ada Lovelace</h2>
+      <p>Mathematician and programmer</p>
+    </article>
+  );
+}
+
+renderReact(<ProfileCard />);
+```
+
+A function, a `return`, and a value that looks like HTML. Change the text and run the cell again.
+
+## Three Conventions
+
+None of these are enforced by the language. All three are followed everywhere, and one of them is not really optional.
+
+**The name starts with a capital letter.** We normally start function and variable names lowercase, and components are the exception. This one matters: JSX decides what you meant by looking at the first letter. `<greeting />` is read as an HTML tag named `greeting`, which does not exist, so nothing renders. `<Greeting />` is read as the component in scope by that name.
+
+```{react autorun}
+function Greeting() {
+  return <span>Hello viewer</span>;
+}
+
+// The capital G is what makes this the component rather than an unknown HTML tag.
+renderReact(<Greeting />);
+```
+
+Try lowercasing both the definition and the usage and running it again. React does not crash; it renders an empty `<greeting>` element, which is a bug that looks like nothing happening.
+
+**One component per file.** A file named `Greeting.jsx` holds `Greeting` and nothing else. Larger projects live or die by being able to guess which file something is in.
+
+**Export it as the default.** With `export default`, the importing file names it:
+
+```jsx
+// Greeting.jsx
+export default function Greeting() {
+  return <span>Hello viewer</span>;
+}
+```
+
+```jsx
+// App.jsx
+import Greeting from './Greeting';
+```
+
+Notice there are no braces around `Greeting` in that import, because it is the default export. That is the ES module syntax from Course 3, applied to components. Since the import names it, the name you use does not have to match, and by convention it does.
+
+## Components Can Compose
+
+A component can use another component, and this is the entire point of having them:
+
+```{react autorun}
+function Badge() {
+  return <strong>New</strong>;
+}
+
+function Notification() {
+  return (
+    <p>
+      <Badge /> message
+    </p>
+  );
+}
+
+renderReact(<Notification />);
+```
+
+`Notification` does not care how a badge is drawn; it asks for one. And a component can be used as many times as you like:
+
+```{react autorun}
+function Greeting() {
+  return <li>Hello viewer</li>;
+}
+
+function GreetingList() {
+  return (
+    <ul>
+      <Greeting />
+      <Greeting />
+      <Greeting />
+    </ul>
+  );
+}
+
+renderReact(<GreetingList />);
+```
+
+Three separate greetings from one definition. Right now they all say the same thing, which is the limitation the next lessons remove.
+
+## Exercises
+
+1. Create a `Badge` component that renders the exact text `Featured`.
+
+   ```{react}
+   function Badge() {
+     return <span>Change me</span>;
+   }
+
+   renderReact(<Badge />);
+   ```
+   ```+solution
+   function Badge() {
+     return <span>Featured</span>;
+   }
+
+   renderReact(<Badge />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('span').should('have.text', 'Featured').run('Render the exact badge text `Featured`', 'Rendered the badge');
+   }, 50);
+   ```
+
+2. Write a `Footer` component that returns a `<footer>` containing the text `Thanks for visiting`, then use it twice inside `Page`.
+
+   ```{react}
+   // TODO: define a Footer component here
+
+   function Page() {
+     return (
+       <div>
+         <h1>My page</h1>
+         {/* TODO: render two Footer components here */}
+       </div>
+     );
+   }
+
+   renderReact(<Page />);
+   ```
+   ```+solution
+   function Footer() {
+     return <footer>Thanks for visiting</footer>;
+   }
+
+   function Page() {
+     return (
+       <div>
+         <h1>My page</h1>
+         <Footer />
+         <Footer />
+       </div>
+     );
+   }
+
+   renderReact(<Page />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('footer').should('have.length', 2).run('Render two `<Footer />` components inside `Page`', 'Rendered the footer twice');
+     assert('footer').should('have.text', 'Thanks for visiting').run('The footer should contain the exact text `Thanks for visiting`', 'The footer text is right');
+     wrap(/function\s+Footer/.test(source)).should('equal', true).run('Define the component as a function named `Footer`, with a capital F', 'Defined the Footer component');
+   }, 50);
+   ```
+
+3. Why must a component's name start with a capital letter?
+
+   ```{mcq}
+   What happens if you write `<greeting />` instead of `<Greeting />`?
+   correct: Correct! JSX reads a lowercase name as an HTML tag, so it looks for an element called `greeting`, finds nothing familiar, and renders an empty element rather than your component. The capital letter is what tells JSX to look for a component.
+   wrong: JSX decides between "HTML tag" and "component in scope" by looking at one character. Look back at "Three Conventions".
+   [x] JSX treats it as an HTML tag rather than a component, so the component never runs
+   [ ] React throws an error naming the lowercase component
+   [ ] It works the same way; capitalization is only a style preference
+   [ ] The component runs but its CSS is ignored
+   ```
+
+4. What is a React function component?
+
+   ```{mcq}
+   Which description is accurate?
+   correct: Correct! It is an ordinary JavaScript function whose return value is React elements. There is no special syntax and no base class to extend.
+   wrong: Think about what you actually wrote in the cells above, and what it returned.
+   [x] A plain JavaScript function that returns React elements
+   [ ] A class that extends `React.Component`
+   [ ] A special file format that React compiles separately
+   [ ] An HTML template stored in a `.html` file
+   ```
+
+## Resources
+
+- [React Docs: Your first component](https://react.dev/learn/your-first-component)
+- [React Docs: Importing and exporting components](https://react.dev/learn/importing-and-exporting-components)
+- [MDN: export default](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export)

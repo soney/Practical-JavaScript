@@ -1,0 +1,305 @@
+# Creating and Adding Elements
+
+So far we have modified elements that were already on the page because we wrote them in HTML. But how do we add *new* elements?
+
+Technically we could do it by setting `innerHTML`, and as we saw two lessons ago that means hard-coding markup inside a string, with all the security problems that brings. There is a better way, and it takes two steps:
+
+1. **Create** the element with `document.createElement(tagName)`.
+2. **Add** it to the DOM tree with a method like `append`.
+
+### A Note About These Cells
+
+Inside a notebook cell, `document` refers to that cell's own output area rather than to the whole page, which means `document.createElement` is not available there. Every runnable cell below therefore starts with one extra line:
+
+```javascript
+const document = window.document;
+```
+
+That points `document` at the real page document, exactly as it already is in a `<script>` element. **In a real page you do not write that line**; everything after it is what you would actually type.
+
+## The Two Steps
+
+Suppose we have a paragraph and we want to put a `<strong>` element containing the word `world` inside it.
+
+```html id=page1
+<h1>Hello</h1>
+<p>Hello </p>
+```
+
+```{javascript autorun}
+const document = window.document;
+
+const p = document.querySelector('p');
+
+const newElem = document.createElement('strong');
+
+console.log(newElem);
+```
+```+id=page1
+```
+
+`document.createElement('strong')` takes the tag name as a string and hands back a new element object. Run that cell and look at the page: **nothing changed.** The element exists, but it lives outside the DOM tree, so there is nothing to see.
+
+Now give it some text and attach it:
+
+```{javascript autorun}
+const document = window.document;
+
+const p = document.querySelector('p');
+
+const newElem = document.createElement('strong');
+newElem.textContent = 'world';
+
+p.append(newElem);
+```
+```+id=page1
+```
+
+`p.append(newElem)` adds the new element to the tree as the last child of the paragraph, and only then does it render.
+
+That "created but not attached" state is worth getting used to. If you build an element and nothing appears, the missing step is almost always the second one.
+
+## Where the New Element Goes
+
+`append` puts the element last. Four methods together cover everything you normally need. Given a `parent` already in the tree, and a `sibling` already in the tree:
+
+```javascript
+parent.append(newEl);    // add newEl as the LAST child of parent
+parent.prepend(newEl);   // add newEl as the FIRST child of parent
+sibling.after(newEl);    // insert newEl immediately AFTER sibling
+sibling.before(newEl);   // insert newEl immediately BEFORE sibling
+```
+
+Here they are on one list. Watch where each item lands:
+
+```html id=page2
+<ul>
+  <li>First</li>
+  <li id="second">Second</li>
+  <li>Third</li>
+</ul>
+```
+
+```{javascript autorun}
+const document = window.document;
+
+const list = document.querySelector('ul');
+const second = document.querySelector('#second');
+
+function makeItem(text) {
+  const li = document.createElement('li');
+  li.textContent = text;
+  return li;
+}
+
+list.append(makeItem('appended: last child'));
+list.prepend(makeItem('prepended: first child'));
+second.after(makeItem('after the second item'));
+second.before(makeItem('before the second item'));
+```
+```+id=page2
+```
+
+You will also run into older methods such as `parent.appendChild(newEl)` and `parent.insertBefore(newEl, reference)`. They still work, and these four cover the same ground more readably.
+
+### Strings and Several Arguments
+
+These methods are not limited to a single element. Pass a string and it is added as text. Pass several arguments and they are all added, in order.
+
+```html id=page3
+<p>Some </p>
+```
+
+```{javascript autorun}
+const document = window.document;
+
+const p = document.querySelector('p');
+
+const strongEl = document.createElement('strong');
+strongEl.textContent = 'bold';
+
+const emEl = document.createElement('em');
+emEl.textContent = 'italic';
+
+p.append(strongEl, ' and ', emEl);
+```
+```+id=page3
+```
+
+That adds an element, then a piece of plain text, then another element, without needing a wrapper around them.
+
+## Building a List From Data
+
+Here is the pattern you will use most. Imagine writing code for a bulletin board: you have an array of comments from somewhere, and you need each one to become a list item on the page.
+
+```html id=page4
+<ul id="comments-container"></ul>
+```
+
+```{javascript autorun}
+const document = window.document;
+
+const list = document.querySelector('#comments-container');
+const comments = ['Great post!', 'Thanks for sharing', 'Very helpful'];
+
+let commentNumber = 1;
+
+for (const comment of comments) {
+  const li = document.createElement('li');
+  li.textContent = comment;
+  li.prepend('Comment ' + commentNumber + ': ');
+
+  list.append(li);
+
+  commentNumber++;
+}
+```
+```+id=page4
+```
+
+For each string we create an `li`, set its text, prepend a numbered label to the front of that text, and append it to the container. The HTML started with an empty list; everything you see came from the array.
+
+This is the thing that makes a page dynamic: the markup no longer has to know what content it will hold.
+
+## Exercises
+
+1. Create a new list item with the text `Cherry` and add it as the last child of the list.
+
+    ```html id=page5
+    <ul id="fruits">
+      <li>Apple</li>
+      <li>Banana</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const document = window.document;
+
+    const fruits = document.querySelector('#fruits');
+
+    // Write your code here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const document = window.document;
+
+    const fruits = document.querySelector('#fruits');
+
+    const li = document.createElement('li');
+    li.textContent = 'Cherry';
+
+    fruits.append(li);
+    ```
+    ```+test
+    assert('#fruits li').should('have.length', 3).run('The list should end up with three items', 'Added a third item');
+    assert('#fruits li:last-child').should('have.text', 'Cherry').run('The new `li` should be the last child and read `Cherry`', 'Appended Cherry to the end');
+    ```
+
+2. Create a list item with the text `Plan work` and make it the **first** child of the list.
+
+    ```html id=page6
+    <ul id="tasks">
+      <li>Write code</li>
+      <li>Test code</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const document = window.document;
+
+    const tasks = document.querySelector('#tasks');
+
+    // Write your code here
+    ```
+    ```+id=page6
+    ```
+    ```+solution
+    const document = window.document;
+
+    const tasks = document.querySelector('#tasks');
+
+    const li = document.createElement('li');
+    li.textContent = 'Plan work';
+
+    tasks.prepend(li);
+    ```
+    ```+test
+    assert('#tasks li').should('have.length', 3).run('The list should end up with three items', 'Added a third item');
+    assert('#tasks li:first-child').should('have.text', 'Plan work').run('The new `li` should be the first child. Use `prepend` rather than `append`', 'Prepended the new item');
+    ```
+
+3. Insert a new list item with the text `Lansing` immediately after the item with ID `detroit`.
+
+    ```html id=page7
+    <ul>
+      <li>Ann Arbor</li>
+      <li id="detroit">Detroit</li>
+      <li>Grand Rapids</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const document = window.document;
+
+    const detroit = document.querySelector('#detroit');
+
+    // Write your code here
+    ```
+    ```+id=page7
+    ```
+    ```+solution
+    const document = window.document;
+
+    const detroit = document.querySelector('#detroit');
+
+    const li = document.createElement('li');
+    li.textContent = 'Lansing';
+
+    detroit.after(li);
+    ```
+    ```+test
+    assert('li').should('have.length', 4).run('The list should end up with four items', 'Added an item');
+    wrap(document.querySelectorAll('li')[2].textContent).should('equal', 'Lansing').run('`Lansing` should be the third item, immediately after `Detroit`. Use `detroit.after(...)`', 'Inserted it in the right place');
+    ```
+
+4. Turn the `cities` array into list items inside the empty list, one `li` per city, in order.
+
+    ```html id=page8
+    <ul id="city-list"></ul>
+    ```
+
+    ```{javascript}
+    const document = window.document;
+
+    const list = document.querySelector('#city-list');
+    const cities = ['Ann Arbor', 'Detroit', 'Lansing'];
+
+    // Write your loop here
+    ```
+    ```+id=page8
+    ```
+    ```+solution
+    const document = window.document;
+
+    const list = document.querySelector('#city-list');
+    const cities = ['Ann Arbor', 'Detroit', 'Lansing'];
+
+    for (const city of cities) {
+      const li = document.createElement('li');
+      li.textContent = city;
+      list.append(li);
+    }
+    ```
+    ```+test
+    assert('#city-list li').should('have.length', 3).run('There should be one `li` for each of the three cities', 'Created three list items');
+    wrap(document.querySelector('#city-list').textContent).should('equal', 'Ann ArborDetroitLansing').run('The three cities should appear in the same order as the array', 'The cities are in order');
+    ```
+
+## Resources
+
+- [MDN: Document.createElement()](https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement)
+- [MDN: Element.append()](https://developer.mozilla.org/en-US/docs/Web/API/Element/append)
+- [MDN: Element.prepend()](https://developer.mozilla.org/en-US/docs/Web/API/Element/prepend)
+- [MDN: Element.after()](https://developer.mozilla.org/en-US/docs/Web/API/Element/after)
+- [MDN: Element.before()](https://developer.mozilla.org/en-US/docs/Web/API/Element/before)

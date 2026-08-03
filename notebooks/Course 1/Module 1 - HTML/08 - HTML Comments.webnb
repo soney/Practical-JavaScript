@@ -1,0 +1,103 @@
+# HTML Comments
+
+**Comments** are parts of the code that the browser ignores. We use them to (1) add notes for ourselves or other developers, and (2) temporarily remove parts of the code without deleting them.
+
+## Syntax
+
+An HTML comment starts with `<!--` (an angle bracket, an exclamation point, and two dashes) and ends with `-->` (two dashes and an angle bracket). Everything between those markers is ignored by the browser. For example:
+
+```{html autorun}
+<!-- This is a comment -->
+<p>This is a paragraph. Note that the comment is not visible in the browser.</p>
+```
+
+The comment will not appear in the rendered page, but it can be seen in the HTML source code. Comments can be placed anywhere in the code, even inside other elements:
+
+```{html autorun}
+<p>This is a paragraph. <!-- This is a comment --></p>
+```
+
+- The comment text (`This is a comment`) never shows up in the browser output.
+- The `<p>` element renders normally; only the commented part is ignored.
+
+## Leaving Notes
+
+A common use is to leave a reminder to yourself or a teammate right next to the relevant code:
+
+```{html autorun}
+<h1>Nature Facts</h1>
+<!-- add more nature facts here -->
+<p>Honey never spoils.</p>
+```
+
+## Commenting Out Code
+
+Comments are also a way to temporarily disable code without deleting it. Wrapping an element in `<!--` and `-->` keeps the code in the file but stops it from rendering. This is handy when you want to hide something for now but might bring it back later.
+
+A comment can span any number of lines, so you can comment out several elements at once:
+
+```{html autorun}
+<!--
+<h2>Fun Fact</h2>
+<p>This whole section is hidden for now.</p>
+-->
+<p>This paragraph still shows.</p>
+```
+
+Here the comment starts before the `<h2>` and ends after the `<p>`, so both of those elements are hidden while the last paragraph still renders.
+
+Most code editors have a keyboard shortcut for commenting. In Visual Studio Code, select some code and press `Ctrl + /` (Windows) or `Cmd + /` (Mac) to comment it out; pressing the same shortcut on already-commented code uncomments it.
+
+## Caveat: Comments Are Not Private
+
+Although comments do not show up in the rendered page, anyone viewing your site can read them by opening their browser's developer tools or viewing the page source. Comments are part of the file that gets sent to every visitor. For that reason, never put sensitive information such as passwords, API keys, or private notes inside a comment.
+
+## Exercises
+
+1. Using `<!-- -->`, add a comment to the following HTML that says "This is a comment".
+
+    ```{html}
+    <p>This is a paragraph. Add a comment somewhere below.</p>
+    ```
+    ```+solution
+    <p>This is a paragraph. Add a comment somewhere below.</p>
+    <!-- This is a comment -->
+    ```
+    ```+test
+    wrap(source.includes("<!--")).should('equal', true).run('Failed; source should include `<!--`', 'Passed!');
+    wrap(source.includes("-->")).should('equal', true).run('Failed; source should include `-->`', 'Passed!');
+    ```
+
+2. Comment out the `<h2>` heading below so it no longer appears in the rendered page. Leave the paragraph untouched, and do not delete the heading -- wrap it in a comment instead.
+
+    ```{html}
+    <h2>Outdated Heading</h2>
+    <p>Nature fact: honey never spoils.</p>
+    ```
+    ```+solution
+    <!-- <h2>Outdated Heading</h2> -->
+    <p>Nature fact: honey never spoils.</p>
+    ```
+    ```+test
+    wrap(source.includes("<!--")).should('equal', true).run('Failed; wrap the heading in a comment starting with `<!--`', 'Comment markers found.');
+    wrap(source.includes("-->")).should('equal', true).run('Failed; a comment must end with `-->`', 'Comment closed.');
+    wrap(source.includes("Outdated Heading")).should('equal', true).run('Failed; do not delete the heading -- comment it out instead.', 'Heading text is still in the source.');
+    assert('h2').should('not.exist').run('Failed; the `<h2>` should be inside the comment so it does not render.', 'Passed! The heading is hidden.');
+    ```
+
+3. Comment syntax
+
+    ```{mcq}
+    Which of the following is the correct syntax for adding a comment in HTML?
+    correct: Correct! An HTML comment starts with `<!--` and ends with `-->`.
+    wrong: Not quite. Remember that HTML comments use angle brackets, an exclamation mark, and dashes.
+    [x] `<!-- This is a comment -->`
+    [ ] `// This is a comment`
+    [ ] `/* This is a comment */`
+    [ ] `<comment>This is a comment</comment>`
+    ```
+
+## Resources
+
+- [MDN: HTML comments](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Basic_HTML_syntax#html_comments)
+- [MDN: HTML basics](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Basic_HTML_syntax)

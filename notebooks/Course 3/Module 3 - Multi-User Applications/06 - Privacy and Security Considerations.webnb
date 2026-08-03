@@ -1,0 +1,169 @@
+# Privacy and Security Considerations
+
+Now that your server can store data, it is worth stopping before the next lesson, which stores passwords.
+
+Storing user data is a real responsibility, and it does not scale with how serious the application is. A toy project with fifty accounts holds fifty real people's real passwords, which those people probably also use elsewhere. So the question is not only whether the application works, but whether it is safe, private, and defensible.
+
+Three ideas to carry with you.
+
+## One: Data Minimization
+
+**Collect only what you actually need.**
+
+If the application does not need a phone number or a home address to do its job, do not ask for it and do not store it. Not "ask for it in case we add a delivery feature later"; that feature does not exist yet, and the data is a liability from the moment it arrives.
+
+The reasoning is blunt: **data you do not have cannot be stolen.** Every field you keep is a field that appears in a breach, has to be disclosed, has to be deletable on request, and has to be protected in the meantime. The cheapest way to protect a piece of data is not to have it.
+
+## Two: Never Store Passwords in Plain Text
+
+If your database contains a column of readable passwords, then anyone who reads your database has every user's password, and, realistically, their password for other sites too.
+
+The technique that avoids this is **hashing**: scrambling a password so it cannot be read back, while still letting the server check whether a submitted password is the right one. That sounds contradictory and is not, and it is the subject of a reading in the next lesson.
+
+For now, the rule: a stored password field should never hold the password. A useful habit is naming the field `passwordHash` rather than `password`, so that anything storing the real thing looks wrong at a glance.
+
+## Three: Encrypt at Rest and in Transit
+
+Two different exposures, two different protections.
+
+**At rest** means the database files sitting on the server's disk. Encrypting them means that someone who steals the physical drive, or gains access to the file system, still cannot read the contents.
+
+**In transit** means data moving between the browser and your server, across networks you do not control. Encrypting that is what **HTTPS** does, and it is why a login form on plain HTTP is a serious problem: the password crosses the network as readable text.
+
+Neither substitutes for the other. Encryption in transit does not protect a stolen drive, and encryption at rest does not protect a password typed over an open network.
+
+## Exercises
+
+1. Write `auditRecord`, which reports problems in a record you are about to store.
+
+    ```{javascript}
+    // The fields a registration form is about to store.
+    const record = [
+      { name: 'email', value: 'grace@example.com' },
+      { name: 'password', value: 'hunter2' },
+      { name: 'phoneNumber', value: '555-0100' }
+    ];
+
+    const neededFields = ['email', 'passwordHash'];
+
+    function auditRecord(record) {
+      const problems = [];
+
+      // TODO: for each field, add 'password stored in plain text' if it is
+      // named `password`, and 'unnecessary field: ' plus its name if it is
+      // not one of the neededFields
+
+      return problems;
+    }
+
+    console.log(auditRecord(record));
+    ```
+    ```+solution
+    // The fields a registration form is about to store.
+    const record = [
+      { name: 'email', value: 'grace@example.com' },
+      { name: 'password', value: 'hunter2' },
+      { name: 'phoneNumber', value: '555-0100' }
+    ];
+
+    const neededFields = ['email', 'passwordHash'];
+
+    function auditRecord(record) {
+      const problems = [];
+
+      for (const field of record) {
+        if (field.name === 'password') {
+          problems.push('password stored in plain text');
+        }
+
+        if (!neededFields.includes(field.name)) {
+          problems.push('unnecessary field: ' + field.name);
+        }
+      }
+
+      return problems;
+    }
+
+    console.log(auditRecord(record));
+    ```
+    ```+test
+    wrap(auditRecord(record).includes('password stored in plain text')).should('equal', true).run('A field literally named `password` should be reported. Stored passwords should be hashed', 'Caught the plain-text password');
+    wrap(auditRecord(record).includes('unnecessary field: phoneNumber')).should('equal', true).run('A field that is not in `neededFields` should be reported as unnecessary', 'Caught the unnecessary field');
+    wrap(auditRecord([{ name: 'email', value: 'a@b.com' }, { name: 'passwordHash', value: 'abc' }])).should('equal', []).run('A record holding only the needed fields, with a hashed password, should report no problems', 'Accepted a clean record');
+    wrap(auditRecord([{ name: 'password', value: 'x' }]).length).should('equal', 2).run('A plain-text password is both a security problem and an unnecessary field, so it produces two problems', 'Reported both problems');
+    ```
+
+2. The server is about to send an account back to the browser. Return only the parts the browser should see.
+
+    ```{javascript}
+    const account = {
+      id: 3,
+      email: 'grace@example.com',
+      passwordHash: 'e7d3f...',
+      recoveryCode: '84213'
+    };
+
+    function publicAccount(account) {
+      // TODO: return an object with only id and email
+      return account;
+    }
+
+    const result = publicAccount(account);
+
+    console.log(result);
+    ```
+    ```+solution
+    const account = {
+      id: 3,
+      email: 'grace@example.com',
+      passwordHash: 'e7d3f...',
+      recoveryCode: '84213'
+    };
+
+    function publicAccount(account) {
+      return {
+        id: account.id,
+        email: account.email
+      };
+    }
+
+    const result = publicAccount(account);
+
+    console.log(result);
+    ```
+    ```+test
+    wrap(result).should('equal', { id: 3, email: 'grace@example.com' }).run('Return a new object holding only `id` and `email`', 'Sent only the public fields');
+    wrap('passwordHash' in result).should('equal', false).run('Never send the password hash to the browser, even though it is not the password itself', 'Kept the hash on the server');
+    wrap('recoveryCode' in result).should('equal', false).run('The recovery code should not leave the server either', 'Kept the recovery code on the server');
+    ```
+
+3. You are building a weather application that needs a postal code and nothing else. Should you also collect a full address and phone number, in case you add deliveries later?
+
+    ```{mcq}
+    Is collecting it now the safe choice?
+    correct: Correct! Every extra field is a liability from the moment you store it: it can be breached, it has to be disclosed, and it has to be protected. Collect it when the feature that needs it exists.
+    wrong: Think about what happens to that address and phone number if your database is compromised next month.
+    [x] No, because every extra piece of data is a liability that could be exposed in a breach
+    [ ] Yes, so that you do not have to ask again later
+    [ ] Yes, because more data makes the database more valuable
+    [ ] Only if the user agrees to a long terms-of-service document
+    ```
+
+4. Data should be encrypted at rest and in transit. What is data "in transit"?
+
+    ```{mcq}
+    Which of these is the in-transit case?
+    correct: Correct! In transit means moving between the browser and the server, across networks you do not control, which is what HTTPS protects.
+    wrong: One of these describes data sitting still on a disk, which is the other half of the pair.
+    [x] Data traveling between the browser and the server, protected by HTTPS
+    [ ] Database files sitting on a physical hard drive
+    [ ] Data currently being processed by the CPU
+    [ ] Data that has been deleted but is still in a trash folder
+    ```
+
+## Resources
+
+- [MDN: privacy on the web](https://developer.mozilla.org/en-US/docs/Web/Privacy)
+- [MDN: website security](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/First_steps/Website_security)
+- [MDN: HTTPS](https://developer.mozilla.org/en-US/docs/Glossary/HTTPS)
+- [OWASP: password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)

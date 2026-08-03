@@ -1,0 +1,168 @@
+# Deploying Your Bundled Application
+
+Everything so far has run on your own machine. **Deploying** means putting it somewhere the public can reach. This reading uses GitHub and GitHub Pages, and the shape of it is the same for any host.
+
+Start by building:
+
+```
+$ npx webpack
+```
+
+That fills `dist/` with runnable code: the bundle, and the HTML that loads it. The important realization is that **`dist/` is the whole deployment**. Your source files, your configuration, and `node_modules/` are all things that were needed to *produce* those files. The web server only needs the result.
+
+## Method One: Upload the Output
+
+The direct approach:
+
+1. Create a repository on GitHub, say `deployment-example-1`.
+2. Upload the files from `dist/` into it.
+3. Open **Settings > Pages**, choose to publish from the `main` branch, and save.
+4. Wait for the green check mark, then visit the URL GitHub gives you.
+
+Your application is now public. This works, and it has two problems.
+
+**Every change means uploading everything again**, by hand, which you will get wrong eventually.
+
+**The repository holds your built files instead of your source.** That is backwards. Version control exists to hold the code you write and its history; `dist/main.js` is minified output with no history worth reading.
+
+## Method Two: Source in Git, Output Deployed
+
+Better: keep the repository for source, and have a tool handle the deployment.
+
+Create a second repository, `deployment-example-2`, and set it up locally with the commands GitHub shows you. (A reasonable aside from the video: pasting commands from a website into your terminal is generally ill-advised, and GitHub's own setup instructions are a case where it is fine.)
+
+Open the Source Control panel in VS Code and you find something alarming: **8,641 files to commit**. The project has four files you wrote. The rest is `node_modules/`, your dependencies and their dependencies and theirs.
+
+### `.gitignore`
+
+The rule to follow: **commit your source and configuration; do not commit anything that can be rebuilt or reinstalled.**
+
+- `node_modules/` can be reinstalled by anyone from your `package.json` with `npm install`.
+- `dist/` can be rebuilt by anyone from your source with `npx webpack`.
+
+Neither belongs in the repository. Create a file called `.gitignore`, listing what to leave out:
+
+```
+node_modules
+dist
+```
+
+The count drops from 8,641 to 7. Those seven files are the project:
+
+```
+.gitignore
+package.json
+package-lock.json
+webpack.config.js
+src/index.html
+src/index.js
+src/styles/page.css
+```
+
+The ignored directories are still on your machine, and Git simply stops tracking them.
+
+Then commit with a message describing what you did, and sync to upload. Your source is on GitHub.
+
+### Deploying the Output
+
+Now the built files, using an npm package written for this:
+
+```
+$ npm install gh-pages --save-dev
+$ npx gh-pages -d dist
+```
+
+`-d dist` says which directory to publish.
+
+Look at the repository afterwards and `main` is unchanged: no `dist/` in sight. Open the branch list, though, and there is a new **branch** called `gh-pages` containing the deployed files. A branch is a parallel version of the code inside the same repository, and `gh-pages` is the one GitHub Pages serves. The tool created and populated it for you.
+
+So one repository now holds two things in two places: your source on `main`, and your deployed application on `gh-pages`. Redeploying is one command, and it never touches your source history.
+
+## A Milestone
+
+It is worth stopping to notice what you can now do. You can write JavaScript across multiple modules, pull in libraries with npm, bundle and optimize the result with Webpack, and deploy it publicly. That is a complete workflow for a modern client-side application.
+
+What is missing is the other side of the connection. In this lesson GitHub Pages was our server, and all it did was hand over files. In Module 2 we write the server ourselves, which is where the interesting things start.
+
+## Exercises
+
+1. Build the project, install the deployment tool, and publish the output directory.
+
+    ```{external}
+    title: Build and deploy
+    interval: off
+    - command: npx webpack | Build the bundle into dist/
+    - command: npm install gh-pages --save-dev | Install the deployment tool as a development dependency
+    - command: npx gh-pages -d dist | Publish the dist directory to the gh-pages branch
+    ```
+    ```+terminal
+    welcome: Run the commands in order, then run the cell to check them.
+    prompt: $
+    ```
+
+2. Write `shouldCommit`, deciding whether a path belongs in version control.
+
+    ```{javascript}
+    const ignored = ['node_modules', 'dist'];
+
+    function shouldCommit(path) {
+      // TODO: return false for anything inside an ignored directory
+      return true;
+    }
+
+    console.log(shouldCommit('src/index.js'));
+    console.log(shouldCommit('node_modules/lodash/lodash.js'));
+    ```
+    ```+solution
+    const ignored = ['node_modules', 'dist'];
+
+    function shouldCommit(path) {
+      for (const directory of ignored) {
+        if (path.startsWith(directory)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    console.log(shouldCommit('src/index.js'));
+    console.log(shouldCommit('node_modules/lodash/lodash.js'));
+    ```
+    ```+test
+    wrap(shouldCommit('src/index.js')).should('equal', true).run('Your own source files should be committed', 'Kept the source files');
+    wrap(shouldCommit('webpack.config.js')).should('equal', true).run('Configuration files should be committed too', 'Kept the configuration');
+    wrap(shouldCommit('node_modules/lodash/lodash.js')).should('equal', false).run('Anything inside `node_modules` should be left out, since `npm install` can restore it', 'Ignored the installed packages');
+    wrap(shouldCommit('dist/main.js')).should('equal', false).run('Anything inside `dist` should be left out, since the build can recreate it', 'Ignored the build output');
+    ```
+
+3. Why is adding `node_modules` and `dist` to `.gitignore` considered good practice?
+
+    ```{mcq}
+    What does ignoring those two directories achieve?
+    correct: Correct! Both can be regenerated, one by `npm install` and the other by the build, so committing them adds thousands of files and no information. The history stays about the code you actually wrote.
+    wrong: Ask what you would lose if those directories were missing from a fresh copy of the project. Could you get them back?
+    [x] It keeps the repository from filling up with reinstallable libraries and regenerable build output, so the history is about your own source
+    [ ] It deletes those files from your computer to save disk space
+    [ ] It makes the code run faster in the browser
+    [ ] It encrypts the files so nobody can copy your project
+    ```
+
+4. What does `gh-pages` give you over uploading the `dist` files by hand?
+
+    ```{mcq}
+    Compare the two methods.
+    correct: Correct! Your source stays on `main` and the deployed files go to a separate `gh-pages` branch, managed for you. Redeploying becomes one command instead of a manual upload.
+    wrong: Think about what ends up in the repository under each method, and how much work a second deployment is.
+    [x] Source stays on `main` while the deployed output is managed on a separate `gh-pages` branch, and updates take one command
+    [ ] It is the only way to make CSS work on a public site
+    [ ] It makes the site load twice as fast
+    [ ] Uploading by hand is better, because it needs no terminal
+    ```
+
+## Resources
+
+- [npm: gh-pages](https://www.npmjs.com/package/gh-pages)
+- [GitHub: configuring a publishing source for GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+- [Git: gitignore](https://git-scm.com/docs/gitignore)
+- [Webpack: production](https://webpack.js.org/guides/production/)

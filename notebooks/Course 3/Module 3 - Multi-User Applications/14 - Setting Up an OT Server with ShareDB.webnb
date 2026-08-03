@@ -1,0 +1,356 @@
+# Setting Up an OT Server with ShareDB
+
+The previous reading was theory: operations, transformations, convergence. This one is the plumbing that makes it real: an Express server, a WebSocket, and **ShareDB** attached to both. No shared documents yet; that is the next reading.
+
+The project the video built is in your workspace, in the `sharedb-demo/01-server/` folder next to this notebook, and this reading walks through it. The same project grows one folder per reading, `01-server/` through `05-richtext/`, so these files will keep coming back.
+
+## The Ordinary Parts First
+
+The video starts a fresh project and installs Express and the `ws` WebSocket library, as we have before:
+
+    $ npm init -y
+    $ npm install express ws
+
+The client code will be bundled, so the video also installs the webpack tooling from Module 1:
+
+    $ npm install webpack webpack-cli html-webpack-plugin
+
+The workspace copy shares one `package.json` for all five stages, in `sharedb-demo/`, so a single `npm install` **there** covers this whole lesson. `sharedb-demo/README.md` spells that out.
+
+```{walkthrough}
+title: A server we already know how to read
+Every line in these first steps is from earlier in the course: Express and static serving from this module's authentication lesson, WebSocket servers from Module 2, and webpack from Module 1.
+
+step: An Express app and a WebSocket server
+file: sharedb-demo/01-server/server.js
+region: app
+@"express.static": Express serves whatever is in `dist`, which does not exist yet; webpack is about to build it. (`path.join(__dirname, ...)` keeps the path correct no matter which folder you start the server from.)
+@"http.createServer(app)": The same Express-on-an-HTTP-server arrangement as the Passport reading.
+@"new ws.WebSocketServer": The WebSocket server shares the HTTP server, and so shares its port, exactly as in "Introduction to WebSockets".
+
+step: Listening
+file: sharedb-demo/01-server/server.js
+region: listen
+@"server.listen(8000": Port 8000 this time. This log line is how you know the server is up.
+
+step: The webpack build
+file: sharedb-demo/01-server/webpack.config.js
+The client code is bundled because it is about to `import` libraries into browser code, which is exactly what we [set webpack up for](<../Module 1 - Libraries and Modules/25 - Setting Up a Bundler - Webpack.webnb>) in Module 1.
+@"entry: './src/client.js'": The starting point. webpack follows every `import` from here and rolls the result into one `dist/main.js`.
+@"mode: 'development'": We would like to be able to read what we are debugging.
+@"new HtmlWebpackPlugin": The plugin from "Using Loaders and Plugins": it copies `src/index.html` into `dist/` with a script tag for the bundle added, so we never write that tag by hand.
+
+step: The page
+file: sharedb-demo/01-server/src/index.html
+@"ShareDB Example": The whole page. Everything interesting happens in the console for now.
+```
+
+Run `npx webpack` inside `01-server/` and `dist/` appears: the page, plus a `main.js` built from `src/client.js`. Express serves that folder, so visiting the server shows the heading.
+
+## The ShareDB Parts
+
+Three more packages, and it is worth knowing why each is there:
+
+    $ npm install sharedb @teamwork/websocket-json-stream reconnecting-websocket
+
+- **`sharedb`** is the library itself, and it has a server half and a client half.
+- **`@teamwork/websocket-json-stream`** adapts a WebSocket for ShareDB. A WebSocket carries **strings**; ShareDB wants to send and receive **JSON objects** through a stream interface. This package bridges the two. As the video says, it is short enough that you could write it yourself, and we will sketch it below to see what it does.
+- **`reconnecting-websocket`** is a WebSocket that reconnects when the connection drops. Nothing to do with OT; it is what you want in an application people leave open in a tab all day.
+
+```{walkthrough}
+title: Attaching ShareDB to both ends
+step: Two new requires
+file: sharedb-demo/01-server/server.js
+region: modules
+@"require('sharedb')": The server half of the library.
+@"require('@teamwork/websocket-json-stream')": The string-to-JSON adapter, used once per connection below.
+
+step: The backend
+file: sharedb-demo/01-server/server.js
+region: backend
+This is the entire server side of ShareDB. Everything after this, receiving operations, ordering them, transforming them, broadcasting them, is the library's job.
+@"new ShareDB()": By default the backend keeps documents in memory, so restarting the server wipes them. A database adapter would make them persistent, the same fix as for the sessions object; we are not covering that, and in-memory is fine for learning.
+@"wss.on('connection'": Runs once for every client that connects, as in the WebSockets readings.
+@"new WebSocketJSONStream(webSocket)": Wraps this client's socket so ShareDB can read and write objects instead of strings.
+@"backend.listen(stream)": Hands the wrapped connection to ShareDB. From here on, the library talks to that client directly.
+
+step: The client's imports
+file: sharedb-demo/01-server/src/client.js
+region: imports
+@"sharedb/lib/client": The browser half of the same package. The server required `'sharedb'`; the client imports `'sharedb/lib/client'`.
+@"reconnecting-websocket": A drop-in `WebSocket` replacement that quietly reconnects if the connection drops.
+
+step: The connection
+file: sharedb-demo/01-server/src/client.js
+region: connect
+@"new ReconnectingWebSocket": Opens the socket to our server. The `ws://` scheme is the WebSocket counterpart of `http://`, and `wss://` is the counterpart of `https://`. The line above picks between them from the page's own address, because a page loaded over `https://` is not allowed to open an insecure `ws://` connection. The rest of the address comes from `location` too, so the socket goes back to wherever the page was served from.
+@"new sharedb.Connection(socket)": The important object. The connection is the client's manager for shared documents: it owns the WebSocket, sends the operations you make, receives the operations other people made, and keeps every document you have open in sync. Everything in the next reading starts from it. (ShareDB's docs write `new Connection(...)` because they import `Connection` by itself; we imported the whole `sharedb` object, so ours is `sharedb.Connection`.)
+@"console.log(connection)": All this stage does with it. Nothing is shared yet, and the pipe is open.
+```
+
+## What the JSON Stream Does
+
+The video notes that the JSON stream wrapper is short enough to reimplement, and writing a sketch of it makes the WebSocket-versus-ShareDB mismatch concrete:
+
+```{node autorun}
+// A stand-in socket that echoes whatever is written to it.
+function makeFakeSocket() {
+  const socket = { listeners: {} };
+
+  socket.addEventListener = function (name, callback) {
+    socket.listeners[name] = callback;
+  };
+
+  socket.send = function (text) {
+    console.log('sent over the wire (a ' + typeof text + '): ' + text);
+
+    // Pretend the server echoes it straight back.
+    if (socket.listeners.message) {
+      socket.listeners.message({ data: text });
+    }
+  };
+
+  return socket;
+}
+
+// The wrapper: objects in, objects out, strings on the wire.
+function makeJsonStream(socket) {
+  const stream = {};
+
+  socket.addEventListener('message', (messageEvent) => {
+    if (stream.onData) {
+      stream.onData(JSON.parse(messageEvent.data));
+    }
+  });
+
+  stream.write = function (value) {
+    socket.send(JSON.stringify(value));
+  };
+
+  return stream;
+}
+
+const stream = makeJsonStream(makeFakeSocket());
+
+stream.onData = function (value) {
+  console.log('received as a ' + typeof value + ', with p = ' + value.p);
+};
+
+stream.write({ p: ['users', 0, 'points'], na: 5 });
+```
+
+An object goes in, a string crosses the wire, an object comes out. ShareDB works entirely in the object world and never has to think about `JSON.stringify`, and the operation in that cell is the `p`/`na` format from the previous reading.
+
+## Running It Yourself
+
+From a terminal in `sharedb-demo/` (after the one-time `npm install` there):
+
+    $ cd "01-server"
+    $ npx webpack
+    $ node server.js
+    Listening on http://localhost:8000
+
+Then open `http://localhost:8000` and look at two things:
+
+1. The page shows the heading from `src/index.html`, served out of the `dist/` folder webpack built.
+2. The browser console (F12 or Cmd+Option+I) logs the `Connection` object, full of internal state you never touch directly.
+
+That console line is the whole payoff of this stage: a browser and a server with an open, JSON-speaking, auto-reconnecting pipe between them, and ShareDB standing at both ends. Stop the server with Ctrl+C when you are done; every stage in this lesson uses port 8000, so only one runs at a time.
+
+## Exercises
+
+1. Complete `makeJsonStream` so callers can send and receive objects while the socket carries strings.
+
+    ```{javascript}
+    function makeFakeSocket() {
+      const socket = { listeners: {}, sent: [] };
+
+      socket.addEventListener = function (name, callback) {
+        socket.listeners[name] = callback;
+      };
+
+      socket.send = function (text) {
+        socket.sent.push(text);
+
+        if (socket.listeners.message) {
+          socket.listeners.message({ data: text });
+        }
+      };
+
+      return socket;
+    }
+
+    function makeJsonStream(socket) {
+      const stream = {};
+
+      // TODO: when a message arrives, parse it and hand the object to
+      // stream.onData. Give the stream a write(value) function that sends
+      // the value as text.
+
+      return stream;
+    }
+
+    const socket = makeFakeSocket();
+    const stream = makeJsonStream(socket);
+
+    let receivedValue = null;
+
+    stream.onData = function (value) {
+      receivedValue = value;
+    };
+
+    stream.write({ p: ['points'], na: 5 });
+
+    console.log(socket.sent, receivedValue);
+    ```
+    ```+solution
+    function makeFakeSocket() {
+      const socket = { listeners: {}, sent: [] };
+
+      socket.addEventListener = function (name, callback) {
+        socket.listeners[name] = callback;
+      };
+
+      socket.send = function (text) {
+        socket.sent.push(text);
+
+        if (socket.listeners.message) {
+          socket.listeners.message({ data: text });
+        }
+      };
+
+      return socket;
+    }
+
+    function makeJsonStream(socket) {
+      const stream = {};
+
+      socket.addEventListener('message', (messageEvent) => {
+        if (stream.onData) {
+          stream.onData(JSON.parse(messageEvent.data));
+        }
+      });
+
+      stream.write = function (value) {
+        socket.send(JSON.stringify(value));
+      };
+
+      return stream;
+    }
+
+    const socket = makeFakeSocket();
+    const stream = makeJsonStream(socket);
+
+    let receivedValue = null;
+
+    stream.onData = function (value) {
+      receivedValue = value;
+    };
+
+    stream.write({ p: ['points'], na: 5 });
+
+    console.log(socket.sent, receivedValue);
+    ```
+    ```+test
+    wrap(socket.sent[0]).should('equal', '{"p":["points"],"na":5}').run('`write` should send the value over the socket as text, using `JSON.stringify`', 'Sent the object as text');
+    wrap(typeof socket.sent[0]).should('equal', 'string').run('A WebSocket carries strings, so what reaches `socket.send` must be a string', 'Put a string on the wire');
+    wrap(receivedValue).should('equal', { p: ['points'], na: 5 }).run('An arriving message should be parsed with `JSON.parse` and handed to `stream.onData`', 'Delivered an object to the caller');
+    wrap(typeof receivedValue).should('equal', 'object').run('The caller should receive an object rather than the string', 'Received an object');
+    ```
+
+2. Wire up the server side: for every client that connects, give ShareDB a JSON stream for it.
+
+    ```{javascript}
+    // Stand-ins for the real library and server.
+    const backend = { listening: [] };
+
+    backend.listen = function (stream) {
+      backend.listening.push(stream);
+    };
+
+    function WebSocketJSONStream(socket) {
+      return { socket: socket };
+    }
+
+    const wss = { listeners: {} };
+
+    wss.on = function (name, callback) {
+      wss.listeners[name] = callback;
+    };
+
+    // TODO: when the WebSocket server gets a connection, wrap that socket in a
+    // WebSocketJSONStream and hand it to backend.listen
+
+    // Two clients connect.
+    wss.listeners.connection({ id: 'client-1' });
+    wss.listeners.connection({ id: 'client-2' });
+
+    console.log(backend.listening.length);
+    ```
+    ```+solution
+    // Stand-ins for the real library and server.
+    const backend = { listening: [] };
+
+    backend.listen = function (stream) {
+      backend.listening.push(stream);
+    };
+
+    function WebSocketJSONStream(socket) {
+      return { socket: socket };
+    }
+
+    const wss = { listeners: {} };
+
+    wss.on = function (name, callback) {
+      wss.listeners[name] = callback;
+    };
+
+    wss.on('connection', (webSocket) => {
+      const stream = new WebSocketJSONStream(webSocket);
+
+      backend.listen(stream);
+    });
+
+    // Two clients connect.
+    wss.listeners.connection({ id: 'client-1' });
+    wss.listeners.connection({ id: 'client-2' });
+
+    console.log(backend.listening.length);
+    ```
+    ```+test
+    wrap(backend.listening.length).should('equal', 2).run('Every connection should produce a stream that ShareDB listens to, so two clients means two streams. Register the handler with `wss.on(\'connection\', ...)`', 'Handled both clients');
+    wrap(backend.listening[0] && backend.listening[0].socket && backend.listening[0].socket.id).should('equal', 'client-1').run('Wrap the socket that the `connection` event hands you in a `WebSocketJSONStream`, so each stream belongs to one client', 'Wrapped the right socket');
+    wrap(backend.listening[1] && backend.listening[1].socket && backend.listening[1].socket.id).should('equal', 'client-2').run('The second client should get its own stream around its own socket', 'Each client got its own stream');
+    wrap((function () { wss.listeners.connection({ id: 'client-3' }); return backend.listening.length; })()).should('equal', 3).run('The handler should keep working for every client that connects later, handing each stream to `backend.listen(...)`', 'Later connections are handled too');
+    ```
+
+3. The purpose of the JSON stream wrapper
+
+    ```{mcq}
+    On the server, each new WebSocket is wrapped in a `WebSocketJSONStream` before being handed to ShareDB. What mismatch is the wrapper fixing?
+    correct: Correct! ShareDB works with JSON objects through a stream interface. A WebSocket sends and receives strings. The wrapper converts between the two so neither side has to care.
+    wrong: Compare what a WebSocket carries with what an operation looks like.
+    [x] ShareDB expects a stream of JSON objects, while a WebSocket carries strings
+    [ ] It encrypts the data so the server cannot read passwords
+    [ ] It compresses the HTML to make the connection faster
+    [ ] Express requires it in order to serve static files
+    ```
+
+4. The client's `connection` object
+
+    ```{mcq}
+    In `client.js`, the last line builds `connection` from the WebSocket and logs it. What is that object for?
+    correct: Correct! It is the client's manager for shared documents: it owns the WebSocket, sends the operations you make, and applies the ones that arrive. The next reading gets documents from it.
+    wrong: It was built from the WebSocket, and everything you do with a shared document will start from it.
+    [x] It manages the client's shared documents, sending and receiving operations over the WebSocket
+    [ ] It holds the user's login credentials for the database
+    [ ] It is a complete local copy of the database
+    [ ] It defines the styling for the editor
+    ```
+
+## Resources
+
+- [ShareDB](https://github.com/share/sharedb)
+- [ShareDB: getting started](https://share.github.io/sharedb/getting-started)
+- [npm: @teamwork/websocket-json-stream](https://www.npmjs.com/package/@teamwork/websocket-json-stream)
+- [npm: reconnecting-websocket](https://www.npmjs.com/package/reconnecting-websocket)

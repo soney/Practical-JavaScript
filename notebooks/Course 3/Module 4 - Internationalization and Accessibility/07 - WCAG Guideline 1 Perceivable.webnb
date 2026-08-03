@@ -1,0 +1,114 @@
+# WCAG Guideline 1: Perceivable
+
+The first WCAG principle is **perceivable**. The standard phrases it as: information and user interface components must be presentable to users in ways they can perceive. In other words, every user needs a way to take in the information your page presents, whether through sight, sound, or assistive technology such as a screen reader.
+
+Common ways to satisfy this principle:
+
+- provide text alternatives for non-text content (for example, `alt` text on images and captions or transcripts for video),
+- do not rely on color alone to convey meaning,
+- keep enough contrast between text and its background,
+- let content adapt (resize, reflow) without losing meaning.
+
+## Text Alternatives
+
+Images that communicate information need useful `alt` text so that people who cannot see the image still receive the same meaning.
+
+```{html}
+<img src="chart.png" alt="Bar chart showing sales increasing from January to March">
+```
+
+- The `alt` text describes the meaning of the image, not the fact that it is an image. Avoid writing `alt="image"` or `alt="chart.png"`.
+- A screen reader announces the `alt` text in place of the picture, so it should carry the same information a sighted user gets from looking at the chart.
+- Videos and audio need their own alternatives: captions for people who cannot hear the audio, and transcripts so the content can be read.
+
+## Do Not Rely on Color Alone
+
+Consider a restaurant menu where a legend says "red means spicy" and some dishes are shown in red. A sighted user can see which dishes are red, but a screen reader cannot announce a color, so that user never learns which dishes are spicy. This violates **success criterion 1.4.1**: color is not used as the only visual means of conveying information, indicating an action, or distinguishing an element.
+
+The same problem shows up in data visualizations that tell two series apart using only red and green. Beyond the screen-reader issue, red and green are a poor choice because a significant portion of the population is red-green colorblind, and to them the two series look nearly identical.
+
+The fix is to pair color with a second cue, such as text, an icon, or a pattern:
+
+```html
+<!-- Color alone: meaning is lost without sight -->
+<span style="color: red">Vindaloo</span>
+
+<!-- Color plus a text label: everyone gets the meaning -->
+<span style="color: red">Vindaloo</span> <span class="tag">(spicy)</span>
+```
+
+## Color Contrast
+
+Even when color is not the only cue, text still has to be readable against its background. **Success criterion 1.4.3** requires a contrast ratio of at least **4.5:1** between text and its background (with a few exceptions, such as large text). Combinations like red text on a blue background, or light gray text on white, fall below that ratio and are hard to read.
+
+To check a pair of colors, use an online tool such as the [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/): enter a foreground and a background color and it reports the ratio and whether it passes the WCAG levels.
+
+One caveat: passing the 4.5:1 ratio does not guarantee the colors are pleasant to read. Two highly saturated colors, such as bright green text on a bright blue background, can clear the contrast threshold and still be uncomfortable, so use the checker as a floor, not a guarantee.
+
+## Exercises
+
+1. Add meaningful alt text to the image. Use the exact text `Line chart of weekly signups`.
+
+   ```{html}
+   <img src="signups.png" alt="">
+   ```
+   ```+solution
+   <img src="signups.png" alt="Line chart of weekly signups">
+   ```
+   ```+test
+   wrap(source.includes('alt="Line chart of weekly signups"') || source.includes("alt='Line chart of weekly signups'")).should('equal', true).run('Add the exact alt text', 'Added meaningful alt text');
+   ```
+
+2. Imagine the notice below were shown in a light gray such as `#eee` on a white background, which would fail the 4.5:1 contrast ratio. Style `.notice` to give it `black` text on a `white` background so it comfortably passes.
+
+   ```html id=page1
+   <p class="notice">Kitchen closes at 9pm</p>
+   ```
+
+   ```{css}
+   /* Write your CSS here */
+   ```
+   ```+solution
+   .notice {
+     color: black;
+     background-color: white;
+   }
+   ```
+   ```+id=page1
+   ```
+   ```+test
+   assert('.notice').should('exist').should('have.css', 'color: black').run('Set the notice text color to black', 'Set readable black text');
+   assert('.notice').should('have.css', 'background-color: white').run('Set the notice background to white', 'Set a white background');
+   ```
+
+3. Why is showing spicy dishes only in red text a problem?
+
+   ```{mcq}
+   Who misses the information, and why?
+   correct: Correct. Color alone is not conveyed to screen readers, and red-green colorblind users may not perceive the difference either. This violates success criterion 1.4.1.
+   wrong: Think about screen-reader users and red-green colorblind users, who cannot rely on the color.
+   [x] Color alone does not reach screen readers, and colorblind users may not perceive it, so the meaning is lost.
+   [ ] Red text is not allowed anywhere on the web.
+   [ ] CSS cannot apply the color red to text.
+   [ ] Screen readers refuse to read any styled text.
+   ```
+
+4. What is the minimum contrast ratio that success criterion 1.4.3 requires for standard-sized text at Level AA?
+
+   ```{mcq}
+   How much contrast does normal text need?
+   correct: Correct! 4.5:1 for standard-sized text, with an allowance for large text. A ratio of 1:1 is invisible and 21:1 is black on white, the maximum possible.
+   wrong: One of these is the maximum possible ratio and one is no contrast at all. The requirement is between them.
+   [x] 4.5:1
+   [ ] 1:1
+   [ ] 3:1
+   [ ] 21:1
+   ```
+
+## Resources
+
+- [W3C: WCAG Principle 1 Perceivable](https://www.w3.org/WAI/WCAG22/Understanding/perceivable)
+- [W3C: Use of Color (Success Criterion 1.4.1)](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color)
+- [W3C: Contrast Minimum (Success Criterion 1.4.3)](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum)
+- [WebAIM: Contrast Checker](https://webaim.org/resources/contrastchecker/)
+- [MDN: The Image Embed element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img)

@@ -1,0 +1,333 @@
+# Managing User Sessions
+
+Registration and login work. There is still something absurd about the result: the server has no idea, one request later, that the login happened. Every private page would need the password again.
+
+The cause is the statelessness from the cookies reading. HTTP is **stateless**: the server treats every request as arriving from a brand-new stranger, because as far as HTTP is concerned it is. It does not remember that you logged in one second ago.
+
+A **session** is the fix, and the useful image is a temporary visitor badge. You show your credentials once at the desk, you are handed a badge, and after that you show the badge.
+
+We will build this by hand to see how it works, in `auth-demo/04-sessions/`. **In production, use a library**: `express-session` or Passport, which is later in this lesson. Sessions are security-critical and there is no prize for a homemade one.
+
+## The Shape of It
+
+Remember from the cookies reading that a server can attach a cookie to a response, and the browser then sends that cookie back with every later request to the same site. Sessions ride on exactly that:
+
+1. The user logs in successfully.
+2. The server invents a **session ID**: unique, and impossible to guess.
+3. The server remembers, on its side, which user that ID belongs to.
+4. The server sends the ID to the browser as a **cookie**.
+5. Every later request carries that cookie automatically, so the server can look the ID up and know who is asking.
+
+The password crosses the network once. After that, the badge.
+
+## Handing Out the Badge
+
+```{walkthrough}
+title: The server side of a session
+step: Somewhere to keep them
+file: auth-demo/04-sessions/server.js
+region: sessions
+@"const sessions": An ordinary object, mapping each session ID to what the server remembers about that user. Keep the word "memory" in mind; it comes back at the end of this reading.
+
+step: On a successful login
+file: auth-demo/04-sessions/server.js
+region: login
+The login endpoint from stage 3, unchanged until the moment the password matches. Then, instead of only saying so, it starts a session.
+@"crypto.randomUUID": The ID has to be unguessable. The video started with `'xyz'` as a placeholder and immediately called it inappropriate: anyone who can guess a valid session ID *is* that user, without a password. `crypto.randomUUID()`, from Node's built-in `crypto` module (imported at the top of the file), produces a random identifier nobody can predict.
+@"sessions[sessionId] = {": The server's half of the arrangement: this ID belongs to this email.
+@"Set-Cookie": The browser's half. The `Set-Cookie` header rides along with the `200`, so the badge arrives together with the "you are in".
+```
+
+The three cookie attributes on that `Set-Cookie` line are the ones from the cookies reading, and each is doing a job here:
+
+- **`HttpOnly`** keeps JavaScript from reading the cookie, so a script injected into your page cannot steal the session.
+- **`SameSite=Strict`** stops the browser sending it on requests originating from other sites.
+- **`Max-Age=3600`** expires the badge after an hour. The unit is seconds.
+
+**And notice what is *not* in the cookie**: no email, no name, nothing about the user. Only an opaque ID. Everything real stays on the server, which is the whole point of the pattern.
+
+## Reading the Cookie Back
+
+The `Cookie` header arrives as one string, so it has to be parsed. Again, a library would do this; doing it once shows what the library is for:
+
+```{walkthrough}
+title: parseCookies
+file: auth-demo/04-sessions/server.js
+region: parse-cookies
+@"req.headers.cookie": Where the browser's cookies show up. A first-time visitor sends none at all, and then this header is not there, which is why the function returns the empty object rather than assuming.
+@"split(';')": Cookies arrive as one string, separated by semicolons: `theme=dark; sessionId=abc123`.
+@"[name, ...rest]": Each piece is `name=value`, so split at `=`. The `...rest` is a rest element: the first part becomes `name` and *everything else* lands in the `rest` array. That matters on the next annotated line.
+@"name.trim": The pieces are separated by `; `, semicolon and a space, so without a `trim()` the space would become part of the next cookie's name.
+@"rest.join('=')": A value can itself contain `=` characters. If the cookie was `data=xy=z`, splitting produced `['data', 'xy', 'z']`, and gluing the tail back together with `=` restores the whole value, `xy=z`. Joining an array of one item gives back that item on its own, so the ordinary case works too.
+```
+
+## The `/me` Endpoint
+
+Now a route that answers "who am I?":
+
+```{walkthrough}
+title: GET /me
+file: auth-demo/04-sessions/server.js
+region: me
+@"cookies.sessionId": Parse the cookies, then look for the one that matters here.
+@"sessionId && sessions[": Both halves of the check matter. A request may carry no `sessionId` cookie at all, or carry one the server does not recognize, and neither should be treated as logged in.
+@"JSON.stringify": A known badge answers with what the server remembered at login, as JSON, with the content type saying so.
+@"writeHead(401": Anything else is `401 Unauthorized`, the same status a failed login gets.
+```
+
+## Using It From the Pages
+
+Two client-side changes put the session to work:
+
+```{walkthrough}
+title: The pages
+step: login.html goes home on success
+file: auth-demo/04-sessions/static/login.html
+region: script
+The same login script as before, except for what happens after the `fetch`.
+@"response.ok": True for any 2xx status, so it distinguishes success from the `401` without reading the number.
+@"window.location.href": On success, navigate back to the home page instead of printing a message. The failure branch still shows the server's text.
+
+step: index.html asks who it is talking to
+file: auth-demo/04-sessions/static/index.html
+region: user-info
+A welcome message that starts hidden. The `style="display:none"` means a visitor who is not logged in never sees it.
+
+step: checkSession
+file: auth-demo/04-sessions/static/index.html
+region: script
+@"async function checkSession": The function has to be `async` because of the `await`s inside it.
+@"fetch('/me')": No headers, no credentials, nothing about who is asking: the browser attaches the session cookie by itself. That silent tag-along is the property that makes cookies right for this job.
+@"style.display": On a `200`, fill in the email and reveal the welcome block by switching its `display` to `block`.
+@"checkSession();": Small enough to overlook, and load-bearing: defining an `async` function does nothing until something calls it. In the video, the missing call was a real moment of "why is nothing happening". Forgetting it produces no error message at all.
+```
+
+## Sessions Live in Memory
+
+Restart the server while logged in, then refresh. You are logged out, and the browser still has its cookie.
+
+`const sessions = {}` is an ordinary variable, so it lives in the server's memory and dies with the process, exactly as in the hit-counter reading. The badge is still in the visitor's pocket; the desk has thrown away its records, and an ID that matches nothing is treated like a made-up one.
+
+For development that is merely annoying. In production it means nobody stays logged in through a deployment, which is why real session stores keep this in a database or a dedicated store such as Redis. It is the same lesson as Lesson 2, arriving again.
+
+## Parsing and Lookup, Running
+
+The two server-side moves, runnable here:
+
+```{node autorun}
+function parseCookies(request) {
+  const list = {};
+  const cookieHeader = request.headers.cookie;
+  if (!cookieHeader) { return list; }
+
+  const cookies = cookieHeader.split(';');
+  for (const cookie of cookies) {
+    let [name, ...rest] = cookie.split('=');
+
+    if (name) { name = name.trim(); }
+    else { continue; }
+    const value = rest.join('=').trim();
+    if (!value) { continue; }
+    list[name] = value;
+  }
+  return list;
+}
+
+const sessions = {
+  'e9b1c7a4-1f2d-4c3b-8a9e-2d4f6b8c0a1e': { email: 'soney@umich.edu' }
+};
+
+const cookies = parseCookies({
+  headers: { cookie: 'theme=dark; sessionId=e9b1c7a4-1f2d-4c3b-8a9e-2d4f6b8c0a1e' }
+});
+
+console.log(cookies);
+console.log('this request is from ' + sessions[cookies.sessionId].email);
+
+// A visitor who has never logged in.
+console.log(parseCookies({ headers: {} }));
+```
+
+Try changing the `sessionId` in the fake header to something the `sessions` object does not contain and see what breaks; that is the case the `/me` endpoint's `if` is guarding.
+
+## Running It Yourself
+
+From the `auth-demo` folder (stop the previous stage with `Ctrl+C` first):
+
+```
+$ node 04-sessions/server.js
+Listening on port 3000
+```
+
+1. Register, then log in. The login page bounces you back to the home page, and the home page greets you by email: that greeting is `checkSession` hearing back from `/me`.
+2. Open the developer tools (F12), find the cookies for `localhost` (Application > Cookies in Chrome), and there is `sessionId`, a long random UUID. That string is the badge.
+3. Visit `http://localhost:3000/me` directly. Logged in, you get your session as JSON; in a private window, `Unauthorized`.
+4. Now restart the server (`Ctrl+C`, run it again) and refresh the page. The cookie is still in the browser, and you are logged out anyway: the `sessions` object was reborn empty.
+
+Logging in works and persists across pages. What we cannot do yet is leave. Logging out is the next reading.
+
+## Exercises
+
+1. Complete `parseCookies`.
+
+    ```{node}
+    function parseCookies(request) {
+      const list = {};
+      const cookieHeader = request.headers.cookie;
+
+      if (!cookieHeader) {
+        return list;
+      }
+
+      for (const cookie of cookieHeader.split(';')) {
+        // TODO: split the cookie at '=', trim the name, re-join the rest
+        // as the value and trim it, then store the pair in list
+        // (skip a piece with no name or no value)
+      }
+
+      return list;
+    }
+
+    console.log(parseCookies({ headers: { cookie: 'theme=dark; sessionId=abc123' } }));
+    ```
+    ```+solution
+    function parseCookies(request) {
+      const list = {};
+      const cookieHeader = request.headers.cookie;
+
+      if (!cookieHeader) {
+        return list;
+      }
+
+      for (const cookie of cookieHeader.split(';')) {
+        let [name, ...rest] = cookie.split('=');
+
+        if (name) { name = name.trim(); }
+        else { continue; }
+
+        const value = rest.join('=').trim();
+        if (!value) { continue; }
+
+        list[name] = value;
+      }
+
+      return list;
+    }
+
+    console.log(parseCookies({ headers: { cookie: 'theme=dark; sessionId=abc123' } }));
+    ```
+    ```+test
+    wrap(parseCookies({ headers: { cookie: 'theme=dark; sessionId=abc123' } })).should('equal', { theme: 'dark', sessionId: 'abc123' }).run('Split each piece at `=` and store the trimmed name and value', 'Parsed both cookies');
+    wrap(parseCookies({ headers: { cookie: 'sessionId=abc123' } }).sessionId).should('equal', 'abc123').run('It should work for a single cookie too', 'Parsed one cookie');
+    wrap(parseCookies({ headers: { cookie: 'data=a=b=c' } }).data).should('equal', 'a=b=c').run('A value can contain `=`, so re-join everything after the first split piece. `rest.join(\'=\')` does this', 'Kept an equals sign inside the value');
+    wrap(parseCookies({ headers: {} })).should('equal', {}).run('A visitor with no cookies sends no header, so return an empty object', 'Handled a missing header');
+    ```
+
+2. Complete the `/me` handler.
+
+    ```{node}
+    const sessions = {
+      'abc123': { email: 'soney@umich.edu' }
+    };
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleMe(cookies, response) {
+      // TODO: if the cookies contain a sessionId that the server knows,
+      // answer 200 with Content-Type application/json and the session as JSON.
+      // Otherwise answer 401 with the body 'Not logged in'.
+    }
+
+    const loggedIn = makeFakeResponse();
+    handleMe({ sessionId: 'abc123' }, loggedIn);
+
+    console.log(loggedIn.statusCode + ' ' + loggedIn.body);
+    ```
+    ```+solution
+    const sessions = {
+      'abc123': { email: 'soney@umich.edu' }
+    };
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleMe(cookies, response) {
+      const sessionId = cookies.sessionId;
+
+      if (sessionId && sessions[sessionId]) {
+        response.writeHead(200, { 'Content-Type': 'application/json' });
+        response.end(JSON.stringify(sessions[sessionId]));
+      } else {
+        response.writeHead(401, { 'Content-Type': 'text/plain' });
+        response.end('Not logged in');
+      }
+    }
+
+    const loggedIn = makeFakeResponse();
+    handleMe({ sessionId: 'abc123' }, loggedIn);
+
+    console.log(loggedIn.statusCode + ' ' + loggedIn.body);
+    ```
+    ```+test
+    wrap(loggedIn.statusCode).should('equal', 200).run('A known session should answer `200`', 'Recognized the session');
+    wrap(loggedIn.body).should('equal', '{"email":"soney@umich.edu"}').run('Send the session object as JSON, using `JSON.stringify`', 'Sent the session as JSON');
+    wrap(loggedIn.headers && loggedIn.headers['Content-Type']).should('equal', 'application/json').run('Announce the body as `application/json`', 'Set the content type');
+    wrap((function () { const r = makeFakeResponse(); handleMe({ sessionId: 'not-a-real-id' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '401|Not logged in').run('A session ID the server does not know should answer `401` with `Not logged in`', 'Refused an unknown session');
+    wrap((function () { const r = makeFakeResponse(); handleMe({}, r); return r.statusCode + '|' + r.body; })()).should('equal', '401|Not logged in').run('A request with no `sessionId` cookie at all should be refused the same way', 'Refused a request with no cookie');
+    ```
+
+3. What are sessions for?
+
+    ```{mcq}
+    What problem does a session solve?
+    correct: Correct! It is a visitor badge: the server records who a session ID belongs to, the browser carries the ID, and the server can recognize the user on every later request without asking for the password again.
+    wrong: Think about what the server cannot do on its own between two requests from the same person.
+    [x] They let the server remember a user's identity across separate requests
+    [ ] They encrypt password data on the user's hard drive
+    [ ] They let JavaScript rewrite the page without contacting the server
+    [ ] They make the browser delete its cookies after login
+    ```
+
+4. You are logged in, you restart the server, you refresh, and you are logged out, even though the browser still has its cookie. Why?
+
+    ```{mcq}
+    What was lost in the restart?
+    correct: Correct! `sessions` is an ordinary variable in the server's memory, so restarting empties it. The cookie is still valid-looking, and the ID in it now matches nothing. This is why real applications keep sessions in a database or a session store.
+    wrong: The cookie survived, so the missing half is on the other side of the connection.
+    [x] The `sessions` object lived in the server's memory, which is emptied when the process restarts
+    [ ] The browser notices the restart and deletes its cookies
+    [ ] `crypto.randomUUID()` changes how the cookie is decoded after a reconnection
+    [ ] `SameSite=Strict` treats a server restart as a cross-site attack
+    ```
+
+## Resources
+
+- [MDN: Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
+- [Node.js: crypto.randomUUID()](https://nodejs.org/api/crypto.html#cryptorandomuuidoptions)
+- [express-session](https://www.npmjs.com/package/express-session)
+- [MDN: Response.ok](https://developer.mozilla.org/en-US/docs/Web/API/Response/ok)

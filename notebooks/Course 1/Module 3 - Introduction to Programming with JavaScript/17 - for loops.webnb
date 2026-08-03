@@ -1,0 +1,196 @@
+# `for` Loops
+
+[Last lesson](<16 - while loops.webnb>) we learned about `while` loops, which run a piece of code repeatedly while a condition is met. While loops are not the only kind of loop in JavaScript, and in practice we will write **`for` loops** far more often. They express many of the most common looping patterns in a shorter way.
+
+## The Pattern Behind Most While Loops
+
+Look again at the counting loop from last lesson:
+
+```{javascript autorun}
+let i = 0;
+
+while (i < 5) {
+  console.log(i);
+  i++;
+}
+```
+
+Three separate jobs are going on there:
+
+1. **Initialization**: `let i = 0;` sets up the loop variable, once, before anything else.
+2. **The condition**: `i < 5` is checked before every pass.
+3. **The update**: `i++` moves the loop variable along at the end of every pass.
+
+That combination is so common across so many loops that JavaScript has a form which puts all three on one line.
+
+## The `for` Loop
+
+A `for` loop takes the same three pieces, separated by semicolons, inside the parentheses:
+
+```javascript
+for (initialization; condition; update) {
+  // code that runs on each pass
+}
+```
+
+Here is the counting loop rewritten as a `for` loop:
+
+```{javascript autorun}
+for (let i = 0; i < 5; i++) {
+  console.log(i);
+}
+```
+
+![The same counting loop written both ways, side by side. On the left is the while version: let i = 0; sits above the loop in a red box labeled Initialize, the while line has i < 5 in a green box labeled Condition, the body is console.log(i);, and i++; sits at the end of the block in a blue box labeled Update. A large arrow points to the for version on the right, where the identical three pieces, in the same colors and with the same labels, all sit together on the for line as let i = 0; i < 5; i++, above the same console.log(i); body.](images/while-for-comparison.png)
+
+Same output, three lines shorter. To read one of these, take the three parts in turn:
+
+- `let i = 0` runs once, at the very start.
+- `i < 5` is checked before each pass. If it is true the body runs; if it is false the loop is over.
+- `i++` runs at the end of each pass, just before the condition is checked again.
+
+A `for` loop is not more powerful than a `while` loop. Anything you can write with one you can write with the other. What it gives you is concision, and the fact that the three moving parts sit together where you can see them all at once, instead of the update hiding at the bottom of a long block.
+
+## Looping Over an Array
+
+The array loop from last lesson converts the same way:
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie', 'Dana'];
+
+for (let index = 0; index < L.length; index++) {
+  console.log(index, L[index]);
+}
+```
+
+`index` starts at `0`, the condition stops it at `L.length - 1`, and each pass logs one name. Try adding a fifth name to the array; the loop handles it without any other change.
+
+## Going Backwards
+
+To walk a list from the end to the beginning, change all three parts. Start at the last index, keep going while the index is at least `0`, and step *down* instead of up:
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie', 'Dana'];
+
+for (let index = L.length - 1; index >= 0; index--) {
+  console.log(index, L[index]);
+}
+```
+
+That logs `Dana`, `Charlie`, `Bob`, `Alice`.
+
+Each of the three changes matters:
+
+- The start is `L.length - 1`, not `L.length`. The length is `4`, but the last valid index is `3`.
+- The condition is `index >= 0`, not `index > 0`, or we would stop one short and never reach `Alice`.
+- The update is `index--`, which is shorthand for `index = index - 1`, the counterpart to `index++`.
+
+Getting one of these three slightly wrong is the most common loop bug there is, and the symptom is almost always an `undefined` at one end or a missing item at the other.
+
+## `break` and `continue` Still Work
+
+Everything we learned about [`break` and `continue`](<16 - while loops.webnb#break-and-continue>) last lesson applies here unchanged. `break` exits the loop immediately, and `continue` skips the rest of the current pass and goes back around:
+
+```{javascript autorun}
+const scores = [98, 45, 85, 30, 100];
+
+for (let index = 0; index < scores.length; index++) {
+  if (scores[index] < 60) {
+    continue;
+  }
+
+  console.log(scores[index]);
+}
+```
+
+That logs `98`, `85`, and `100`. Notice that it is safe in a way the `while` version was not. In a `while` loop the update sits at the bottom of the block, so a `continue` jumps over it and the loop can get stuck. In a `for` loop the update is part of the header, and it runs on the way back around no matter how the pass ended.
+
+## Leaving Parts Out
+
+Each of the three parts in the header is optional. The two semicolons are not, so the empty slots stay visible:
+
+- Leave out the **initialization** when the variable already exists: `for (; index < L.length; index++)`.
+- Leave out the **update** when the body already moves the variable along: `for (let index = 0; index < L.length;)`.
+- Leave out the **condition** and it is treated as always true, so the only way out of the loop is a `break` inside it.
+
+Leaving out all three gives `for (;;)`, which is another way of writing `while (true)`:
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie'];
+let index = 0;
+
+for (;;) {
+  if (index >= L.length) {
+    break;
+  }
+
+  console.log(L[index]);
+  index++;
+}
+```
+
+That loop stops only because of the `break`. Take the `break` out and you have an infinite loop, exactly as in the last lesson. Most of the time the ordinary three-part header is clearer, but this form is worth recognizing when you meet it, and it is genuinely useful when the reason to stop is easier to state in the middle of the body than at the top.
+
+There is one more kind of loop to meet. `for...of` loops are made specifically for walking through a list, and they are the subject of the next lesson.
+
+## Exercises
+
+1. Write a `for` loop that multiplies the numbers from `1` to `4` together, leaving `product` equal to `24`.
+
+    ```{javascript}
+    let product = 1;
+
+    // Write your loop here
+
+    console.log(product);
+    ```
+    ```+solution
+    let product = 1;
+
+    for (let i = 1; i <= 4; i++) {
+      product = product * i;
+    }
+
+    console.log(product);
+    ```
+    ```+test
+    wrap(product).should('equal', 24).run('`product` should end up as `24`, which is 1 * 2 * 3 * 4', 'Multiplied the numbers');
+    wrap(source.includes('for (') || source.includes('for(')).should('equal', true).run('Use a `for` loop', 'Used a for loop');
+    ```
+
+2. Write a `for` loop that logs the items of `cities` in reverse order, so the output is `Detroit`, `Lansing`, `Ann Arbor`.
+
+    ```{javascript}
+    const cities = ['Ann Arbor', 'Lansing', 'Detroit'];
+
+    // Write your loop here
+    ```
+    ```+solution
+    const cities = ['Ann Arbor', 'Lansing', 'Detroit'];
+
+    for (let index = cities.length - 1; index >= 0; index--) {
+      console.log(cities[index]);
+    }
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'Detroit,Lansing,Ann Arbor').run('The loop should log the three cities in reverse order', 'Logged the cities in reverse');
+    wrap(source.includes('for (') || source.includes('for(')).should('equal', true).run('Use a `for` loop rather than three separate log statements', 'Used a for loop');
+    ```
+
+3. How many times does the body of this loop run?
+
+    ```{mcq}
+    `for (let i = 0; i < 3; i++) { console.log(i); }`. How many lines does this log?
+    correct: Correct! `i` takes the values `0`, `1`, and `2`, so the body runs three times. When `i` becomes `3` the condition `3 < 3` is false and the loop ends without running the body again.
+    wrong: Write down the value of `i` at the start of each pass, and stop when the condition first becomes false.
+    [x] 3
+    [ ] 2
+    [ ] 4
+    [ ] It depends on what is inside the body
+    ```
+
+## Resources
+
+- [MDN: for](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for)
+- [MDN: Loops and iteration](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Loops_and_iteration)
+- [MDN: Increment (++) and decrement (--)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Increment)

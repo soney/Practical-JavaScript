@@ -1,0 +1,302 @@
+# Chaining Promises
+
+We can make promises and we can read their values with `.then`. This lesson is about the thing that makes promises genuinely better than callbacks: **chaining**.
+
+## Getting a Value With `.then`
+
+`.then` takes up to **two** arguments, both functions:
+
+- The first is called if the promise is **fulfilled**, and receives the value. It is often named `onSuccess`.
+- The second, which is optional, is called if the promise is **rejected**, and receives the reason. It is often named `onError`.
+
+```{javascript autorun}
+const myPromise = Promise.resolve(42);
+
+myPromise.then(
+  (value) => {
+    console.log('the promise was fulfilled with ' + value);
+  },
+  (err) => {
+    console.log('something went wrong: ' + err);
+  }
+);
+```
+
+The success handler runs and the error handler does not, because this promise was fulfilled. Change `Promise.resolve` to `Promise.reject` and the opposite happens.
+
+Written out with named functions first and then passed in, that is three separate blocks of code. In practice the callbacks are written **inline**, inside the `.then` call, which is how you will nearly always see it.
+
+## `.then` Returns a New Promise
+
+Here is the piece everything else rests on. **`.then` does not just read a value; it returns a new promise**, and that new promise is fulfilled with **whatever the callback returned**.
+
+```{javascript autorun}
+const promise1 = Promise.resolve('value1');
+
+const promise2 = promise1.then((value) => {
+  console.log('promise1 gave: ' + value);
+  return 'value2';
+});
+
+const promise3 = promise2.then((value) => {
+  console.log('promise2 gave: ' + value);
+  return 'value3';
+});
+
+promise3.then((value) => {
+  console.log('promise3 gave: ' + value);
+});
+```
+
+Three promises, each fulfilled with what the previous callback returned. `promise1` holds `value1`; its callback returns `value2`, so `promise2` holds `value2`; and so on.
+
+## A Chain With Real Delays
+
+That example computes everything instantly, so it does not show why this matters. Here is a helper that gives us a promise which takes time to settle, standing in for anything slow:
+
+```{javascript autorun}
+function delayPromise(delay, value) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve(value);
+    }, delay);
+  });
+}
+
+const promise1 = delayPromise(300, 'done1');
+
+const promise2 = promise1.then((value1) => {
+  console.log(value1);
+  return delayPromise(300, 'done2');
+});
+
+const promise3 = promise2.then((value2) => {
+  console.log(value2);
+  return delayPromise(300, 'done3');
+});
+
+promise3.then((value3) => {
+  console.log(value3);
+});
+```
+
+Watch the output arrive one line at a time. The important behavior: **when a callback returns a promise, the next `.then` waits for it.** Our callback returned a promise that takes 300 milliseconds, so `promise2` is not fulfilled until that inner promise settles. Each step genuinely waits for the one before.
+
+That is the difference between returning a plain value and returning a promise. Either works, and returning a promise is what lets us sequence slow operations.
+
+## Dropping the Names
+
+We named `promise1`, `promise2`, and `promise3`, and we never actually needed those names. Each one is used exactly once, on the next line. So we can write the whole thing as one expression:
+
+```{javascript autorun}
+function delayPromise(delay, value) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => resolve(value), delay);
+  });
+}
+
+delayPromise(300, 'done1')
+  .then((value1) => {
+    console.log(value1);
+    return delayPromise(300, 'done2');
+  })
+  .then((value2) => {
+    console.log(value2);
+    return delayPromise(300, 'done3');
+  })
+  .then((value3) => {
+    console.log(value3);
+  });
+```
+
+This is **chaining**, and it is how promise code is almost always written. Compare it with the pyramid of doom from two lessons ago: the same three sequential steps, and the code no longer marches to the right. Each step is one `.then` at the same indent level, and you read it top to bottom.
+
+When a callback only returns a value, an arrow function with an implicit return makes it shorter still:
+
+```{javascript autorun}
+Promise.resolve(2)
+  .then((value) => value * 5)
+  .then((value) => value + 1)
+  .then((value) => console.log(value));
+```
+
+## When Things Go Wrong
+
+We all like to be optimistic, and as a programmer you have to think about what happens if things fail. A promise can be rejected: a network request times out, a file is missing.
+
+**A rejection skips every following success callback.** It propagates down the chain, past each `.then`, until it reaches something that handles errors.
+
+```{javascript autorun}
+Promise.reject('the first step failed')
+  .then((value) => {
+    console.log('this never runs');
+    return 'a';
+  })
+  .then((value) => {
+    console.log('nor does this');
+  })
+  .catch((error) => {
+    console.log('caught at the end: ' + error);
+  });
+```
+
+Neither success callback runs. That is exactly what we want: if the first step failed, there is no point running steps that depend on it.
+
+It also means **one error handler at the end of a chain catches an error from anywhere earlier in it**, which is why that is where you normally put it.
+
+### `.catch()` and `.finally()`
+
+- **`.catch(onError)`** is the same thing as `.then(undefined, onError)`. It runs only when something earlier was rejected. Most people find it easier to read than the two-argument `.then`.
+- **`.finally(onFinally)`** runs when the promise is **settled**, meaning fulfilled *or* rejected. Its callback gets **no arguments**, so it cannot see the value or the error, and whatever it returns does not affect the chain. It is for cleanup that has to happen either way, such as hiding a loading spinner.
+
+```{javascript autorun}
+Promise.resolve('it worked')
+  .then((value) => console.log(value))
+  .catch((error) => console.log('error: ' + error))
+  .finally(() => console.log('operation finished'));
+```
+
+```{javascript autorun}
+Promise.reject('it failed')
+  .then((value) => console.log(value))
+  .catch((error) => console.log('error: ' + error))
+  .finally(() => console.log('operation finished'));
+```
+
+Two runs, two different middles, and `operation finished` both times.
+
+### A Concrete Example With `fetch`
+
+`fetch`, which gets a lesson of its own next, returns a promise, and it rejects when the request cannot be made at all, such as when the user has no connection. Here is a realistic shape:
+
+```javascript
+const button = document.querySelector('button');
+const output = document.querySelector('#output');
+
+button.addEventListener('click', () => {
+  fetch('book.txt')
+    .then((response) => response.text())
+    .then((bookText) => {
+      output.textContent = bookText;
+    })
+    .catch((error) => {
+      output.textContent = 'Sorry, no connection detected. Try again in a few minutes.';
+    })
+    .finally(() => {
+      console.log('operation finished');
+    });
+});
+```
+
+Two things worth noticing.
+
+Without the `.catch`, a failure would appear only as an uncaught error in the console, and **the user would see nothing at all**. The button would simply seem broken.
+
+And the message shown is not the raw error. `TypeError: NetworkError when attempting to fetch the resource` is useful to you and useless to the person using your page. Tell them what happened in terms they can act on.
+
+You can test this path without unplugging anything: open the developer tools, go to the **Network** panel, and set the throttling dropdown to **Offline**. Then click the button.
+
+## Exercises
+
+1. Build a chain from `Promise.resolve(2)` that multiplies the value by `5`, then adds `1`, so the final promise is fulfilled with `11`. Log the result.
+
+    ```{javascript}
+    const numberPromise = Promise.resolve(2);
+
+    // Add your chain here
+    ```
+    ```+solution
+    const numberPromise = Promise.resolve(2)
+      .then((value) => value * 5)
+      .then((value) => value + 1);
+
+    numberPromise.then((value) => console.log(value));
+    ```
+    ```+test
+    wrap(numberPromise instanceof Promise).should('equal', true).run('`numberPromise` should still be a promise', 'Still a promise');
+    wrap((source.match(/\.then\s*\(/g) || []).length >= 2).should('equal', true).run('Use at least two chained `.then` calls', 'Chained two calls');
+    setTimeout(() => {
+      check.consoleLogged(/^11$/).run('The chain should end up fulfilled with `11`, and you should log it', 'The chain produced 11');
+    }, 250);
+    ```
+
+2. Chain the two delayed steps so the cell logs `first`, then `second`, in that order. The second step must not start until the first has finished.
+
+    ```{javascript}
+    function delayPromise(delay, value) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(value), delay);
+      });
+    }
+
+    // Write your chain here
+    ```
+    ```+solution
+    function delayPromise(delay, value) {
+      return new Promise((resolve) => {
+        setTimeout(() => resolve(value), delay);
+      });
+    }
+
+    delayPromise(100, 'first')
+      .then((value) => {
+        console.log(value);
+        return delayPromise(100, 'second');
+      })
+      .then((value) => {
+        console.log(value);
+      });
+    ```
+    ```+test
+    wrap(console.history().length).should('equal', 0).run('Nothing should be logged synchronously', 'Nothing logs immediately');
+    setTimeout(() => {
+      wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'first,second').run('The output should be `first` then `second`. Return the second `delayPromise` from the first `.then` callback so the next one waits for it', 'The steps ran in sequence');
+    }, 500);
+    ```
+
+3. Add error handling to this chain: log `error: ` plus the reason if anything fails, and log `finished` either way.
+
+    ```{javascript}
+    Promise.reject('disk full')
+      .then((value) => {
+        console.log('got ' + value);
+      });
+    ```
+    ```+solution
+    Promise.reject('disk full')
+      .then((value) => {
+        console.log('got ' + value);
+      })
+      .catch((error) => {
+        console.log('error: ' + error);
+      })
+      .finally(() => {
+        console.log('finished');
+      });
+    ```
+    ```+test
+    setTimeout(() => {
+      check.consoleLogged('error: disk full').run('Add a `.catch` that logs `error: ` followed by the reason', 'The catch handler ran');
+      check.consoleLogged('finished').run('Add a `.finally` that logs `finished`', 'The finally handler ran');
+      wrap(console.didLog('got')).should('equal', false).run('The success callback should not run, because the promise was rejected', 'The success callback was skipped');
+    }, 250);
+    ```
+
+4. When does a `.finally()` callback run, and what is it given?
+
+    ```{mcq}
+    Which statement about `.finally()` is correct?
+    correct: Correct! It runs on settlement either way, and deliberately receives nothing, so it cannot accidentally depend on the outcome. Anything it returns is ignored by the chain.
+    wrong: Revisit the description of `.finally()` above, particularly what its callback receives.
+    [x] It runs whether the promise was fulfilled or rejected, and its callback receives no arguments
+    [ ] It runs only on fulfillment, and receives the value
+    [ ] It runs only on rejection, and receives the error
+    [ ] It runs before the promise settles, and receives the promise itself
+    ```
+
+## Resources
+
+- [MDN: Using promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises)
+- [MDN: Promise.prototype.then()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then)
+- [MDN: Promise.prototype.catch()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/catch)
+- [MDN: Promise.prototype.finally()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/finally)

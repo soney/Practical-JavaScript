@@ -1,0 +1,177 @@
+# Events
+
+This module is about **events**. An event is a signal that something we might care about has happened: the user clicked something, some time has passed, or pretty much anything else the browser can detect. In this lesson we look at events at a high level, before going deeper in the lessons that follow.
+
+## What Counts as an Event
+
+Almost anything, is the short answer. Here are some of the things we can listen for:
+
+- The user clicks a button.
+- The web page finishes loading.
+- The user presses a keyboard key down.
+- The mouse hovers over an element.
+- The user scrolls.
+- The browser window is resized.
+- Five seconds have passed.
+
+Some of those are things the *user* did, and some are things the *browser* did. Both are events, and JavaScript can react to all of them.
+
+## Event Listeners
+
+The way we react to an event is with an **event listener**. An event listener says: *run this callback function when this event happens.*
+
+![An orange panel standing for an event listener. In the top half a button sits inside a hexagon, with a hand cursor clicking it, and a large ear is attached to the right side of the panel with sound waves coming off it. A dashed line separates that from the bottom half, which holds a gray box labeled callback, drawn like the function boxes from Course 1.](images/event-listener.png =x300)
+
+Two pieces go into every listener, and it is worth naming them separately:
+
+- **When to react.** This is the event description, such as the string `'click'`, together with which element we are listening to.
+- **What to do.** This is the **callback function**, which we write ourselves. It is an ordinary function, the same gray box from Course 1, with inputs going in and an output coming out.
+
+We hand both of those to a built-in function, and in this course that function is `addEventListener`.
+
+```html id=page1
+<button id="event-button">Click to trigger an event</button>
+<p id="event-output">Waiting for an event...</p>
+```
+
+```{javascript autorun}
+const eventButton = document.querySelector('#event-button');
+const eventOutput = document.querySelector('#event-output');
+
+function onClick() {
+  eventOutput.textContent = 'The click event happened.';
+}
+
+eventButton.addEventListener('click', onClick);
+```
+```+id=page1
+```
+
+Run the cell and notice that the paragraph does not change. Then click the button, and it does. `onClick` was defined when the cell ran, and it did not *run* until the event happened.
+
+## What the Browser Does With a Listener
+
+Calling `addEventListener` produces nothing visible, because what it changes is not the page. The browser keeps its own list of event listeners, and our call added an entry to it. Each entry pairs an event with a callback: "when this button is clicked, run this function."
+
+The important consequence is that **the browser remembers these listeners long after our code has finished running.** Our script runs top to bottom in a few milliseconds and finishes. The listener it registered sits there for as long as the page is open, waiting. When the event finally happens, minutes later perhaps, the browser reaches into its list and runs the callback.
+
+That is the shift in thinking this module asks for. Up to now our code has been a sequence of instructions that runs once. From here on, a lot of our code is instructions about what should happen *later*, in response to something we cannot predict.
+
+A real page adds many listeners, for many different events, on many different elements. Here are two on one page:
+
+```html id=page2
+<button id="hello">Say hello</button>
+<button id="bye">Say goodbye</button>
+<p id="output">Nothing yet.</p>
+```
+
+```{javascript autorun}
+const helloButton = document.querySelector('#hello');
+const byeButton = document.querySelector('#bye');
+const output = document.querySelector('#output');
+
+function sayHello() {
+  output.textContent = 'Hello!';
+}
+
+function sayGoodbye() {
+  output.textContent = 'Goodbye!';
+}
+
+helloButton.addEventListener('click', sayHello);
+byeButton.addEventListener('click', sayGoodbye);
+```
+```+id=page2
+```
+
+Two listeners, two callbacks, and the browser keeps both, running whichever one matches what the user actually did.
+
+Over the next few lessons we will look at how to add listeners properly, at what a callback function really is, at the different event types available, and at the extra information the browser hands your callback when an event fires.
+
+## Exercises
+
+1. Make the button log `Clicked!` to the console when it is clicked.
+
+    ```html id=page3
+    <button id="run">Run</button>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#run');
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const button = document.querySelector('#run');
+
+    function onClick() {
+      console.log('Clicked!');
+    }
+
+    button.addEventListener('click', onClick);
+    ```
+    ```+test
+    wrap(console.history().length).should('equal', 0).run('Nothing should be logged until the button is actually clicked', 'The callback waits for the event');
+    assert('#run').click().run('Could not find the `#run` button', 'Clicked the button');
+    check.consoleLogged('Clicked!').run('Clicking the button should log `Clicked!`', 'The click handler logged the message');
+    ```
+
+2. Give each button its own listener, so that clicking `Up` sets the paragraph to `Up` and clicking `Down` sets it to `Down`.
+
+    ```html id=page4
+    <button id="up">Up</button>
+    <button id="down">Down</button>
+    <p id="readout">-</p>
+    ```
+
+    ```{javascript}
+    const upButton = document.querySelector('#up');
+    const downButton = document.querySelector('#down');
+    const readout = document.querySelector('#readout');
+
+    // Write your code here
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const upButton = document.querySelector('#up');
+    const downButton = document.querySelector('#down');
+    const readout = document.querySelector('#readout');
+
+    function goUp() {
+      readout.textContent = 'Up';
+    }
+
+    function goDown() {
+      readout.textContent = 'Down';
+    }
+
+    upButton.addEventListener('click', goUp);
+    downButton.addEventListener('click', goDown);
+    ```
+    ```+test
+    assert('#up').click().run('Could not find the `#up` button', 'Clicked Up');
+    assert('#readout').should('have.text', 'Up').run('Clicking `Up` should set the paragraph to `Up`', 'The Up button works');
+    assert('#down').click().run('Could not find the `#down` button', 'Clicked Down');
+    assert('#readout').should('have.text', 'Down').run('Clicking `Down` should set the paragraph to `Down`', 'The Down button works');
+    ```
+
+3. Your script finishes running. What happens to the listeners it added?
+
+    ```{mcq}
+    A script adds a click listener and then reaches its last line. Is the listener still active?
+    correct: Correct! The browser keeps its list of event listeners for as long as the page is open, which is what lets a page respond to a click that happens minutes after the script finished.
+    wrong: Revisit "What the Browser Does With a Listener".
+    [x] Yes. The browser keeps it and will run the callback whenever the event happens.
+    [ ] No. Listeners are discarded when the script finishes.
+    [ ] Only if the callback was defined with a name.
+    [ ] Only until the user scrolls the page.
+    ```
+
+## Resources
+
+- [MDN: Introduction to events](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Events)
+- [MDN: Event](https://developer.mozilla.org/en-US/docs/Web/API/Event)
+- [MDN: Event reference](https://developer.mozilla.org/en-US/docs/Web/Events)

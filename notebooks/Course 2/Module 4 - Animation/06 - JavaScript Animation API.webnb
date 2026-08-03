@@ -1,0 +1,333 @@
+# The JavaScript Animation API
+
+The **Web Animations API** gives us the flexibility of JavaScript with the ease of use and performance of CSS animations. It is the middle ground between the two halves of this module.
+
+Using it takes one method: **`element.animate(keyframes, options)`**.
+
+## Keyframes as an Array of Objects
+
+The first argument is an array of keyframe objects. Each object sets CSS properties:
+
+```html id=page1
+<div id="box">Click me</div>
+```
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+
+box.addEventListener('click', () => {
+  box.animate(
+    [
+      { backgroundColor: 'red' },
+      { backgroundColor: 'blue' }
+    ],
+    { duration: 2000, fill: 'forwards' }
+  );
+});
+```
+```+id=page1
+```
+```+css
+#box {
+  width: 200px; height: 80px; padding: 8px;
+  background-color: red; color: white;
+}
+```
+
+Click the box and it animates from red to blue.
+
+### Property Names Are camelCase
+
+Notice **`backgroundColor`**, not `background-color`. In CSS the property is kebab-case, and a dash cannot appear in an object key without quoting it, so the API uses the JavaScript spelling instead.
+
+The conversion rule: **remove each dash and capitalize the letter that followed it.**
+
+- `background-color` becomes `backgroundColor`
+- `font-size` becomes `fontSize`
+- `border-top-width` becomes `borderTopWidth`
+
+### Keyframes Are Spread Out Evenly
+
+By default the keyframes you give are distributed evenly across the duration:
+
+- **two** keyframes sit at 0% and 100%
+- **three** sit at 0%, 50%, and 100%
+- **four** sit at 0%, 33%, 66%, and 100%
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+
+box.addEventListener('click', () => {
+  box.animate(
+    [
+      { backgroundColor: 'red' },
+      { backgroundColor: 'yellow' },
+      { backgroundColor: 'green' },
+      { backgroundColor: 'blue' }
+    ],
+    { duration: 3000, fill: 'forwards' }
+  );
+});
+```
+```+id=page1
+```
+```+css
+#box { width: 200px; height: 80px; padding: 8px; background-color: red; color: white; }
+```
+
+To place a keyframe somewhere else, give it an **`offset`**, a number from 0 to 1:
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+
+box.addEventListener('click', () => {
+  box.animate(
+    [
+      { backgroundColor: 'red', offset: 0 },
+      { backgroundColor: 'yellow', offset: 0.1 },
+      { backgroundColor: 'blue', offset: 1 }
+    ],
+    { duration: 3000, fill: 'forwards' }
+  );
+});
+```
+```+id=page1
+```
+```+css
+#box { width: 200px; height: 80px; padding: 8px; background-color: red; color: white; }
+```
+
+Now it rushes to yellow in the first 10% and takes the rest of the time getting to blue. If you set an offset on one keyframe and leave others unset, the API redistributes the unset ones evenly through the space that remains.
+
+### One Keyframe Is Allowed
+
+If you give a **single** keyframe, the API treats it as the **100%** state and uses the element's current styles as the start:
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+
+box.addEventListener('click', () => {
+  box.animate(
+    [{ backgroundColor: 'blue', width: '80px' }],
+    { duration: 2000, fill: 'forwards' }
+  );
+});
+```
+```+id=page1
+```
+```+css
+#box { width: 200px; height: 80px; padding: 8px; background-color: red; color: white; }
+```
+
+That is often the shortest way to express "animate to this".
+
+## Options
+
+The second argument is an options object. The only **required** one is `duration`.
+
+- **`duration`** in **milliseconds**. This is worth pausing on: CSS animations take seconds (`2s`), and this API takes milliseconds (`2000`), consistent with `setTimeout`. Mixing them up is a very easy mistake, and a duration a thousand times too short looks like nothing happened.
+- **`easing`**, using the same names as CSS: `'ease'`, `'linear'`, `'ease-in-out'`, and so on.
+- **`iterations`**, a number, or `Infinity` to repeat forever.
+- **`direction`**, such as `'alternate'`.
+- **`fill`**, the same idea as CSS `animation-fill-mode`. The default is `'none'`, which means the element **snaps back** to its original styles when the animation ends. Use `'forwards'` to keep the final keyframe.
+
+Here are four of the options at once:
+
+```html id=page2
+<div id="box">Running forever</div>
+```
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+
+box.animate(
+  [
+    { backgroundColor: 'red' },
+    { backgroundColor: 'blue' }
+  ],
+  {
+    duration: 1500,
+    easing: 'ease-in-out',
+    iterations: Infinity,
+    direction: 'alternate'
+  }
+);
+```
+```+id=page2
+```
+```+css
+#box { width: 200px; height: 80px; padding: 8px; color: white; }
+```
+
+If duration is the only option you care about, you can pass it directly instead of an object:
+
+```javascript
+box.animate([{ opacity: 0 }], 500);
+```
+
+## The `Animation` Object
+
+`animate()` does not just start an animation; it **returns an `Animation` object** representing it. That is what makes this API more powerful than CSS: we get a handle we can control from code.
+
+Useful properties:
+
+- **`playState`**: `'idle'`, `'running'`, `'paused'`, or `'finished'`.
+- **`currentTime`**: how far in, in milliseconds.
+
+Useful methods:
+
+- **`play()`** to start or resume.
+- **`pause()`** to freeze where it is.
+- **`finish()`** to jump to the end.
+- **`cancel()`** to remove the animation entirely.
+
+And two promises, which are properties rather than methods:
+
+- **`finished`** resolves when the animation ends.
+- **`ready`** resolves when it is ready to play.
+
+There is also **`element.getAnimations()`**, which returns every animation currently running on an element.
+
+```html id=page3
+<button id="pause">Pause</button>
+<button id="play">Play</button>
+<button id="finish">Finish</button>
+<button id="state">Log state</button>
+<div id="track"><div id="box"></div></div>
+```
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+
+const animation = box.animate(
+  [{ marginLeft: '0px' }, { marginLeft: '300px' }],
+  { duration: 6000, fill: 'forwards' }
+);
+
+document.querySelector('#pause').addEventListener('click', () => animation.pause());
+document.querySelector('#play').addEventListener('click', () => animation.play());
+document.querySelector('#finish').addEventListener('click', () => animation.finish());
+
+document.querySelector('#state').addEventListener('click', () => {
+  console.log(animation.playState + ' at ' + Math.round(animation.currentTime) + 'ms');
+});
+
+animation.finished.then(() => {
+  console.log('the animation finished');
+});
+```
+```+id=page3
+```
+```+css
+#track {
+  width: 360px;
+  height: 60px;
+  margin-top: 8px;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+}
+#box { width: 60px; height: 60px; background-color: #00274c; }
+```
+
+The dashed box is the corridor it travels: 300px of margin plus the block's own 60px. Pause it mid-flight, log its state, resume it, or jump it to the end. None of that is possible with a pure CSS animation, and this is the reason the API exists.
+
+## Which Should You Use?
+
+We have now seen four ways to animate. In order of preference:
+
+1. **A CSS transition.** The simplest thing that works. Reach for this first.
+2. **A CSS animation** with keyframes, when you need intermediate steps or repetition.
+3. **The Web Animations API**, when the animation depends on values computed at run time, or you need to control it from code.
+4. **A manual `requestAnimationFrame` loop**, only when none of the above can express what you want.
+
+The first three cover something like 99% of cases. Knowing how to write the fourth is still worth it, because it is what taught us what the other three are doing.
+
+## Exercises
+
+1. Create a keyframes array that fades from an opacity of `0` to an opacity of `1`.
+
+    ```{javascript}
+    const keyframes = [
+      // Write your keyframes here
+    ];
+
+    console.log(keyframes);
+    ```
+    ```+solution
+    const keyframes = [
+      { opacity: 0 },
+      { opacity: 1 }
+    ];
+
+    console.log(keyframes);
+    ```
+    ```+test
+    wrap(keyframes).should('equal', [{ opacity: 0 }, { opacity: 1 }]).run('Two keyframe objects, one with `opacity: 0` and one with `opacity: 1`', 'Created the keyframes array');
+    ```
+
+2. Animate the box's background color to `green` over `800` milliseconds, and make it keep that color when the animation finishes. Store the returned object in `animation`.
+
+    ```html id=page4
+    <div id="target" style="width:150px;height:60px;background-color:red;"></div>
+    ```
+
+    ```{javascript}
+    const box = document.querySelector('#target');
+
+    const animation = /* Your code here */;
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const box = document.querySelector('#target');
+
+    const animation = box.animate(
+      [{ backgroundColor: 'green' }],
+      { duration: 800, fill: 'forwards' }
+    );
+    ```
+    ```+test
+    wrap(typeof animation.pause).should('equal', 'function').run('`animation` should be the `Animation` object returned by `box.animate(...)`', 'Started the animation');
+    wrap(source.includes('backgroundColor')).should('equal', true).run('Use the camelCase property name `backgroundColor`, not `background-color`', 'Used the JavaScript property name');
+    wrap(source.includes('800')).should('equal', true).run('The duration is in milliseconds for this API, so `800`', 'Used milliseconds');
+    wrap(source.includes('forwards')).should('equal', true).run('Add `fill: \'forwards\'` so the color stays after the animation ends', 'Kept the final color');
+    ```
+
+3. Convert these CSS property names into the form the Animation API needs.
+
+    ```{javascript}
+    const first = /* the API name for font-size, as a string */;
+    const second = /* the API name for border-top-width, as a string */;
+
+    console.log(first, second);
+    ```
+    ```+solution
+    const first = 'fontSize';
+    const second = 'borderTopWidth';
+
+    console.log(first, second);
+    ```
+    ```+test
+    wrap(first).should('equal', 'fontSize').run('`font-size` becomes `fontSize`', 'Converted the first one');
+    wrap(second).should('equal', 'borderTopWidth').run('`border-top-width` becomes `borderTopWidth`: remove every dash and capitalize the letter after it', 'Converted the second one');
+    ```
+
+4. A `duration` of `2` in the Animation API produces an animation nobody can see. Why?
+
+    ```{mcq}
+    What does `{ duration: 2 }` mean here?
+    correct: Correct! This API measures duration in milliseconds, so `2` is two thousandths of a second. In CSS you would write `2s`, which is why this is such an easy mistake to make.
+    wrong: Compare the units this API uses with the units CSS animations use.
+    [x] Two milliseconds, because this API uses milliseconds rather than seconds
+    [ ] Two seconds, but the browser ignores durations under five seconds
+    [ ] Two frames, which is too few to render
+    [ ] Two iterations, so the duration was never set at all
+    ```
+
+## Resources
+
+- [MDN: Web Animations API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Animations_API)
+- [MDN: Element.animate()](https://developer.mozilla.org/en-US/docs/Web/API/Element/animate)
+- [MDN: Animation](https://developer.mozilla.org/en-US/docs/Web/API/Animation)
+- [MDN: Element.getAnimations()](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAnimations)

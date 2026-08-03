@@ -1,0 +1,217 @@
+# Changing Text and HTML Content
+
+Now that we can get element objects, let's start modifying them. We begin with the content inside an element.
+
+The first step is **always** the same: fetch a DOM element with `document.querySelector` or `querySelectorAll`. Then we read or set a property on the element object we got back.
+
+## Reading and Writing `.textContent`
+
+Every HTML element has an opening tag, some content, and a closing tag. The **`.textContent`** property is that content, as text.
+
+```html id=page1
+<p id="para">original text</p>
+```
+
+```{javascript autorun}
+const el = document.querySelector('#para');
+
+console.log(el.textContent);
+
+el.textContent = 'updated';
+
+console.log(el.textContent);
+```
+```+id=page1
+```
+
+Reading `.textContent` gives us the text inside the element. Assigning to it replaces that text, and because we changed the DOM, the paragraph rendered above the output changed too.
+
+## `.textContent` Versus `.innerHTML`
+
+There is a second property, **`.innerHTML`**, which is the HTML content of the element rather than only its text. The difference shows up in four situations: reading each one, and writing each one.
+
+### Reading
+
+Take a paragraph with a nested element in it:
+
+```html id=page2
+<p id="demo">This is <strong>bold</strong> text</p>
+```
+
+```{javascript autorun}
+const el = document.querySelector('#demo');
+
+console.log(el.textContent);
+console.log(el.innerHTML);
+```
+```+id=page2
+```
+
+`.textContent` gives `This is bold text`. The `<strong>` element is ignored: we get the text from inside it, but no sign that it was formatted at all.
+
+`.innerHTML` gives `This is <strong>bold</strong> text`, the actual markup that lives inside the element.
+
+### Writing
+
+Now the more surprising half. `.textContent` treats whatever you assign as **literal text**, and `.innerHTML` treats it as **HTML to parse**.
+
+```{javascript autorun}
+const el = document.querySelector('#demo');
+
+el.textContent = 'new <strong>text</strong>';
+
+console.log(el.innerHTML);
+```
+```+id=page2
+```
+
+Look at the rendered paragraph: it literally reads `new <strong>text</strong>`, angle brackets and all. Nothing became bold. Setting `.textContent` means "these are characters", so the browser replaces `<` and `>` with the special sequences `&lt;` and `&gt;`, which display as those characters rather than starting a tag. You can see that in the logged `innerHTML`.
+
+Change one word and the behavior flips completely:
+
+```{javascript autorun}
+const el = document.querySelector('#demo');
+
+el.innerHTML = 'new <strong>HTML</strong>';
+
+console.log(el.textContent);
+```
+```+id=page2
+```
+
+Now `HTML` is genuinely bold, because the browser parsed the string and built a real `<strong>` element inside the paragraph.
+
+To summarize all four:
+
+- **Reading `.textContent`** returns the text only, with any inner tags stripped.
+- **Reading `.innerHTML`** returns the markup, tags included.
+- **Setting `.textContent`** escapes `<` and `>`, so the string appears as literal characters.
+- **Setting `.innerHTML`** parses the string as HTML and builds real elements.
+
+## Prefer `.textContent`
+
+Whenever you only need to change text, use `.textContent`. Reach for `.innerHTML` only when you specifically need to insert structure, and only with strings you wrote yourself.
+
+The reason is security. Because setting `.innerHTML` parses its string as HTML, any tags in that string become live elements. That is fine when you wrote the string. It is dangerous when the string came from a user.
+
+Imagine a message board that appends whatever a visitor typed:
+
+```javascript
+const board = document.querySelector('#board');
+const userMessage = getMessageFromUser();
+
+board.innerHTML = board.innerHTML + userMessage;   // dangerous
+```
+
+If someone types `Hello everyone!`, fine. If they type this instead:
+
+```html
+<img src="x" onerror="alert('you have been hacked')">
+```
+
+then the browser parses it as HTML, creates a real `<img>` element, fails to load the image named `x`, and runs the `onerror` JavaScript, in the browser of every visitor who views that page. A real attack would take session cookies rather than show an alert. This class of attack is called **cross-site scripting**, or XSS.
+
+The fix is to route anything from a user through `.textContent`, which escapes it:
+
+```javascript
+const board = document.querySelector('#board');
+const userMessage = getMessageFromUser();
+
+const line = document.createElement('p');
+line.textContent = userMessage;   // escaped as text, never parsed as HTML
+board.appendChild(line);
+```
+
+(`createElement` and `appendChild` are how we build new elements from scratch. We cover them properly in a couple of lessons.)
+
+The rule of thumb: use `.textContent` by default, and use `.innerHTML` only with HTML you control.
+
+## A Note on `.innerText`
+
+You will run into a third property, `.innerText`, which is almost the same as `.textContent`. The differences are small and mostly about spacing and about elements that are hidden by CSS: `.innerText` accounts for how the browser will actually render the content, while `.textContent` does not.
+
+In this specialization we will use `.textContent`. When you see `.innerText` elsewhere, it is doing nearly the same job.
+
+## Exercises
+
+1. Change the paragraph's text to exactly `Updated message`.
+
+    ```html id=page3
+    <p id="note">Original message</p>
+    ```
+
+    ```{javascript}
+    const message = document.querySelector('#note');
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const message = document.querySelector('#note');
+
+    message.textContent = 'Updated message';
+    ```
+    ```+test
+    assert('#note').should('have.text', 'Updated message').run('Set the paragraph text to `Updated message`', 'Updated the paragraph text');
+    ```
+
+2. Put a real `<strong>` element containing the word `Important` inside the empty paragraph.
+
+    ```html id=page4
+    <p id="notice"></p>
+    ```
+
+    ```{javascript}
+    const notice = document.querySelector('#notice');
+
+    // Write your code here
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const notice = document.querySelector('#notice');
+
+    notice.innerHTML = '<strong>Important</strong>';
+    ```
+    ```+test
+    assert('#notice strong').should('have.text', 'Important').run('Add a real `strong` element containing `Important`. Setting `textContent` would show the tag as literal characters instead', 'Inserted a strong element');
+    ```
+
+3. Read both properties of the list below. Store its text in `listText` and its markup in `listMarkup`.
+
+    ```html id=page5
+    <ul><li>Milk</li><li>Apples</li></ul>
+    ```
+
+    ```{javascript}
+    const list = document.querySelector('ul');
+
+    const listText = /* Your code here */;
+    const listMarkup = /* Your code here */;
+
+    console.log(listText);
+    console.log(listMarkup);
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const list = document.querySelector('ul');
+
+    const listText = list.textContent;
+    const listMarkup = list.innerHTML;
+
+    console.log(listText);
+    console.log(listMarkup);
+    ```
+    ```+test
+    wrap(listText).should('equal', 'MilkApples').run('`listText` should be the list\'s `textContent`, which is the text with no tags', 'Read the text content');
+    wrap(listMarkup).should('equal', '<li>Milk</li><li>Apples</li>').run('`listMarkup` should be the list\'s `innerHTML`, which includes the `li` tags', 'Read the HTML content');
+    ```
+
+## Resources
+
+- [MDN: Node.textContent](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent)
+- [MDN: Element.innerHTML](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML)
+- [MDN: HTMLElement.innerText](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/innerText)
+- [MDN: Cross-site scripting (XSS)](https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/XSS)

@@ -1,0 +1,221 @@
+# `fetch`
+
+The **`fetch`** function lets us get data from other files, or from other websites entirely. Because we cannot know how long that will take, `fetch` relies heavily on promises, which is why we spent the last three lessons on them.
+
+`fetch` is built into the browser. It takes one argument, a string containing the URL to fetch from:
+
+```javascript
+const responsePromise = fetch('book.txt');
+```
+
+## Two Promises, Not One
+
+This is the part to get straight, because it surprises people.
+
+**`fetch` returns a promise that fulfills with a `Response` object.** A `Response` is not the data. It is an object describing the reply, with properties including:
+
+- **`status`**, the HTTP status code. `200` means everything went well.
+- **`statusText`**, a short description such as `OK`.
+- **`url`**, the full URL that was actually requested. Even if you passed the relative `book.txt`, this is the complete address.
+
+To get the actual content you call a method on the response, and **that method returns a second promise**:
+
+- **`text()`** fulfills with the content as a string.
+- **`json()`** fulfills with the content parsed from JSON into a JavaScript object. That is the next lesson.
+
+So the full journey is: call `fetch`, get a promise, wait for it, get a `Response`, call `text()` on it, get another promise, wait for that, and finally get the text.
+
+## Building It Up
+
+Written out with every step named, it looks like this:
+
+```javascript
+const url = 'book.txt';
+
+const responsePromise = fetch(url);
+
+responsePromise.then((response) => {
+  const textPromise = response.text();
+
+  textPromise.then((text) => {
+    console.log(text);
+  });
+});
+```
+
+That works, and it has two problems. `responsePromise` and `textPromise` are each used once, so naming them earns nothing. And the callbacks are **nested**, which is the pyramid shape we are trying to get away from.
+
+Both are fixed the same way: **return** the inner promise instead of using it in place, so the next `.then` can be chained on rather than nested in.
+
+```javascript
+fetch('book.txt')
+  .then((response) => {
+    return response.text();
+  })
+  .then((text) => {
+    console.log(text);
+  });
+```
+
+And with an implicit return on the first callback, which is how you will see it written almost everywhere:
+
+```javascript
+fetch('book.txt')
+  .then((response) => response.text())
+  .then((text) => console.log(text));
+```
+
+Read that as three steps: fetch the URL, turn the response into text, do something with the text.
+
+## Seeing the Shape Run
+
+We cannot fetch a real file from inside this notebook, so here is a stand-in that behaves the way `fetch` does: it returns a promise that fulfills with an object having `status`, `url`, and a `text()` method that itself returns a promise.
+
+```{javascript autorun}
+function fakeFetch(url) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        status: 200,
+        statusText: 'OK',
+        url: 'https://example.com/' + url,
+        text: () => Promise.resolve('It was a bright cold day in April.')
+      });
+    }, 200);
+  });
+}
+
+fakeFetch('book.txt')
+  .then((response) => {
+    console.log('status: ' + response.status);
+    console.log('url: ' + response.url);
+    return response.text();
+  })
+  .then((text) => {
+    console.log('text: ' + text);
+  });
+```
+
+Swap `fakeFetch` for `fetch` and that code works against a real file. The chain is identical.
+
+## Always Handle Failure
+
+A request can fail. The user's connection drops, the server is down, the file is not there. `fetch` rejects when the request could not be made at all, so a `.catch` belongs on the end:
+
+```javascript
+fetch('book.txt')
+  .then((response) => response.text())
+  .then((text) => {
+    output.textContent = text;
+  })
+  .catch((error) => {
+    output.textContent = 'Sorry, no connection detected. Try again in a few minutes.';
+  });
+```
+
+Without that, a failure shows up only in the console and the user sees nothing happen at all.
+
+## What This Is For
+
+Here we are fetching a text file sitting next to our page. The same function fetches anything: user data, saved game files, a list of a user's friends, stock prices, images loaded on demand rather than at page load.
+
+Most interestingly, it fetches from **other people's servers**. In a couple of lessons we will use it against external APIs, services that publish weather, maps, transit times, and almost anything else, so we can pull that information into our own pages.
+
+## Exercises
+
+1. Complete the chain so the cell logs the fetched text. Use the `fakeFetch` stand-in, and chain rather than nest.
+
+    ```{javascript}
+    function fakeFetch(url) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ status: 200, text: () => Promise.resolve('hello from the server') });
+        }, 100);
+      });
+    }
+
+    fakeFetch('greeting.txt')
+      // Add your .then calls here
+    ```
+    ```+solution
+    function fakeFetch(url) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          resolve({ status: 200, text: () => Promise.resolve('hello from the server') });
+        }, 100);
+      });
+    }
+
+    fakeFetch('greeting.txt')
+      .then((response) => response.text())
+      .then((text) => console.log(text));
+    ```
+    ```+test
+    wrap((source.match(/\.then\s*\(/g) || []).length >= 2).should('equal', true).run('Use two chained `.then` calls: one to get the text promise, one to use the text', 'Chained two calls');
+    setTimeout(() => {
+      check.consoleLogged('hello from the server').run('The cell should log `hello from the server`. Return `response.text()` from the first callback', 'Logged the fetched text');
+    }, 350);
+    ```
+
+2. This stand-in always fails. Add error handling so the paragraph shows `Could not load` instead of staying empty.
+
+    ```html id=page1
+    <p id="out"></p>
+    ```
+
+    ```{javascript}
+    const output = document.querySelector('#out');
+
+    function fakeFetch(url) {
+      return Promise.reject('network error');
+    }
+
+    fakeFetch('data.txt')
+      .then((response) => response.text())
+      .then((text) => {
+        output.textContent = text;
+      });
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const output = document.querySelector('#out');
+
+    function fakeFetch(url) {
+      return Promise.reject('network error');
+    }
+
+    fakeFetch('data.txt')
+      .then((response) => response.text())
+      .then((text) => {
+        output.textContent = text;
+      })
+      .catch((error) => {
+        output.textContent = 'Could not load';
+      });
+    ```
+    ```+test
+    wrap(source.includes('.catch')).should('equal', true).run('Add a `.catch` to the end of the chain', 'Added a catch handler');
+    setTimeout(() => {
+      assert('#out').should('have.text', 'Could not load').run('When the request fails the paragraph should read `Could not load`', 'The failure is shown to the user');
+    }, 250);
+    ```
+
+3. Why does `response.text()` return a promise, rather than just giving you the string?
+
+    ```{mcq}
+    `fetch` has already resolved, so why is a second promise needed to read the body?
+    correct: Correct! The response arrives in pieces. The headers, which give you the status and URL, come first, and the body may still be arriving, so reading it is itself an operation that has to be waited for.
+    wrong: Think about what part of a reply the browser has when the first promise fulfills, and what it may still be waiting for.
+    [x] Because the response arrives before its body has finished downloading, so reading the body is another wait
+    [ ] Because every method in JavaScript returns a promise
+    [ ] Because `text()` has to make a second request to the server
+    [ ] Because promises can only carry one value each, so a second one is needed for the second value
+    ```
+
+## Resources
+
+- [MDN: fetch()](https://developer.mozilla.org/en-US/docs/Web/API/Window/fetch)
+- [MDN: Response](https://developer.mozilla.org/en-US/docs/Web/API/Response)
+- [MDN: Response.text()](https://developer.mozilla.org/en-US/docs/Web/API/Response/text)
+- [MDN: HTTP response status codes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status)

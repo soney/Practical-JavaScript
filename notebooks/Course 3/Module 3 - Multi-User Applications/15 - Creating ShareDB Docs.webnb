@@ -1,0 +1,336 @@
+# Creating ShareDB Docs
+
+The connection is open. Now for a document that several clients share.
+
+The example is deliberately small, and it is the one ShareDB's own examples use: a button, and a count of how many times **anybody** has pressed it. The finished project is in your workspace as `sharedb-demo/02-docs/`, and it is `01-server/` plus one shared document; this reading walks through what was added.
+
+## The Server Creates the Document
+
+Two names identify every ShareDB document. The **collection** is like a folder or a database table, and the **id** is the particular document inside it. Ours lives in the collection `examples` under the id `counter`. One limitation worth knowing: collections are a **single level**. There is no nesting, no `examples/counters/daily`. A collection and an id, and that is the whole naming scheme.
+
+Somebody also has to *create* the document, once, before any client subscribes to it. The first client to arrive would find nothing there, so our server does it on startup:
+
+```{walkthrough}
+title: What the server gained since stage 1
+step: A document on the server
+file: sharedb-demo/02-docs/server.js
+region: doc
+The requires at the top of the file have not changed. This block, between them and the server, is new.
+@"backend.connect()": The server gives itself a connection to its own backend, the same kind of connection the browser has. The server is a participant here, not only a relay.
+@"connection.get('examples', 'counter')": `get(collection, id)` in both places, on the server and on the client. It returns a document object; it does not talk to anybody yet.
+@"doc.fetch": Asks for the document's current contents. It is asynchronous because the data may be in memory, as here, or in a database somewhere, and the callback's first argument is the usual optional error, which we throw.
+@"doc.type === null": The test for "am I the first?". A document that has been fetched but has no type does not exist yet. (A document that exists has a type naming the OT type that governs it, the subject of the next reading.)
+@"doc.create({ numClicks: 0 }": Creates it with a starting value, an ordinary JSON object.
+@"startServer();": Note where this call sits: inside the create callback. The server does not accept clients until the document exists, so no client can subscribe to nothing.
+@"'Document already exists'": The second run of the server takes this branch instead, and starts the server directly.
+
+step: The server, wrapped in a function
+file: sharedb-demo/02-docs/server.js
+region: start-server
+@"function startServer": Everything inside is stage 1 unchanged: the Express app, the static `dist`, the WebSocket server, `backend.listen`. It moved into a function only so that the fetch-and-create logic above can decide *when* to run it.
+```
+
+## Reading It on the Client
+
+The client gets the same document by the same two names, and then does two things `get` alone does not: it subscribes, and it listens for operations.
+
+```{walkthrough}
+title: What the client gained since stage 1
+step: The page
+file: sharedb-demo/02-docs/src/index.html
+The heading grew a live number, and there is a button now.
+@"click-count": The span our client code will keep filled in with the shared count.
+@"button id=": Anybody's press of this button will move every client's counter.
+
+step: Element references
+file: sharedb-demo/02-docs/src/client.js
+region: refs
+@"button#increment": The same `querySelector` calls as always.
+@"'...loading...'": What the page shows for the moment between loading and the first data arriving. It might take a little time, and a blank span looks broken.
+
+step: Subscribe, and listen for ops
+file: sharedb-demo/02-docs/src/client.js
+region: doc
+Two hooks, two jobs: one for "the data is here", one for "the data changed".
+@"connection.get('examples', 'counter')": `get` is local. It creates this client's reference to the document and sends nothing.
+@"doc.subscribe": The part that talks to the server: it asks for the current contents *and* for every future change to be pushed to this client. Without it you have a document object that never updates.
+@"updateCounter();": The subscribe callback runs once, when the subscription is established, which is why the initial render goes here.
+@"doc.on('op'": Runs every time an operation is applied to the document, whoever made it, however many clients are connected. This is the live-update hook, and it is where rendering belongs.
+
+step: Rendering
+file: sharedb-demo/02-docs/src/client.js
+region: render
+@"doc.data.numClicks": `doc.data` is the document's contents as a plain JavaScript object, so reading it is ordinary property access.
+
+step: Changing the document
+file: sharedb-demo/02-docs/src/client.js
+region: submit
+@"doc.submitOp([": How you change a shared document. Note the array: a submission is a list of operations, even when there is one.
+@"na: 1": The format from the OT reading: path `['numClicks']`, and `na: 1` to add one. The video points out that the json0 documentation lists many other actions, inserting into lists, deleting from lists, and more; the next two readings use them.
+```
+
+One thing this click handler does *not* do is touch the page. Writing `doc.data.numClicks = doc.data.numClicks + 1` would be the natural thing to try, and it would be wrong: nobody else would hear about it, because a change only travels if it is expressed as an operation. Submit the operation and let the `op` listener do the rendering, for this client and every other.
+
+## A Miniature Shared Document
+
+Here is that arrangement with a small stand-in for ShareDB, so you can watch two subscribers stay in step:
+
+```{node autorun}
+// A very small stand-in for a shared ShareDB document.
+function makeSharedDoc(initialData) {
+  const doc = { data: initialData, listeners: [] };
+
+  doc.on = function (eventName, callback) {
+    doc.listeners.push(callback);
+  };
+
+  doc.submitOp = function (operations) {
+    for (const operation of operations) {
+      const key = operation.p[0];
+
+      if (operation.na !== undefined) {
+        doc.data[key] = doc.data[key] + operation.na;
+      }
+    }
+
+    // Everyone subscribed hears about it, including whoever sent it.
+    for (const callback of doc.listeners) {
+      callback();
+    }
+  };
+
+  return doc;
+}
+
+const doc = makeSharedDoc({ numClicks: 0 });
+
+// Two clients render the same document.
+doc.on('op', () => {
+  console.log('client 1 shows ' + doc.data.numClicks);
+});
+
+doc.on('op', () => {
+  console.log('client 2 shows ' + doc.data.numClicks);
+});
+
+// Somebody presses the button twice.
+doc.submitOp([{ p: ['numClicks'], na: 1 }]);
+doc.submitOp([{ p: ['numClicks'], na: 1 }]);
+```
+
+Both clients see every change, and neither was told about the other. Try adding a third listener, or submitting an operation with `na: 10`, and run it again.
+
+## Running It Yourself
+
+For one browser, all of this to increment a number is absurd, and the video says so. The point only appears with more than one window. From `sharedb-demo/`:
+
+    $ cd "02-docs"
+    $ npx webpack
+    $ node server.js
+    Document created!
+    Listening on http://localhost:8000
+
+Open `http://localhost:8000` in **two or three** windows side by side and press the button in any of them: **every counter moves at once.** Nobody polls, nobody refreshes, and no code of ours sends messages to anybody. The windows all happen to be on your computer, but nothing in the code cares: users on different computers connected to the same server would be sharing the same document, which is where the last reading of this lesson ends up. Then:
+
+1. Refresh a window: the count survives, because it lives in the server's document, not the page.
+2. Stop the server with Ctrl+C and start it again: it logs `Document created!` once more, and the count is back to zero. The backend keeps documents in memory, so a restart wipes them; the `Document already exists` branch is there for backends where documents survive, which is what a database adapter would provide.
+
+## Exercises
+
+1. Complete the server-side setup so the document is created only if it is not there, and the server starts in either case.
+
+    ```{javascript}
+    const log = [];
+
+    function startServer() {
+      log.push('server started');
+    }
+
+    // A stand-in document that has never been created.
+    const doc = { type: null };
+
+    doc.fetch = function (callback) {
+      callback();
+    };
+
+    doc.create = function (initialData, callback) {
+      doc.type = 'json0';
+      doc.data = initialData;
+      log.push('document created');
+      callback();
+    };
+
+    doc.fetch((error) => {
+      if (error) {
+        throw error;
+      }
+
+      // TODO: if the document does not exist yet, create it with
+      // { numClicks: 0 } and start the server once it exists.
+      // Otherwise, only start the server.
+    });
+
+    console.log(log, doc.data);
+    ```
+    ```+solution
+    const log = [];
+
+    function startServer() {
+      log.push('server started');
+    }
+
+    // A stand-in document that has never been created.
+    const doc = { type: null };
+
+    doc.fetch = function (callback) {
+      callback();
+    };
+
+    doc.create = function (initialData, callback) {
+      doc.type = 'json0';
+      doc.data = initialData;
+      log.push('document created');
+      callback();
+    };
+
+    doc.fetch((error) => {
+      if (error) {
+        throw error;
+      }
+
+      if (doc.type === null) {
+        doc.create({ numClicks: 0 }, () => {
+          startServer();
+        });
+      } else {
+        startServer();
+      }
+    });
+
+    console.log(log, doc.data);
+    ```
+    ```+test
+    wrap(doc.data).should('equal', { numClicks: 0 }).run('Create the document with `{ numClicks: 0 }`', 'Created the document');
+    wrap(log).should('equal', ['document created', 'server started']).run('The server should start inside the create callback, so it starts only once the document exists', 'Started the server after creating the document');
+    wrap((function () { const other = { type: 'json0', data: { numClicks: 7 } }; let started = false; other.fetch = function (cb) { cb(); }; other.create = function () { started = 'created'; }; other.fetch(function () { if (other.type === null) { other.create(); } else { started = true; } }); return started; })()).should('equal', true).run('When the document already exists, do not create it again; check `doc.type === null` and take the other branch', 'Handled an existing document');
+    ```
+
+2. Complete the client side: render on subscribe, re-render on every operation, and submit an operation when the button is pressed.
+
+    ```{javascript}
+    const rendered = [];
+
+    const doc = { data: { numClicks: 3 }, listeners: [], submitted: [] };
+
+    doc.subscribe = function (callback) {
+      callback();
+    };
+
+    doc.on = function (eventName, callback) {
+      doc.listeners.push(callback);
+    };
+
+    doc.submitOp = function (operations) {
+      doc.submitted.push(operations);
+
+      for (const operation of operations) {
+        doc.data[operation.p[0]] = doc.data[operation.p[0]] + operation.na;
+      }
+
+      for (const callback of doc.listeners) {
+        callback();
+      }
+    };
+
+    function updateCounter() {
+      rendered.push(doc.data.numClicks);
+    }
+
+    // TODO: subscribe to the document and render once it is ready,
+    // re-render whenever an operation arrives,
+    // and add one to numClicks by submitting an operation.
+
+    console.log(rendered, doc.submitted);
+    ```
+    ```+solution
+    const rendered = [];
+
+    const doc = { data: { numClicks: 3 }, listeners: [], submitted: [] };
+
+    doc.subscribe = function (callback) {
+      callback();
+    };
+
+    doc.on = function (eventName, callback) {
+      doc.listeners.push(callback);
+    };
+
+    doc.submitOp = function (operations) {
+      doc.submitted.push(operations);
+
+      for (const operation of operations) {
+        doc.data[operation.p[0]] = doc.data[operation.p[0]] + operation.na;
+      }
+
+      for (const callback of doc.listeners) {
+        callback();
+      }
+    };
+
+    function updateCounter() {
+      rendered.push(doc.data.numClicks);
+    }
+
+    doc.subscribe((error) => {
+      if (error) {
+        throw error;
+      }
+
+      updateCounter();
+    });
+
+    doc.on('op', () => {
+      updateCounter();
+    });
+
+    doc.submitOp([{ p: ['numClicks'], na: 1 }]);
+
+    console.log(rendered, doc.submitted);
+    ```
+    ```+test
+    wrap(rendered).should('equal', [3, 4]).run('Render once when the subscription is ready, showing `3`, and again after the operation, showing `4`', 'Rendered at both points');
+    wrap(doc.submitted).should('equal', [[{ p: ['numClicks'], na: 1 }]]).run('Submit one operation: an array containing `{ p: [\'numClicks\'], na: 1 }`. Do not assign to `doc.data.numClicks` directly; a change only travels as an operation', 'Submitted the right operation');
+    wrap(doc.listeners.length >= 1).should('equal', true).run('Listen for changes with `doc.on(\'op\', ...)` so later operations re-render', 'Listened for operations');
+    wrap((function () { doc.submitOp([{ p: ['numClicks'], na: 2 }]); return rendered[rendered.length - 1]; })()).should('equal', 6).run('When another operation arrives later, the `op` listener should render the new value', 'Re-rendered on a later operation');
+    ```
+
+3. Collections and ids
+
+    ```{mcq}
+    Every ShareDB document is named twice over, as in `connection.get('examples', 'counter')`. What is the relationship between the collection and the document id?
+    correct: Correct! The collection is a container, like a folder or a database table, and the id names one document inside it. Collections are a single level, so there is no nesting.
+    wrong: You pass both to `connection.get`. Think about what each one narrows down.
+    [x] A collection is like a folder or table; the document id names a particular document inside it
+    [ ] The collection is a password and the document id is a username
+    [ ] They are the same thing and can be used interchangeably
+    [ ] The collection sets the programming language and the id names a variable
+    ```
+
+4. What subscribing adds
+
+    ```{mcq}
+    The client already called `connection.get('examples', 'counter')` and has a `doc` object. Why call `doc.subscribe()` as well?
+    correct: Correct! `get` only creates a local reference and sends nothing. `subscribe` is what asks the server for the contents and for every future change to be pushed to this client.
+    wrong: One of those two calls involves the server. Which one, and what does it ask for?
+    [x] `get` is only a local reference; `subscribe` tells the server to send this client the data and its updates
+    [ ] `subscribe` registers the license for ShareDB
+    [ ] `subscribe` is only needed in order to delete a document
+    [ ] Without it the browser blocks the WebSocket connection
+    ```
+
+## Resources
+
+- [ShareDB: the Doc class](https://share.github.io/sharedb/api/doc)
+- [ShareDB: the Connection class](https://share.github.io/sharedb/api/connection)
+- [ShareDB: the counter example](https://github.com/share/sharedb/tree/master/examples/counter)
+- [ShareDB: JSON0 operations](https://github.com/ottypes/json0)

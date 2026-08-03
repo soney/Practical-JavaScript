@@ -1,0 +1,314 @@
+# Synchronizing JSON Data
+
+The counter shared one number. This reading shares a **list**: a to-do list that several people can add to and delete from at once. The project is `sharedb-demo/04-todo/` in your workspace.
+
+It also changes the rendering approach. The counter re-read `doc.data` and rewrote everything on every change. Here we read the **operation**, exactly as the previous reading previewed, and make the matching change to the page. Not "something changed" but "an item appeared at position 3".
+
+## The Document and the Page
+
+```{walkthrough}
+title: A list instead of a number
+step: The server's document
+file: sharedb-demo/04-todo/server.js
+region: doc
+The server is the stage 2 server with a different document.
+@"'examples', 'todo-list'": A new id in the same collection. The counter document can even still exist beside it; nothing connects to it.
+@"{ todos: [] }": The starting value: an object holding an empty array. Everything the list will ever contain goes through operations on `todos`.
+
+step: The page
+file: sharedb-demo/04-todo/src/index.html
+@"ul id=": An empty list. Every `li` inside it will be created by our code, never written in the HTML.
+@"todo-description": Where the user types a new item's title.
+@"add-item": And the button that submits it.
+
+step: The element references
+file: sharedb-demo/04-todo/src/client.js
+region: refs
+@"ul#todo-list": The same three `querySelector` calls you would write in any DOM code.
+```
+
+## Adding an Item
+
+Two json0 operations do the work in this reading, and both carry an index in their path. The first is **`li`**, list insert, which inserts a value **before** the given index:
+
+```{walkthrough}
+title: The add button submits an operation
+step: The click handler
+file: sharedb-demo/04-todo/src/client.js
+region: add
+@"descriptionInp.value;": Read what the user typed...
+@"done: false": ...and build the item to store. The video adds a `done` field for whether the item is finished; the example never uses it, and wiring it up to a checkbox is left to you.
+@"doc.data.todos.length": The path is `['todos', index]`: which array, and where in it. Since `li` inserts *before* the index, using the array's length means "one past the last item", which is how you append. An index of `0` would put it at the front.
+@"li: newTodo": The value being inserted rides along under `li`.
+@"descriptionInp.value = ''": Clear the input, ready for the next item.
+```
+
+Note what this handler does *not* do: it does not touch the page. It submits an operation and stops. The list gets updated by the `op` listener, which runs for this client too, so one code path renders every change, whoever made it.
+
+## Reacting to Operations
+
+```{walkthrough}
+title: Reading each operation
+step: The op listener
+file: sharedb-demo/04-todo/src/client.js
+region: ops
+@"for (const op of ops)": The listener receives an **array** of operations, so loop over it. One submission can carry several changes.
+@"op.p[0] === 'todos'": Is this operation about the part of the document we render? A document with several top-level keys would have operations we should ignore.
+@"const index = op.p[1]": The second entry in the path is the position in the list, which is what makes precise updating possible.
+@"op.li !== undefined": An `li` value present means an insert. We compare against `undefined` rather than writing `if (op.li)`, because a falsy value, an inserted empty string, a `0`, would slip through a truthiness test.
+@"op.ld !== undefined": And `ld` means a delete. The operation names what happened, so no comparison of old and new state is needed.
+```
+
+You can hold that logic in your hands. This cell runs the same dispatch against a plain array standing in for the page:
+
+```{javascript autorun}
+const rendered = ['buy milk'];
+
+function addTodoElement(todo, index) {
+  rendered.splice(index, 0, todo.title);
+}
+
+function removeTodoElement(index) {
+  rendered.splice(index, 1);
+}
+
+function handleOps(ops) {
+  for (const op of ops) {
+    if (op.p[0] === 'todos') {
+      if (op.li !== undefined) {
+        addTodoElement(op.li, op.p[1]);
+      } else if (op.ld !== undefined) {
+        removeTodoElement(op.p[1]);
+      }
+    }
+  }
+}
+
+// Somebody appends an item.
+handleOps([{ p: ['todos', 1], li: { title: 'do homework' } }]);
+console.log(rendered);
+
+// Somebody inserts one at the front.
+handleOps([{ p: ['todos', 0], li: { title: 'walk the dog' } }]);
+console.log(rendered);
+
+// Somebody deletes the middle item.
+handleOps([{ p: ['todos', 1], ld: { title: 'buy milk' } }]);
+console.log(rendered);
+```
+
+Three changes, three targeted updates, and the order is preserved throughout. Try adding a fourth operation about a different path, such as `p: ['somethingElse', 0]`, and confirm it is ignored.
+
+## Inserting at the Right Place
+
+`addTodoElement` is the function that turns one to-do into one `li` element, at the right position:
+
+```{walkthrough}
+title: Building and placing the list item
+step: addTodoElement
+file: sharedb-demo/04-todo/src/client.js
+region: add-element
+The middle of the function builds each item's delete button, which the next section covers; look first at the top and bottom.
+@"createElement('li')": Creating elements with `document.createElement` and filling them in, as in Course 2.
+@"todo.title": The span carries the item's text.
+@"index >= todoListElem.children.length": Is this insert at the end?
+@"todoListElem.append(li)": `append` puts an element at the end, which is right only when the insert *was* at the end.
+@"insertBefore": For an insert in the middle, `insertBefore(newElement, existingChild)` places it in the correct spot. The document's array order and the page's element order have to stay in step, or the page starts lying about the data.
+```
+
+## Deleting an Item
+
+The second operation of the reading is **`ld`**, list delete:
+
+```{walkthrough}
+title: The delete button and its operation
+step: Each item's delete button
+file: sharedb-demo/04-todo/src/client.js
+region: delete-button
+@"deleteBtn.innerText": A small `x` button, created alongside the span inside `addTodoElement`.
+@"Array.from": Which index is this item at *right now*? Its position among its siblings answers that; `Array.from(...)` turns the live children collection into an array so `indexOf` can be used on it.
+@"indexOf(li)": The handler closes over `li`, the element it was created with, and looks up where it currently sits.
+@"ld: doc.data.todos[deletingIndex]": `ld` carries both the index (in the path) and the value being removed. Supplying the old value is what lets the operation be inverted, as in the previous reading: the inverse of this `ld` is an `li` that puts the value back.
+
+step: Removing the element
+file: sharedb-demo/04-todo/src/client.js
+region: remove-element
+And once again the click handler only submits; taking the element off the page is the op listener's job, through this function.
+@"removeChild": The mirror image of the insert logic: remove the child at the operation's index.
+```
+
+## Showing What Is Already There
+
+One bug remains, and the video runs into it: add several items, refresh, and the list is empty. The document still holds the items; the page never drew them, because `op` only fires for **changes**, and arriving is not a change.
+
+```{walkthrough}
+title: The subscribe callback draws the existing items
+step: The fix
+file: sharedb-demo/04-todo/src/client.js
+region: subscribe
+@"for (let i = 0": An ordinary indexed loop, because `addTodoElement` needs the index as well as the item.
+@"addTodoElement(doc.data.todos[i], i)": The same function the op listener uses, so items drawn at load and items drawn live look identical.
+```
+
+So the two hooks divide the work exactly as their names suggest: **subscribe draws what exists, `op` draws what changes.**
+
+## Running It Yourself
+
+From `sharedb-demo/` (stop any other stage first with Ctrl+C):
+
+    $ cd "04-todo"
+    $ npx webpack
+    $ node server.js
+    Document created!
+    Listening on http://localhost:8000
+
+Open `http://localhost:8000` in **two** windows. Add an item in one and it appears in the other; delete it in either and it goes from both; refresh and everything is still there (until the server restarts, since the document lives in memory). While experimenting, the video runs `npx webpack --watch` in a second terminal so every save of `client.js` rebuilds on its own.
+
+There is plenty left to add: a checkbox wired to the `done` field we stored and never used, and some styling. Both are good practice, and the shape of the answer is always the same: submit an operation, and render it in the `op` listener.
+
+## Exercises
+
+1. Complete the click handler so it appends a new item to the shared list.
+
+    ```{javascript}
+    const doc = { data: { todos: [{ title: 'buy milk' }, { title: 'do homework' }] }, submitted: [] };
+
+    doc.submitOp = function (ops) {
+      doc.submitted.push(ops);
+    };
+
+    function addItem(title) {
+      // TODO: submit one list-insert operation that appends
+      // { title: title, done: false } to doc.data.todos
+    }
+
+    addItem('walk the dog');
+
+    console.log(doc.submitted);
+    ```
+    ```+solution
+    const doc = { data: { todos: [{ title: 'buy milk' }, { title: 'do homework' }] }, submitted: [] };
+
+    doc.submitOp = function (ops) {
+      doc.submitted.push(ops);
+    };
+
+    function addItem(title) {
+      const newTodo = { title: title, done: false };
+
+      doc.submitOp([{
+        p: ['todos', doc.data.todos.length],
+        li: newTodo
+      }]);
+    }
+
+    addItem('walk the dog');
+
+    console.log(doc.submitted);
+    ```
+    ```+test
+    wrap(doc.submitted.length).should('equal', 1).run('Submit exactly one operation', 'Submitted one operation');
+    wrap(doc.submitted[0] && doc.submitted[0][0] && doc.submitted[0][0].p).should('equal', ['todos', 2]).run('The path is `[\'todos\', index]`, and appending means an index of `doc.data.todos.length`, which is 2 here', 'Used the right path and index');
+    wrap(doc.submitted[0] && doc.submitted[0][0] && doc.submitted[0][0].li).should('equal', { title: 'walk the dog', done: false }).run('`li` holds the value being inserted: `{ title: title, done: false }`', 'Inserted the right value');
+    wrap((function () { doc.data.todos.push({ title: 'walk the dog' }); addItem('water plants'); return doc.submitted[1] && doc.submitted[1][0] && doc.submitted[1][0].p; })()).should('equal', ['todos', 3]).run('Read the index from `doc.data.todos.length` each time, so the item goes at the end however long the list is', 'Appended to the end of a longer list');
+    ```
+
+2. Complete the operation handler so inserts and deletes each update the page precisely.
+
+    ```{javascript}
+    const rendered = ['buy milk'];
+
+    function addTodoElement(todo, index) {
+      rendered.splice(index, 0, todo.title);
+    }
+
+    function removeTodoElement(index) {
+      rendered.splice(index, 1);
+    }
+
+    function handleOps(ops) {
+      // TODO: for each operation about 'todos', call addTodoElement for an
+      // insert and removeTodoElement for a delete, passing the index from
+      // the operation's path.
+    }
+
+    handleOps([{ p: ['todos', 1], li: { title: 'do homework' } }]);
+    handleOps([{ p: ['todos', 0], ld: { title: 'buy milk' } }]);
+    handleOps([{ p: ['somethingElse', 0], li: { title: 'ignore me' } }]);
+
+    console.log(rendered);
+    ```
+    ```+solution
+    const rendered = ['buy milk'];
+
+    function addTodoElement(todo, index) {
+      rendered.splice(index, 0, todo.title);
+    }
+
+    function removeTodoElement(index) {
+      rendered.splice(index, 1);
+    }
+
+    function handleOps(ops) {
+      for (const op of ops) {
+        if (op.p[0] === 'todos') {
+          if (op.li !== undefined) {
+            addTodoElement(op.li, op.p[1]);
+          } else if (op.ld !== undefined) {
+            removeTodoElement(op.p[1]);
+          }
+        }
+      }
+    }
+
+    handleOps([{ p: ['todos', 1], li: { title: 'do homework' } }]);
+    handleOps([{ p: ['todos', 0], ld: { title: 'buy milk' } }]);
+    handleOps([{ p: ['somethingElse', 0], li: { title: 'ignore me' } }]);
+
+    console.log(rendered);
+    ```
+    ```+test
+    wrap(rendered).should('equal', ['do homework']).run('The insert adds `do homework` at index 1, the delete removes index 0, and the third operation is about another part of the document and should be ignored: check `op.p[0]`', 'Handled all three operations');
+    wrap((function () { handleOps([{ p: ['todos', 0], li: { title: 'walk the dog' } }]); return rendered.slice(); })()).should('equal', ['walk the dog', 'do homework']).run('An insert at index 0 goes at the front, so pass the index from `op.p[1]` to `addTodoElement`', 'Inserted at the front');
+    wrap((function () { handleOps([{ p: ['todos', 1], ld: { title: 'do homework' } }]); return rendered.slice(); })()).should('equal', ['walk the dog']).run('A delete removes the item at the index in the path, so pass `op.p[1]` to `removeTodoElement`', 'Deleted by index');
+    ```
+
+3. Appending with `li`
+
+    ```{mcq}
+    The add handler submits this operation:
+
+    ~~~js
+    doc.submitOp([{
+      p: ['todos', doc.data.todos.length],
+      li: newTodo
+    }]);
+    ~~~
+
+    What does using `doc.data.todos.length` as the index achieve?
+    correct: Correct! `li` inserts before the given index, and one past the last item is the end, so this appends. An index of `0` would put it at the front instead.
+    wrong: An array of two items has indexes 0 and 1, and a length of 2. What is at index 2?
+    [x] It appends the new item to the end of the list
+    [ ] It inserts the item at the very beginning
+    [ ] It overwrites the first item
+    [ ] It deletes the existing items first
+    ```
+
+4. The loop after subscribing
+
+    ```{mcq}
+    The subscribe callback loops over `doc.data.todos` and calls `addTodoElement` for each existing item. What happens if you leave that loop out?
+    correct: Correct! The `op` listener only fires for changes, and loading a page is not a change. Without the loop, existing items are in the document and never drawn, so a refresh shows an empty list.
+    wrong: Think about which hook fires when you open the page, and which fires when somebody edits.
+    [x] After a refresh the list looks empty, even though the items are still on the server
+    [ ] The application crashes immediately
+    [ ] New items cannot be added
+    [ ] The delete buttons stop working
+    ```
+
+## Resources
+
+- [ShareDB: JSON0 operations](https://github.com/ottypes/json0)
+- [MDN: Node.insertBefore()](https://developer.mozilla.org/en-US/docs/Web/API/Node/insertBefore)
+- [MDN: Array.from()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from)
+- [MDN: Array.prototype.splice()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/splice)

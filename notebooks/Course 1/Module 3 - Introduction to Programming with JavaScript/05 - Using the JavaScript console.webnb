@@ -1,0 +1,101 @@
+# Using the JavaScript Console
+
+In the last lesson we said that an expression's value does not show up anywhere unless we ask for it, and that `console.log` plus an open console is how we ask. This lesson is about that console. It is a genuinely valuable tool: it shows us the values of expressions and it shows us the errors our code produces. Trying to write JavaScript without opening the console is like trying to build something in the dark without turning the lights on.
+
+## Opening the Console
+
+The console lives inside the browser's **developer tools** (often shortened to DevTools). In most browsers you get there the same way:
+
+- **Firefox, Chrome, and Microsoft Edge**: right-click anywhere on the page, choose "Inspect" (Firefox calls it "Inspect" as well), and then click the "Console" tab in the panel that opens.
+- **Safari**: there is one extra step first. Open Safari's settings, go to "Advanced", and check "Show features for web developers". After that you can right-click and choose "Inspect Element", then open the console from there.
+
+Every browser has some variation of this, and every browser also has a keyboard shortcut for it, so use whichever browser you like. The examples in these videos use Firefox.
+
+Inside these notebooks you do not have to open anything. The output area under each cell plays the same role, so anything a cell logs appears there:
+
+```{javascript autorun}
+console.log('If you can see this, you have found the output area.');
+```
+
+When you work on the assignments, though, you will be looking at a real page in a real browser, and there you will need the real console.
+
+## The Console Logs **Values** (not Expressions)
+
+The JavaScript engine computes the values of any expressions before logging to the console. Log `1 + 1` and you get `2`. Log `1 + 2 + 3` and you get `6`.
+
+```{javascript autorun}
+console.log(1 + 1);
+console.log(1 + 2 + 3);
+```
+
+## Logging Multiple Values
+
+We can log more than one value at a time by separating them with commas. The console prints them side by side on one line.
+
+```{javascript autorun}
+console.log('The Huron River is', 130, 'miles long.');
+```
+
+### Caveat: The Console Is Not for Your Users
+
+Everything we log is for us, the developers. **Visitors to your page will not see any of it** unless they open the developer tools themselves, and almost none of them will. This means:
+
+- If a piece of information is important to the person using the page, it does not belong in the console. Put it on the page (we will see how to do this later).
+- If a piece of information is sensitive and should not be accessible to users, such as a password or an access key for your server, it must never be logged at all. The console is not hidden. Anyone curious enough to open developer tools can read every message your code writes there. It probably should not even be anywhere that users can access (don't make any assumptions about what users can or can't do with their browsers).
+
+## Errors Show Up In the Console
+
+One reason it is important to have the console open while you are writing code is that it alerts you to syntax or runtime errors (not semantic errors, which are valid code that isn't what the developer wants).
+
+Recall that syntax errors mean the code you wrote did not follow the syntactic rules of JavaScript, so the engine could not make sense of it. Here is one: there are two `+` signs with nothing between them.
+
+```{javascript}
+console.log(1 + + );
+```
+
+In a real page, that error message appears in the console and nowhere else. The page will look like nothing happened, or like part of it stopped working for no reason. This is exactly why the console should be open while you write code: a broken page with a closed console tells you nothing, and the same page with the console open usually tells you the line number.
+
+## Exercises
+
+1. The cell below has a syntactic error. Fix it so that it logs `10`.
+
+    ```{javascript}
+    console.log(4 + );
+    ```
+    ```+solution
+    console.log(4 + 6);
+    ```
+    ```+test
+    check.consoleLogged(/^10$/).run('The cell should run without an error and log `10`', 'Fixed the error and logged 10');
+    ```
+
+2. Log the two words `Ann Arbor` and the number `1824` on a single line, as one call to `console.log`, so the output reads `Ann Arbor 1824`.
+
+    ```{javascript}
+    console.log('Ann Arbor');
+    ```
+    ```+solution
+    console.log('Ann Arbor', 1824);
+    ```
+    ```+test
+    check.consoleLogged(/^Ann Arbor 1824$/).run('Pass both values to one `console.log` call, separated by a comma', 'Logged both values on one line');
+    ```
+
+3. You want every visitor to your page to see a welcome message. Where should it go?
+
+    ```{mcq}
+    A message needs to reach every person who visits your page. Should it be logged to the console?
+    correct: Correct! Console output is only visible to someone who has opened the developer tools, so anything a visitor needs to see belongs on the page itself.
+    wrong: Revisit "Caveat: The Console Is Not for Your Users" and think about how many visitors have DevTools open.
+    [x] No. It should go on the page, because visitors do not have the console open.
+    [ ] Yes. Console messages appear on the page automatically.
+    [ ] Yes, but only if the message is short.
+    [ ] It does not matter, because the console and the page show the same thing.
+    ```
+
+## Resources
+
+- [MDN: console](https://developer.mozilla.org/en-US/docs/Web/API/console)
+- [MDN: console.log()](https://developer.mozilla.org/en-US/docs/Web/API/console/log_static)
+- [MDN: Debugging JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Debugging_JavaScript)
+- [MDN: What went wrong? Troubleshooting JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_went_wrong)

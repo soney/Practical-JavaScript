@@ -1,0 +1,184 @@
+# Paths
+
+A **path** specifies where to find a file. Every time a page loads a resource - a JavaScript file in a `<script src="...">`, an image in an `<img src="...">`, a stylesheet in a `<link href="...">` - the browser uses a path to locate it. As we start deploying pages, getting paths right is the difference between a working page and one full of broken images and missing scripts.
+
+## Path Symbols
+
+Suppose we keep our work in a `code` directory, with a `project` directory inside it, and our main file `index.html` inside that. Three symbols come up constantly:
+
+- **`.`** is the **current directory**, the one the current file lives in. For `index.html` above, `.` is the `project` directory.
+- **`..`** is the **parent directory**, one level up. From `project`, `..` is `code`.
+- **`/`** means one of two things. As the first character of a path it is the **root** directory. Everywhere else it is the **separator** between parts of a path.
+
+So in `/code/project/index.html`, the leading `/` is the root, and the other two slashes separate `code`, `project`, and `index.html`.
+
+## How the Browser Resolves a Relative Path
+
+A **relative path** does not start with `/`. It is measured from the directory of the file it appears in, and the browser works it out in four steps.
+
+Say our file is `/code/project/index.html` and it contains a `<script>` element:
+
+1. Take the path of the current file and split it into a **directory** part, `/code/project`, and a **file name** part, `index.html`.
+2. Throw away the file name and keep the directory. That is the **relative directory**: everything in this file is measured against it.
+3. Append the path we wrote onto the relative directory.
+4. Fold in any `..` segments, each one canceling the directory in front of it.
+
+Here is what that gives for three different `src` values, all written inside `/code/project/index.html`:
+
+| We write `src="..."`      | Appended to the relative directory   | After folding in `..`      |
+| ------------------------- | ------------------------------------ | -------------------------- |
+| `js/code.js`              | `/code/project/js/code.js`           | `/code/project/js/code.js` |
+| `./js/code.js`            | `/code/project/./js/code.js`         | `/code/project/js/code.js` |
+| `../project2/other.js`    | `/code/project/../project2/other.js` | `/code/project2/other.js`  |
+| `../../pix/image.jpeg`    | `/code/project/../../pix/image.jpeg` | `/pix/image.jpeg`          |
+
+The first two rows resolve to the same place: a leading `./` says "the current directory", which is where relative paths start anyway, so it is optional. Some people write it to make the intent obvious.
+
+In the third row, `..` cancels the `project` in front of it, leaving `/code/project2/other.js`. In the fourth, two `..` segments cancel both `project` and `code`.
+
+You can watch the browser do exactly this. `new URL` takes a second argument, the address to resolve against:
+
+```{javascript autorun}
+const base = 'https://blueserver.com/code/project/index.html';
+
+console.log(new URL('js/code.js', base).href);
+console.log(new URL('./js/code.js', base).href);
+console.log(new URL('../project2/other.js', base).href);
+console.log(new URL('../../pix/image.jpeg', base).href);
+```
+
+Try adding a path of your own and running the cell again.
+
+## Absolute Paths
+
+An **absolute path** starts with `/`, and that changes everything: the browser ignores the relative directory and starts over at the root.
+
+```{javascript autorun}
+const base = 'https://blueserver.com/code/project/index.html';
+
+console.log(new URL('pix/image.jpeg', base).href);
+console.log(new URL('/pix/image.jpeg', base).href);
+```
+
+One leading slash is the entire difference between those two results. That single character is the source of a great many deployment problems, which is the next section.
+
+## Why This Matters When You Deploy
+
+Suppose we are working on a laptop with the directory structure above, and we want to publish the `project` directory to a server. We copy that directory up to the server, and now two copies of the same code exist in two places with two different addresses.
+
+While developing, a local server usually serves the project directly, so the page is at something like:
+
+```text
+http://localhost:8000/index.html
+```
+
+Deployed to GitHub Pages, the same project is served from under the repository name:
+
+```text
+https://me.github.io/repo/index.html
+```
+
+Different host name, different port, and, most importantly, **a different relative directory**: locally it is `/`, and deployed it is `/repo/`.
+
+Now suppose the HTML loads a script with an absolute path:
+
+```html
+<script src="/js/code.js"></script>
+```
+
+Locally the browser looks for `http://localhost:8000/js/code.js`, which happens to work. Deployed, that same absolute path sends it to `https://me.github.io/js/code.js`. The `/repo/` segment is gone, because an absolute path starts over at the root. The file is not there, and the script silently fails to load.
+
+Write it as a relative path instead:
+
+```html
+<script src="js/code.js"></script>
+```
+
+Locally that resolves to `http://localhost:8000/js/code.js`, and deployed it resolves to `https://me.github.io/repo/js/code.js`, keeping the `/repo/` intact. One line of HTML, correct in both places.
+
+```{javascript autorun}
+const local = 'http://localhost:8000/index.html';
+const deployed = 'https://me.github.io/repo/index.html';
+
+console.log(new URL('/js/code.js', local).href);
+console.log(new URL('/js/code.js', deployed).href);
+
+console.log(new URL('js/code.js', local).href);
+console.log(new URL('js/code.js', deployed).href);
+```
+
+The first two lines disagree about where the file is. The last two do not.
+
+### The Worst Case: A Full Local Path
+
+There is a tempting shortcut that is worse still. Your editor can hand you the complete path to a file on your own disk, something like:
+
+```html
+<img src="/Users/me/code/project/images/logo.jpeg">
+```
+
+That will display the image perfectly on your machine and show a broken image for every single visitor, because no such path exists on the server. Write `src="images/logo.jpeg"` instead, relative to the current file, and it works in both places.
+
+The rule of thumb: for the `src` and `href` of resources your page loads, prefer relative paths, so the page works locally *and* after you deploy it.
+
+## Exercises
+
+1. Complete the calls below so that each one resolves to the path in the comment beside it.
+
+    ```{javascript}
+    const base = 'https://blueserver.com/code/project/index.html';
+
+    const styles = new URL(/* Your code here */, base).href;   // .../code/project/css/styles.css
+    const other = new URL(/* Your code here */, base).href;    // .../code/project2/other.js
+    const logo = new URL(/* Your code here */, base).href;     // https://blueserver.com/logo.png
+
+    console.log(styles);
+    console.log(other);
+    console.log(logo);
+    ```
+    ```+solution
+    const base = 'https://blueserver.com/code/project/index.html';
+
+    const styles = new URL('css/styles.css', base).href;
+    const other = new URL('../project2/other.js', base).href;
+    const logo = new URL('/logo.png', base).href;
+
+    console.log(styles);
+    console.log(other);
+    console.log(logo);
+    ```
+    ```+test
+    wrap(styles).should('equal', 'https://blueserver.com/code/project/css/styles.css').run('`styles` should resolve to `/code/project/css/styles.css`. A plain relative path starts from the current directory', 'Resolved the relative path');
+    wrap(other).should('equal', 'https://blueserver.com/code/project2/other.js').run('`other` should resolve to `/code/project2/other.js`. You need to go up one directory first', 'Used `..` to go up a level');
+    wrap(logo).should('equal', 'https://blueserver.com/logo.png').run('`logo` should resolve to `/logo.png`. An absolute path starts at the root', 'Used an absolute path');
+    ```
+
+2. An absolute path that breaks on deploy
+
+    ```{mcq}
+    A page uses `<script src="/js/code.js">`. It works on `http://localhost:8000/index.html`, but the script is missing once the page is deployed to `https://me.github.io/repo/index.html`. Why does that absolute path break after deployment?
+    correct: Correct! An absolute path starts over at the root, so it drops the `/repo/` segment and the browser looks for the file at `me.github.io/js/code.js`, where nothing is.
+    wrong: Look back at "Why This Matters When You Deploy", and at what a leading slash does to the relative directory.
+    [x] An absolute path starts at the root, so the `/repo/` segment is dropped
+    [ ] GitHub Pages does not serve JavaScript files
+    [ ] The file name changes automatically when you deploy
+    [ ] Absolute paths work only for images, not for scripts
+    ```
+
+3. Choosing a `src` that survives deployment
+
+    ```{mcq}
+    Your file is `/repo/project/index.html` and you want to load `code.js`, which sits in the same directory. Which `src` works both locally and on GitHub Pages?
+    correct: Correct! A relative path with no leading slash is measured from the current directory, so it keeps working wherever the page is served from. `./code.js` would work equally well.
+    wrong: Remember that a leading slash makes a path absolute, which throws away the repository segment when deployed.
+    [x] `<script src="code.js"></script>`
+    [ ] `<script src="/code.js"></script>`
+    [ ] `<script src="/repo/project/code.js"></script>`
+    [ ] `<script src="../code.js"></script>`
+    ```
+
+## Resources
+
+- [MDN: What is a URL?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL)
+- [MDN: Dealing with files and paths](https://developer.mozilla.org/en-US/docs/Learn_web_development/Getting_started/Environment_setup/Dealing_with_files)
+- [MDN: URL](https://developer.mozilla.org/en-US/docs/Web/API/URL)

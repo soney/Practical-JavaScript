@@ -1,0 +1,250 @@
+# Array Fundamentals
+
+So far each of our values has been a single thing: one number, one string, one boolean. **Arrays** are a new JavaScript type for representing a *sequence* of items. You might use one to hold the temperatures over the course of a week, or a series of student names.
+
+## Creating an Array
+
+We create an array with square brackets. The brackets mark the start and end of the array, and every item inside is separated by a comma.
+
+```{javascript autorun}
+const numbers = [5, 10, 15];
+
+console.log(numbers);
+```
+
+That array has three items. The items can be of any type, and the array can be as long as you like:
+
+```{javascript autorun}
+console.log([1.5, 2.25, 3.75, 4.5, 5.125]);
+```
+
+An array can even hold items of *different* types at once. This is called a **heterogeneous** array:
+
+```{javascript autorun}
+console.log(['Ann Arbor', 48104, true, 1824]);
+```
+
+Here the first item is a string, the second a number, the third a boolean, and the fourth another number. And an array can be empty: a pair of square brackets with nothing between them is a perfectly good array with no items in it.
+
+```{javascript autorun}
+console.log([]);
+```
+
+## The `length` Property
+
+Every array has a `length` property, which gives the number of items in it. We read it by writing a dot and then `length` after the array.
+
+```{javascript autorun}
+const l = ['a', 'b', 'c'];
+const emptyList = [];
+
+console.log(l.length);
+console.log(emptyList.length);
+```
+
+`l.length` is `3` because there are three items, and `emptyList.length` is `0` because there are none.
+
+This is a good moment to be careful about a distinction that trips people up. An array can have zero items, and it can have exactly one:
+
+```{javascript autorun}
+console.log([100].length);
+console.log(typeof [100]);
+console.log(typeof 100);
+```
+
+`[100]` is an array that happens to contain one number. `100` is a number. They are not the same thing, even though they look alike.
+
+## Indexing
+
+Getting a specific item out of an array is called **indexing**. We write square brackets after the array, with the index we want inside them.
+
+Indices are **zero based**, which means the first item is at index `0`, the second at index `1`, and so on.
+
+```{javascript autorun}
+const l = ['a', 'b', 'c'];
+
+console.log(l[0]);   // the first item
+console.log(l[2]);   // the third item
+```
+
+`l[2]` is the *third* item, because `0` is the first, `1` is the second, and `2` is the third. This off-by-one feeling never entirely goes away, and it is worth saying "index two means the third one" out loud a few times.
+
+What if we ask for an index that is not there?
+
+```{javascript autorun}
+const l = ['a', 'b', 'c'];
+
+console.log(l[3]);
+console.log(l[99]);
+```
+
+Both give `undefined`. The array has indices `0`, `1`, and `2`, so `3` is already past the end, and asking for `99` is no different. JavaScript does not report this as an error; it hands back `undefined` and carries on, which is exactly why an unexpected `undefined` is often a sign that an index is wrong.
+
+## Working With Two Arrays
+
+Here is a longer example. Suppose we keep a list of students and a matching list of their test scores:
+
+```{javascript autorun}
+const students = ['Alice', 'Bob', 'Charlie', 'Dana'];
+const scores = [98,   85,   95,   100];
+
+console.log(students);
+console.log(students.length);
+console.log(students[0]);
+console.log(scores[0]);
+```
+
+`students.length` is `4`, and `students[0]` is `Alice`, whose score is `scores[0]`, or `98`. Indices `0` through `3` cover the whole list.
+
+Notice the extra spaces in the `scores` array. Spacing inside an array makes no difference to its value; it is only there to make the two lists line up on the page for a human reader.
+
+### Getting the Last Item
+
+You might reasonably guess that `students[students.length]` gives the last student. It does not:
+
+```{javascript autorun}
+const students = ['Alice', 'Bob', 'Charlie', 'Dana'];
+
+console.log(students[students.length]);
+console.log(students[students.length - 1]);
+```
+
+`students.length` is `4`, but the valid indices stop at `3`, so `students[4]` is `undefined`. Because arrays are zero indexed, the last item is always at `length - 1`. That pattern holds for every array you will ever write, so it is worth memorizing: **the last index is the length minus one.**
+
+## Exercises
+
+1. Create an array of three numbers called `myArray`, then use indexing to set `secondItem` to its second item.
+
+    ```{javascript}
+    const myArray = /* Your code here */;
+    const secondItem = /* Your code here */;
+
+    console.log(secondItem);
+    ```
+    ```+solution
+    const myArray = [10, 20, 30];
+    const secondItem = myArray[1];
+
+    console.log(secondItem);
+    ```
+    ```+test
+    wrap(Array.isArray(myArray)).should('equal', true).run('`myArray` should be an array, created with square brackets', 'Created an array');
+    wrap(myArray.length).should('equal', 3).run('`myArray` should contain three numbers', 'The array has three items');
+    wrap(secondItem).should('equal', myArray[1]).run('`secondItem` should be the item at index `1`, which is the second item', 'Indexed the second item');
+    ```
+
+2. Set `lastColor` to the last item of `colors`, without typing the index `2` yourself. Use the array's length so that it would still work if the list got longer.
+
+    ```{javascript}
+    const colors = ['red', 'blue', 'green'];
+
+    const lastColor = /* Your code here */;
+
+    console.log(lastColor);
+    ```
+    ```+solution
+    const colors = ['red', 'blue', 'green'];
+
+    const lastColor = colors[colors.length - 1];
+
+    console.log(lastColor);
+    ```
+    ```+test
+    wrap(lastColor).should('equal', 'green').run('`lastColor` should be `green`, the last item of the array', 'Got the last item');
+    wrap(source.includes('length - 1') || source.includes('length-1')).should('equal', true).run('Use `colors.length - 1` as the index rather than writing `2`', 'Used `length - 1`');
+    ```
+
+3. An array `L` contains three items. What is the value of `L[3]`?
+
+    ```{mcq}
+    `const L = ['a', 'b', 'c'];`. What does `L[3]` evaluate to?
+    correct: Correct! The valid indices are `0`, `1`, and `2`, so index `3` is past the end. JavaScript does not report an error for this; it gives back `undefined`.
+    wrong: Count the indices of a three-item array, starting from zero, and look back at "Indexing".
+    [x] `undefined`
+    [ ] `'c'`
+    [ ] An error stops the script
+    [ ] `3`
+    ```
+
+4. The two arrays below line up: each student's score is at the same index as their name. Charlie is the third student. Set `thirdStudent` and `thirdScore` by indexing the two arrays with that same index.
+
+    ```{javascript}
+    const students = ['Alice', 'Bob', 'Charlie', 'Dana'];
+    const scores =   [98,      85,    95,        100];
+
+    const thirdStudent = /* Your code here */;
+    const thirdScore = /* Your code here */;
+
+    console.log(thirdStudent + ' scored ' + thirdScore);
+    ```
+    ```+solution
+    const students = ['Alice', 'Bob', 'Charlie', 'Dana'];
+    const scores =   [98,      85,    95,        100];
+
+    const thirdStudent = students[2];
+    const thirdScore = scores[2];
+
+    console.log(thirdStudent + ' scored ' + thirdScore);
+    ```
+    ```+test
+    wrap(thirdStudent).should('equal', 'Charlie').run('`thirdStudent` should be `Charlie`. Remember that the third item is at index `2`', 'Got the third student');
+    wrap(thirdScore).should('equal', 95).run('`thirdScore` should be `95`, Charlie\'s score. Use the same index you used for the name', 'Got the matching score');
+    wrap(/thirdStudent\s*=\s*students\s*\[/.test(source)).should('equal', true).run('Set `thirdStudent` by indexing the `students` array rather than typing the name', 'Indexed the students array');
+    wrap(/thirdScore\s*=\s*scores\s*\[/.test(source)).should('equal', true).run('Set `thirdScore` by indexing the `scores` array rather than typing the number', 'Indexed the scores array');
+    ```
+
+5. Set `summary` to `Your cart is empty` when the cart has no items, and otherwise to the number of items followed by ` items in your cart`, such as `2 items in your cart`. Use the array's length rather than counting the items yourself.
+
+    ```{javascript}
+    const cart = ['book', 'pen'];
+    let summary;
+
+    // Write your code here
+
+    console.log(summary);
+    ```
+    ```+solution
+    const cart = ['book', 'pen'];
+    let summary;
+
+    if (cart.length === 0) {
+      summary = 'Your cart is empty';
+    } else {
+      summary = cart.length + ' items in your cart';
+    }
+
+    console.log(summary);
+    ```
+    ```+test
+    wrap(summary).should('equal', '2 items in your cart').run('`summary` should be `2 items in your cart` for this cart', 'Built the summary');
+    wrap(/cart\.length/.test(source)).should('equal', true).run('Use `cart.length` rather than typing the number of items', 'Used cart.length');
+    wrap(source.includes('else')).should('equal', true).run('Handle the empty cart with an `if` and an `else`, so the message would be right for an empty array too', 'Handled the empty case');
+    ```
+
+6. Reaching the last item
+
+    ```{mcq}
+    An array named `items` holds ten items. Which expression gives the last one?
+
+    ~~~javascript
+    const items = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+    ~~~
+
+    correct: Correct! The indices run from `0` to `length - 1`, so the last item is always at `items.length - 1`.
+    wrong: Count the indices. The first item is at `0`, so what is the index of the tenth?
+    [x] `items[items.length - 1]`
+      correct: Right, and this keeps working if the array gets longer or shorter.
+      wrong: This is the one. Ten items means indices `0` through `9`, and `items.length - 1` is `9`.
+    [ ] `items[items.length]`
+      wrong: `items.length` is `10`, but the last valid index is `9`, so this gives `undefined`.
+    [ ] `items[10]`
+      wrong: Index `10` is one past the end of a ten-item array, so this gives `undefined`.
+    [ ] `items[-1]`
+      wrong: Some other languages read `-1` as "count back from the end", but JavaScript does not. There is no item at index `-1`, so this gives `undefined`.
+    ```
+
+## Resources
+
+- [MDN: Array](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array)
+- [MDN: Array length](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/length)
+- [MDN: Indexed collections](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Indexed_collections)

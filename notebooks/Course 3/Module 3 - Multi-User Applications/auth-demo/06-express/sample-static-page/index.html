@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<!-- auth-demo: the grocery search page express.static serves. The search
+     results appear in the browser console. -->
+<html>
+    <body>
+        <input id="query" placeholder="Search groceries" />
+        <input id="maxPrice" placeholder="Max Price" type="number" step="0.01" />
+        <button id="search-btn">Search</button>
+        <script>
+            const queryEl = document.querySelector("#query");
+            const maxPriceEl = document.querySelector("#maxPrice");
+            const searchBtn = document.querySelector("#search-btn");
+
+            searchBtn.addEventListener("click", () => {
+                const params = new URLSearchParams({
+                    query: queryEl.value,
+                    maxPrice: maxPriceEl.value
+                });
+                fetch("/search?" + params.toString())
+                    .then(res => res.json())
+                    .then((data) => {
+                        console.log(data);
+                    });
+            });
+        </script>
+    </body>
+</html>

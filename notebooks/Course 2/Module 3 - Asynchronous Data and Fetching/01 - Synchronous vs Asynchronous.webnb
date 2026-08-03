@@ -1,0 +1,213 @@
+# Synchronous vs. Asynchronous
+
+We have been using callbacks for a while now. This lesson is about *why* JavaScript leans on them so heavily.
+
+Suppose we need to do two **unrelated** tasks, A and B. Unrelated means we do not need A's result in order to do B, or the other way round. There are two styles:
+
+- **Synchronous**: start A, wait for it to finish, then start B.
+- **Asynchronous**: start A, and start B while A is still going.
+
+**JavaScript runs code synchronously.** It is **single-threaded**, which means it can only do one thing at a time. And yet, with callbacks, we get many of the benefits of the asynchronous style.
+
+## One Thing at a Time
+
+That single-threaded fact has a consequence worth stating bluntly: **if JavaScript is stuck on something, nothing else can run.** No other code, no clicks, no typing, no scrolling. To the user, the browser has frozen.
+
+Here is what that looks like. Suppose we want a message to change 5 seconds after a click. Written synchronously, we would need a line that genuinely takes 5 seconds:
+
+```javascript
+function synchronousPause(time) {
+  const startTime = Date.now();
+  while (Date.now() - startTime < time) {
+    // do nothing, just burn time
+  }
+}
+
+button.addEventListener('click', () => {
+  timerContent.textContent = 'Timer started';
+  synchronousPause(5000);                              // takes five seconds
+  timerContent.textContent = 'Five seconds have passed';
+});
+```
+
+(`synchronousPause` is not a real JavaScript function. It is something we wrote to simulate work that takes a long time. `Date.now()` gives the current time in milliseconds; we will meet it properly in the animation module.)
+
+Do not write code like this. Here it is running, with the pause shortened to 1.5 seconds so the demo is bearable. There is a second button that counts its own clicks, so you can see what the freeze does to the rest of the page:
+
+```html id=page1
+<button id="start">Start blocking timer</button>
+<button id="count">Click counter</button>
+<p id="status">Not started.</p>
+<p>Counter: <span id="counter">0</span></p>
+```
+
+```{javascript autorun}
+const startButton = document.querySelector('#start');
+const countButton = document.querySelector('#count');
+const status = document.querySelector('#status');
+const counter = document.querySelector('#counter');
+
+let clicks = 0;
+
+countButton.addEventListener('click', () => {
+  clicks++;
+  counter.textContent = clicks;
+});
+
+function synchronousPause(time) {
+  const startTime = Date.now();
+  while (Date.now() - startTime < time) {
+    // do nothing
+  }
+}
+
+startButton.addEventListener('click', () => {
+  status.textContent = 'Timer started';
+  synchronousPause(1500);
+  status.textContent = 'Time has passed';
+});
+```
+```+id=page1
+```
+
+Click "Start blocking timer" and then immediately hammer the counter button. Nothing happens. The counter does not move, the page does not respond, and you may not even see `Timer started` appear, because the browser never got a chance to redraw. When the 1.5 seconds are up, everything unfreezes at once.
+
+That is one line of JavaScript holding the entire page hostage.
+
+## The Asynchronous Version
+
+Here is the same behavior written properly:
+
+```html id=page2
+<button id="start">Start non-blocking timer</button>
+<button id="count">Click counter</button>
+<p id="status">Not started.</p>
+<p>Counter: <span id="counter">0</span></p>
+```
+
+```{javascript autorun}
+const startButton = document.querySelector('#start');
+const countButton = document.querySelector('#count');
+const status = document.querySelector('#status');
+const counter = document.querySelector('#counter');
+
+let clicks = 0;
+
+countButton.addEventListener('click', () => {
+  clicks++;
+  counter.textContent = clicks;
+});
+
+startButton.addEventListener('click', () => {
+  status.textContent = 'Timer started';
+
+  setTimeout(() => {
+    status.textContent = 'Time has passed';
+  }, 1500);
+
+  console.log('this line runs immediately');
+});
+```
+```+id=page2
+```
+
+Start the timer and hammer the counter again. It counts happily, the status message appears at once, and 1.5 seconds later it updates. Nothing was frozen.
+
+The crucial difference: **the call to `setTimeout` itself takes no time at all.** It runs immediately, hands the browser a callback and a delay, and returns. The waiting is done by the browser, outside our code, and our call stack goes empty so everything else can carry on.
+
+## The General Shape
+
+Zoom out and every one of these functions has the same shape:
+
+- We call some function (`addEventListener`, `setTimeout`, `setInterval`) and give it **when** to act and **what** to do, the callback.
+- That function returns **immediately**. It may hand back some information about the task, like the timer ID `setTimeout` returns, or nothing at all, like `addEventListener`.
+- Later, at the right moment, the browser puts our callback on the queue and it runs. It may be handed detail about what happened, like the event object.
+
+The name says it: a callback is us saying "do not make me wait; call me back when it is time."
+
+Anything that could take a long time in a browser is done this way. Timers are the familiar example. The important one, and the subject of this module, is fetching data over the network, which can take a second or more and must never freeze the page.
+
+## Exercises
+
+1. Make the cell log `first`, `third`, `second`, in that order, using a `setTimeout` with a `100` millisecond delay.
+
+    ```{javascript}
+    console.log('first');
+
+    // Write your code here
+
+    console.log('third');
+    ```
+    ```+solution
+    console.log('first');
+
+    setTimeout(() => {
+      console.log('second');
+    }, 100);
+
+    console.log('third');
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'first,third').run('`first` and `third` should be logged straight away, in that order', 'The synchronous logs came first');
+    setTimeout(() => {
+      wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'first,third,second').run('`second` should be logged last, from inside a `setTimeout` callback', 'The delayed log arrived last');
+    }, 300);
+    ```
+
+2. Rewrite this blocking code so it does not freeze the page. The message should still change after `100` milliseconds.
+
+    ```html id=page3
+    <p id="status">idle</p>
+    ```
+
+    ```{javascript}
+    const status = document.querySelector('#status');
+
+    function synchronousPause(time) {
+      const startTime = Date.now();
+      while (Date.now() - startTime < time) {
+        // do nothing
+      }
+    }
+
+    status.textContent = 'working';
+    synchronousPause(100);
+    status.textContent = 'done';
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const status = document.querySelector('#status');
+
+    status.textContent = 'working';
+
+    setTimeout(() => {
+      status.textContent = 'done';
+    }, 100);
+    ```
+    ```+test
+    wrap(source.includes('while')).should('equal', false).run('Remove the blocking `while` loop entirely', 'No blocking loop left');
+    wrap(source.includes('setTimeout')).should('equal', true).run('Use `setTimeout` to schedule the change instead', 'Used setTimeout');
+    assert('#status').should('have.text', 'working').run('Straight after the cell runs, the message should read `working`', 'The first message shows immediately');
+    setTimeout(() => {
+      assert('#status').should('have.text', 'done').run('After the delay the message should read `done`', 'The delayed change happened');
+    }, 300);
+    ```
+
+3. How long does the line `setTimeout(callback, 5000);` take to run?
+
+    ```{mcq}
+    A script reaches the line `setTimeout(callback, 5000);`. How long before the *next* line of that script runs?
+    correct: Correct! `setTimeout` registers the timer and returns straight away. The five seconds are counted by the browser, not spent inside your code, which is exactly why the page stays responsive.
+    wrong: Look back at "The Asynchronous Version" and what is said about how long the call itself takes.
+    [x] Essentially no time at all; the next line runs immediately
+    [ ] Five seconds
+    [ ] Five seconds, but only if the callback is long
+    [ ] It depends on how many other timers are running
+    ```
+
+## Resources
+
+- [MDN: Introducing asynchronous JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Introducing)
+- [MDN: setTimeout()](https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout)
+- [MDN: The event loop](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Execution_model)

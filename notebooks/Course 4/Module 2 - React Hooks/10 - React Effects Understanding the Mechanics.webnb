@@ -1,0 +1,250 @@
+# React Effects: Understanding the Mechanics
+
+`useEffect` has three behaviors that have so far been presented as rules: it runs after the render, it re-runs only when a dependency changes, and its cleanup runs before the next run. In the video, we built it into freact, and all three turn out to be consequences of about forty lines of code.
+
+The finished project is in this module's `freact/06-effects/` folder, next to this notebook -- the last stage of the fake React we have been growing since Module 1. To watch it run, right-click `index.html` in that folder and choose "Show Preview", then click anywhere on the page: the component counts clicks on the whole window, which is exactly the kind of job that needs an effect.
+
+## What an Effect Hook Stores
+
+`useState` keeps a value in its slot and `useRef` keeps a box. An effect keeps a small record:
+
+```javascript
+{
+  deps: [ ...the dependency values from the last run... ],
+  cleanup: /* the function the last run returned, if any */
+}
+```
+
+Those two fields answer the two questions freact faces on every render: **should this effect run again?**, which is a comparison of dependency arrays, and **what has to be undone first?**, which is the stored cleanup.
+
+## Deciding Whether to Run
+
+```{walkthrough}
+title: useEffect, part one: the decision
+step: Comparing dependencies
+file: freact/06-effects/freact.js
+region: must-run
+Three branches, and the dependency rules you memorized fall out of them.
+@"!oldHook": No record in the slot means this is the first render, so the effect always runs.
+@"deps[i] !== oldHook.deps[i]": This render's dependencies, compared one by one against the ones remembered from last time. One difference is enough, and the loop `break`s out early.
+@"if (deps) {": The dependency array is optional. When there is none, the `else` below makes the effect run after every render, no questions asked -- that is what our App does.
+@"mustRunEffect = depChanged": With a dependency array, "run again" means exactly "something in the array changed". Now read this branch with an *empty* array in mind: `[]` has no elements, nothing can ever differ, so the effect runs once and never again. That is where the "empty array means run on mount" rule comes from -- it is not a special case in the code.
+```
+
+Note the comparison operator: `!==`. Dependencies are compared by identity, which is why a fresh object or array in the dependency list re-runs the effect every render even when its contents look the same.
+
+## Running It at the Right Time
+
+The one thing `useEffect` must not do is run the effect where it is called. It is called **during** render, while `_createDomNode` is calling your component; effects run **after** the DOM is updated. So instead of running anything, the hook queues it.
+
+```{walkthrough}
+title: useEffect, part two: the queue
+step: What gets queued
+file: freact/06-effects/freact.js
+region: queue-effect
+When the effect must run, the hook records this render's dependency values and pushes a small package onto the queue. Nothing is executed here.
+@"hooks[idx].deps = deps": The remembered dependencies for *next* render's comparison.
+@"effectsQueue.push": The package: the effect function itself, a reference to this hook's record, and the previous cleanup.
+@"addToQueue.cleanup = oldHook.cleanup": The cleanup that the *last* run returned rides along, so it can be undone before the new run.
+
+step: The queue itself
+file: freact/06-effects/freact.js
+region: effects-queue
+One module-level array, next to the root component and container.
+@"let effectsQueue": Emptied at the start of every render, filled during it by useEffect calls, drained after the DOM is rebuilt.
+
+step: Draining it after the render
+file: freact/06-effects/freact.js
+region: run-effects
+The last lines of `_performRender`, running after the new DOM is on the page. Read the order inside the loop carefully; everything about cleanup follows from it.
+@"cleanup();": The previous run is undone first. The old listener, timer, or subscription is gone before its replacement exists, so the two never overlap.
+@"effect() || undefined": Now the effect runs -- this is the "after the render" moment -- and whatever it returns is kept. An effect that returns nothing stores `undefined`, meaning there is nothing to undo next time.
+@"hookRef.cleanup = newCleanup": The new cleanup is written back into the hook's record through the reference that rode along in the queue, ready for the next run.
+```
+
+## The Component
+
+```{walkthrough}
+title: A window-wide click counter
+file: freact/06-effects/App.jsx
+The component from the video. A click listener on `window` cannot be written as an `onClick` prop on any element, so it is a side effect, set up after render and torn down before the next one.
+@"useEffect(() => {": No dependency array is passed, so this effect runs after every render: cleanup, then set up again, each time.
+@"window.addEventListener": The effect itself: subscribe to clicks anywhere on the page.
+@"setClickCount((c) => c + 1)": The updater form from the state reading. A listener's callback can run long after the render that created it, so it should not trust a captured `clickCount`; asking the slot for the current value keeps it correct no matter which render installed the listener.
+@"return () => {": The cleanup, removing exactly the listener this run added. Delete this `return` and every render adds one more listener -- each click then jumps the count by more than one, faster and faster. Try it in the preview; that is the bug cleanup exists to prevent.
+```
+
+Preview the page and click a few times. Each click runs the state setter, which schedules a re-render; the re-render calls `App`, which calls `useEffect`, which queues the effect; and after the DOM is rebuilt, the old listener comes off and a fresh one goes on. The count climbs by exactly one per click because at every moment there is exactly one listener.
+
+## The Same in Real React
+
+```{react autorun}
+function StatusTitle() {
+  const [status, setStatus] = React.useState('Ready');
+
+  React.useEffect(() => {
+    console.log('effect ran for status=' + status);
+
+    return () => console.log('cleaning up status=' + status);
+  }, [status]);
+
+  return <button onClick={() => setStatus('Saved')}>{status}</button>;
+}
+
+renderReact(<StatusTitle />);
+```
+
+Click the button and read the console: cleanup for `Ready`, then the effect for `Saved`, in that order. Exactly the queue loop you just read, with `[status]` deciding when it happens.
+
+## Exercises
+
+1. Write the dependency comparison. Return `true` when the effect has to run again.
+
+    ```{javascript}
+    function mustRun(oldHook, deps) {
+      // TODO:
+      //   no oldHook          -> true  (first render)
+      //   no deps array       -> true  (run every render)
+      //   otherwise           -> true only if some dependency differs
+      //                          from the matching one in oldHook.deps
+    }
+
+    const first = mustRun(undefined, [1]);
+    const unchanged = mustRun({ deps: [1] }, [1]);
+    const changed = mustRun({ deps: [1] }, [2]);
+    const empty = mustRun({ deps: [] }, []);
+    const noArray = mustRun({ deps: undefined }, undefined);
+
+    console.log(first, unchanged, changed, empty, noArray);
+    ```
+    ```+solution
+    function mustRun(oldHook, deps) {
+      if (!oldHook) {
+        return true;
+      }
+
+      if (!deps) {
+        return true;
+      }
+
+      for (let i = 0; i < deps.length; i++) {
+        if (deps[i] !== oldHook.deps[i]) {
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    const first = mustRun(undefined, [1]);
+    const unchanged = mustRun({ deps: [1] }, [1]);
+    const changed = mustRun({ deps: [1] }, [2]);
+    const empty = mustRun({ deps: [] }, []);
+    const noArray = mustRun({ deps: undefined }, undefined);
+
+    console.log(first, unchanged, changed, empty, noArray);
+    ```
+    ```+test
+    wrap(first).should('equal', true).run('With no previous hook it is the first render, so the effect must run', 'Runs on the first render');
+    wrap(unchanged).should('equal', false).run('When every dependency matches the previous one, the effect should be skipped', 'Skips when nothing changed');
+    wrap(changed).should('equal', true).run('When a dependency differs, the effect must run again', 'Runs when a dependency changed');
+    wrap(empty).should('equal', false).run('An empty array has nothing that can differ, which is why `[]` means run once', 'Handles the empty array');
+    wrap(noArray).should('equal', true).run('With no dependency array at all, the effect should run after every render', 'Handles a missing array');
+    ```
+
+2. Complete the queue loop so each effect's previous cleanup runs first and the new cleanup is remembered.
+
+    ```{javascript}
+    const events = [];
+
+    const hookRecord = { cleanup: function () { events.push('old cleanup'); } };
+
+    const queue = [
+      {
+        hookRef: hookRecord,
+        cleanup: hookRecord.cleanup,
+        effect: function () {
+          events.push('effect');
+
+          return function () { events.push('new cleanup'); };
+        }
+      }
+    ];
+
+    for (const item of queue) {
+      // TODO: run item.cleanup() if there is one, then run item.effect()
+      // and store whatever it returned on item.hookRef.cleanup
+    }
+
+    // Later, something triggers the stored cleanup.
+    hookRecord.cleanup();
+
+    console.log(events.join(' -> '));
+    ```
+    ```+solution
+    const events = [];
+
+    const hookRecord = { cleanup: function () { events.push('old cleanup'); } };
+
+    const queue = [
+      {
+        hookRef: hookRecord,
+        cleanup: hookRecord.cleanup,
+        effect: function () {
+          events.push('effect');
+
+          return function () { events.push('new cleanup'); };
+        }
+      }
+    ];
+
+    for (const item of queue) {
+      if (item.cleanup) {
+        item.cleanup();
+      }
+
+      const newCleanup = item.effect() || undefined;
+
+      item.hookRef.cleanup = newCleanup;
+    }
+
+    // Later, something triggers the stored cleanup.
+    hookRecord.cleanup();
+
+    console.log(events.join(' -> '));
+    ```
+    ```+test
+    wrap(events[0]).should('equal', 'old cleanup').run('The previous cleanup should run before the effect, so the old subscription is gone before the new one starts', 'Cleaned up first');
+    wrap(events[1]).should('equal', 'effect').run('The effect should run after the cleanup', 'Ran the effect');
+    wrap(events[2]).should('equal', 'new cleanup').run('Store what the effect returned on `hookRef.cleanup`, so it can be run next time', 'Remembered the new cleanup');
+    ```
+
+3. Why a queue
+
+    ```{mcq}
+    `useEffect` pushes the effect onto a queue instead of calling it. Why can it not just run the effect where it is called?
+    correct: Correct! `useEffect` is called while the component is rendering, and effects are meant to run after the DOM has been updated. Queueing them lets `_performRender` drain the queue at the right moment.
+    wrong: Think about when your component function runs, relative to when the DOM exists. Look back at "Running It at the Right Time".
+    [x] It is called during render, and effects must run after the DOM is updated
+    [ ] Calling it directly would be too slow
+    [ ] The effect function is not available yet at that point
+    [ ] React runs effects on a different thread
+    ```
+
+4. Where "run once" comes from
+
+    ```{mcq}
+    Nothing in freact's code says "only run on mount", yet an effect with `[]` runs exactly once. Where does that behavior come from?
+    correct: Correct! The loop compares each dependency with the previous one. An empty array has no elements, so nothing can ever differ, `depChanged` stays false, and the effect is never queued again.
+    wrong: Trace the comparison loop with an array of length zero and see how many times the body runs.
+    [x] The comparison loop has nothing to compare, so no change is ever detected
+    [ ] React special-cases the empty array
+    [ ] The empty array is treated as `undefined`
+    [ ] Effects with `[]` are removed from the hooks array after the first render
+    ```
+
+## Resources
+
+- [React Docs: Synchronizing with effects](https://react.dev/learn/synchronizing-with-effects)
+- [React Docs: Lifecycle of reactive effects](https://react.dev/learn/lifecycle-of-reactive-effects)
+- [React Docs: useEffect](https://react.dev/reference/react/useEffect)

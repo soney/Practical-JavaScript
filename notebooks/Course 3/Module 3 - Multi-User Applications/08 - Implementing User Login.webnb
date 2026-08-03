@@ -1,0 +1,238 @@
+# Implementing User Login
+
+Registration stores an account. **Login** checks that whoever is asking knows that account's password.
+
+This reading's snapshot is `auth-demo/02-login/`, which picks up exactly where `01-registration/` left off: same server, same database, plus the login half of the site.
+
+## The Login Page
+
+In the video, `login.html` began life as a copy of `register.html`, and it shows. Four edits separate them: the heading, the form's id, the button label, and the endpoint the form posts to.
+
+```{walkthrough}
+title: static/login.html
+step: The form
+file: auth-demo/02-login/static/login.html
+region: form
+@"loginForm": The id changes so the page's script can say which form it means. The email and password inputs are untouched.
+@"Log In</button>": The label is the only other visible difference from the registration form.
+
+step: The script
+file: auth-demo/02-login/static/login.html
+region: script
+@'fetch("/login"': The one working difference: the same POST, the same JSON body of `{ email, password }`, aimed at `/login` instead of `/register`.
+@"status.textContent": For now the answer is only displayed. "Login successful" on its own is not much of a prize; making the site actually *remember* the login is the sessions reading, two ahead.
+```
+
+## The `/login` Endpoint
+
+The server grows one new branch, and it reads like the registration endpoint's mirror image: instead of refusing a duplicate and storing a new user, it looks the user up and checks the password.
+
+```{walkthrough}
+title: POST /login
+file: auth-demo/02-login/server.js
+region: login
+@"const { email, password }": The two commented lines above are what this line replaces. It is **object destructuring**: take the `email` property out of `data` and declare a variable called `email`, then the same for `password`. It is the same syntax as `const { WebSocketServer } = require('ws')` from Module 1, and the names in the braces have to match the property names, because that is how it knows what to take.
+@"toLowerCase": Compare emails in a single case on both sides. Register as `Soney@umich.edu`, log in as `soney@umich.edu`, and without this the account cannot be found, because `===` on strings is exact. People do not remember how they capitalized their email address, and nobody expects it to matter.
+@"TODO: fix. Do not compare": Checking the password is one `===` for now, plain text against plain text, and the comment says what it says. The next reading replaces this line.
+@"Login successful!": A correct password answers `200`.
+@"same message as below": Both ways to fail answer `401 Unauthorized` with the identical body. That is deliberate, and the next section is about why.
+```
+
+## Do Not Say Which Half Failed
+
+The video's first version of this endpoint had two failure messages: `No such user` when the email was not found, and `Incorrect password` when it was. More helpful, and an attacker can use it.
+
+They type an email address they are curious about with any password at all. If the answer is "incorrect password", the account exists. If it is "no such user", it does not. Repeat with a list of addresses and you have learned who has an account on this site. That is called **account enumeration**, and for many sites the mere fact that someone has an account is information they would not want shared: a dating site, a support forum, a medical service.
+
+So the endpoint above gives one message, deliberately vague, for both cases: `Invalid credentials`. It is mildly less helpful to a user who has forgotten which email they signed up with, and that is the trade every serious site makes.
+
+## Case-Insensitive in Both Places
+
+The `toLowerCase()` fix belongs in two places, and the second is the one people forget:
+
+```{walkthrough}
+title: The same fix in /register
+file: auth-demo/02-login/server.js
+region: register
+The registration endpoint, unchanged from stage 1 except for one line.
+@"toLowerCase": The duplicate check now ignores case too. Without this, `User@company.com` and `user@company.com` would become two different accounts, and then the case-insensitive login would find whichever one happens to come first.
+```
+
+## The Whole Check, Running
+
+```{node autorun}
+const users = [
+  { email: 'Soney@umich.edu', password: 'my secret password' }
+];
+
+function login(email, password) {
+  const foundUser = users.find(
+    (user) => user.email.toLowerCase() === email.toLowerCase()
+  );
+
+  if (foundUser && foundUser.password === password) {
+    return '200 Login successful';
+  }
+
+  return '401 Invalid credentials';
+}
+
+console.log(login('soney@umich.edu', 'my secret password'));
+console.log(login('SONEY@UMICH.EDU', 'my secret password'));
+console.log(login('soney@umich.edu', 'wrong'));
+console.log(login('nobody@umich.edu', 'anything'));
+```
+
+The first two succeed despite the capitalization. The last two fail identically, which is the point: from outside, there is no way to tell which of them was a real account.
+
+One wrinkle worth naming: this cell folds the two checks into `foundUser && foundUser.password === password`, where the server nests two `if`s. Both are safe when the user is missing, because `&&` stops at the first falsy value, so `foundUser.password` is never read from `undefined`. Try changing the stored email's capitalization and running the cell again.
+
+## Running It Yourself
+
+Stop whatever stage is running (`Ctrl+C`), then, from the `auth-demo` folder:
+
+```
+$ node 02-login/server.js
+Listening on port 3000
+```
+
+Each stage keeps its own `users.json`, so this one starts empty. At `http://localhost:3000`:
+
+1. Register an account first, with any capitalization you like.
+2. Log in with the wrong password: `Invalid credentials`.
+3. Log in with an email you never registered: `Invalid credentials` again, and in the Network tab the two responses are indistinguishable, status and body alike.
+4. Log in correctly, but capitalize the email differently than when you registered. It works, because both sides of the comparison went through `toLowerCase()`.
+
+We can now register and log in. The glaring problem left is the one both TODOs point at: `users.json` still holds every password in plain text. That is the next reading.
+
+## Exercises
+
+1. Pull `email` and `password` out of the parsed body using destructuring.
+
+    ```{javascript}
+    const data = JSON.parse('{"email":"user@company.com","password":"abc123"}');
+
+    // TODO: declare email and password from data, in one line
+
+    console.log(email, password);
+    ```
+    ```+solution
+    const data = JSON.parse('{"email":"user@company.com","password":"abc123"}');
+
+    const { email, password } = data;
+
+    console.log(email, password);
+    ```
+    ```+test
+    wrap(email).should('equal', 'user@company.com').run('`email` should hold the email from `data`', 'Read the email');
+    wrap(password).should('equal', 'abc123').run('`password` should hold the password from `data`', 'Read the password');
+    wrap(/const\s*\{[^}]*email[^}]*password[^}]*\}\s*=\s*data/.test(source)).should('equal', true).run('Use destructuring: `const { email, password } = data;`', 'Used destructuring');
+    ```
+
+2. Complete `login` so that it is case insensitive about the email and gives nothing away when it fails.
+
+    ```{node}
+    const users = [
+      { email: 'Grace@example.com', password: 'letmein' }
+    ];
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, body: '' };
+
+      sent.writeHead = function (code) {
+        sent.statusCode = code;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function login(email, password, response) {
+      // TODO: find the user, ignoring the case of the email address.
+      // On a match answer 200 with 'Login successful'.
+      // On any failure answer 401 with 'Invalid credentials'.
+    }
+
+    const ok = makeFakeResponse();
+    login('grace@example.com', 'letmein', ok);
+
+    console.log(ok.statusCode + ' ' + ok.body);
+    ```
+    ```+solution
+    const users = [
+      { email: 'Grace@example.com', password: 'letmein' }
+    ];
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, body: '' };
+
+      sent.writeHead = function (code) {
+        sent.statusCode = code;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function login(email, password, response) {
+      const foundUser = users.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase()
+      );
+
+      if (foundUser && foundUser.password === password) {
+        response.writeHead(200);
+        response.end('Login successful');
+      } else {
+        response.writeHead(401);
+        response.end('Invalid credentials');
+      }
+    }
+
+    const ok = makeFakeResponse();
+    login('grace@example.com', 'letmein', ok);
+
+    console.log(ok.statusCode + ' ' + ok.body);
+    ```
+    ```+test
+    wrap(ok.statusCode + '|' + ok.body).should('equal', '200|Login successful').run('The stored email is `Grace@example.com`, so a lowercase attempt should still match. Compare `toLowerCase()` on both sides', 'Logged in despite the capitalization');
+    wrap((function () { const r = makeFakeResponse(); login('GRACE@EXAMPLE.COM', 'letmein', r); return r.statusCode; })()).should('equal', 200).run('Any capitalization of the same address should work', 'Case insensitive in general');
+    wrap((function () { const r = makeFakeResponse(); login('grace@example.com', 'wrong', r); return r.statusCode + '|' + r.body; })()).should('equal', '401|Invalid credentials').run('A wrong password should answer `401` with `Invalid credentials`', 'Refused the wrong password');
+    wrap((function () { const r = makeFakeResponse(); login('nobody@example.com', 'letmein', r); return r.statusCode + '|' + r.body; })()).should('equal', '401|Invalid credentials').run('An unknown email should give exactly the same answer as a wrong password, so that neither can be told apart', 'Gave nothing away');
+    ```
+
+3. What does `const { email, password } = data;` do?
+
+    ```{mcq}
+    What is that syntax for?
+    correct: Correct! It is object destructuring: a shorthand for taking several properties out of an object and declaring a variable for each, using the property names.
+    wrong: Compare it with the two separate lines it replaces.
+    [x] It extracts several properties from an object into variables of the same names
+    [ ] It encrypts the email and password
+    [ ] It tells the database to look only at those two fields
+    [ ] It stops the user from entering an incorrect password
+    ```
+
+4. Why answer with a single vague `Invalid credentials` instead of saying whether the email or the password was wrong?
+
+    ```{mcq}
+    What does the vague message protect?
+    correct: Correct! Different messages let someone test email addresses to find out which have accounts, which is account enumeration. For plenty of sites, the existence of an account is itself private.
+    wrong: Imagine someone typing in a list of email addresses with a made-up password, and reading the replies.
+    [x] It prevents account enumeration, where an attacker discovers which email addresses have accounts
+    [ ] It keeps the response body small
+    [ ] It makes the code faster by using fewer `if` statements
+    [ ] The `401` status requires that exact wording
+    ```
+
+## Resources
+
+- [MDN: destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring)
+- [MDN: 401 Unauthorized](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/401)
+- [OWASP: authentication cheat sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html)
+- [MDN: String.prototype.toLowerCase()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase)

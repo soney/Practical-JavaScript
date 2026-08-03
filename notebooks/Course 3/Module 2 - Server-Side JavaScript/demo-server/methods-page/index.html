@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>HTTP methods</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <h1>Choosing the method</h1>
+
+    <p>
+      Keep the server's terminal where you can see it, and open the Network
+      tab. Every button in this row asks for the same file, with a
+      different method:
+    </p>
+
+    <!-- #region method-buttons -->
+    <button id="get-btn">GET /something.txt</button>
+    <button id="post-btn">POST /something.txt</button>
+    <button id="put-btn">PUT /something.txt</button>
+    <button id="delete-btn">DELETE /something.txt</button>
+    <!-- #endregion -->
+
+    <p>These two ask for <code>/users</code>, a route that reads the method:</p>
+
+    <!-- #region users-buttons -->
+    <button id="get-users-btn">GET /users</button>
+    <button id="post-users-btn">POST /users</button>
+    <!-- #endregion -->
+
+    <p>The server answered: <strong id="output">nothing yet</strong></p>
+
+    <script src="script.js"></script>
+  </body>
+</html>

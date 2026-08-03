@@ -1,0 +1,136 @@
+# Licensing
+
+A library's **license** is what determines, legally, what you are allowed to do with its code. It answers questions like:
+
+- Can I use this in software I sell for money?
+- If I modify it, what may I do with my modified version?
+- Do I have to credit anyone, or publish anything of my own?
+
+Virtually every JavaScript library you will use is **open source**, meaning its code is available for anyone to read. That is not the same as "you may do anything with it". Open source projects still carry licenses, and those licenses differ.
+
+Among open source licenses there are two broad families.
+
+## Permissive Licenses
+
+These are sometimes called MIT-style or BSD-style. The family includes **MIT**, **Apache 2.0**, **BSD**, and **ISC**, among others, and this is by far the most common kind of license on JavaScript libraries.
+
+A permissive license lets you use the code for essentially any purpose, including commercial and closed-source software. The MIT license is short enough to read in a minute, and it says three things:
+
+1. You may do what you like with this code, including selling it.
+2. The author is not responsible if anything goes wrong.
+3. Keep this notice and the attribution with the code.
+
+Different permissive licenses word this differently and vary in the details of what attribution they require, but that is the shape of all of them.
+
+## Copyleft Licenses
+
+These are usually called GPL-style, after the **GPL**. The text is much longer than MIT's, and the core rule is different: if you use GPL code in your project and you distribute your project, **your whole project has to be open source under the GPL as well**.
+
+The intent is a kind of reciprocity: I share my work freely, and anything built on it stays shared freely too. Whether that fits your situation is your call, but it is a genuine constraint rather than a formality, and it is why a company shipping closed-source software will usually rule GPL libraries out.
+
+Copyleft is much less common in the JavaScript ecosystem than permissive licensing.
+
+## Finding the License
+
+Where it lives depends on the project.
+
+- Some libraries state it right where you download them. On the Lodash site the license is listed under the downloads, with a link to the full text, which turns out to be the MIT license.
+- Some do not. D3 does not link a license from its site, so you go to its GitHub repository, where the convention is a file named **`LICENSE`**, usually in capitals. D3's is the **ISC** license.
+- GitHub also shows a plain-language summary next to the file. For ISC it says the license is permissive and functionally equivalent to BSD 2-Clause and MIT, with some language removed that was no longer necessary.
+- An npm package also declares its license in its `package.json`:
+
+```json
+{
+  "name": "lodash",
+  "version": "4.17.21",
+  "license": "MIT"
+}
+```
+
+It is worth developing the habit of checking, especially if you are working somewhere with a legal department. Permissive licenses rarely cause problems, but the specifics can matter depending on how you are using the code.
+
+And the other direction: if you publish code of your own, include a license. Without one, people who would happily use your work have no idea whether they are allowed to.
+
+## Exercises
+
+1. Write `mustOpenSourceMyProject`, which returns `true` when using a library under the given license would require your own project to be open source.
+
+    ```{javascript}
+    const copyleft = ['GPL-2.0', 'GPL-3.0', 'AGPL-3.0'];
+
+    function mustOpenSourceMyProject(license) {
+      // TODO: return true only for the copyleft licenses above
+      return false;
+    }
+
+    console.log(mustOpenSourceMyProject('MIT'));
+    console.log(mustOpenSourceMyProject('GPL-3.0'));
+    ```
+    ```+solution
+    const copyleft = ['GPL-2.0', 'GPL-3.0', 'AGPL-3.0'];
+
+    function mustOpenSourceMyProject(license) {
+      return copyleft.includes(license);
+    }
+
+    console.log(mustOpenSourceMyProject('MIT'));
+    console.log(mustOpenSourceMyProject('GPL-3.0'));
+    ```
+    ```+test
+    wrap(mustOpenSourceMyProject('GPL-3.0')).should('equal', true).run('A GPL license does require your project to be open source', 'Caught the copyleft license');
+    wrap(mustOpenSourceMyProject('AGPL-3.0')).should('equal', true).run('Every license in the `copyleft` list should return `true`', 'Caught all the copyleft licenses');
+    wrap(mustOpenSourceMyProject('MIT')).should('equal', false).run('MIT is permissive, so it does not require this', 'Allowed MIT');
+    wrap(mustOpenSourceMyProject('ISC')).should('equal', false).run('ISC is permissive too, and is not in the list', 'Allowed ISC');
+    ```
+
+2. Here are the files in a library's GitHub repository. Log the name of the file you would open to find out how you may use the code.
+
+    ```{javascript}
+    const files = ['README.md', 'package.json', 'LICENSE', 'src', 'CONTRIBUTING.md'];
+
+    // Write your code here
+    ```
+    ```+solution
+    const files = ['README.md', 'package.json', 'LICENSE', 'src', 'CONTRIBUTING.md'];
+
+    for (const file of files) {
+      if (file === 'LICENSE') {
+        console.log(file);
+      }
+    }
+    ```
+    ```+test
+    check.consoleLogged('LICENSE').run('The license lives in a file named `LICENSE`, conventionally in capitals', 'Found the license file');
+    wrap(console.history().length).should('equal', 1).run('Log only the license file, not the whole list', 'Logged just the one file');
+    ```
+
+3. You are building a closed-source commercial application for a client. Which kind of open source license is the safe choice for a library you want to use?
+
+    ```{mcq}
+    Which license family lets you keep your own source code private?
+    correct: Correct! Permissive licenses such as MIT and BSD allow commercial and closed-source use, so nothing you write has to be published.
+    wrong: One of the two families requires your project to be open source if you distribute it.
+    [x] A permissive license, such as MIT or BSD
+    [ ] A copyleft license, such as the GPL
+    [ ] Any license, since open source means there are no restrictions on commercial use
+    [ ] No license at all, since unlicensed code is the most flexible
+    ```
+
+4. You find a useful library on GitHub, and there is no license mentioned on its page. What should you do?
+
+    ```{mcq}
+    No license is visible. What is the right next step?
+    correct: Correct! Look for a `LICENSE` file in the repository, usually in capitals, or the summary GitHub shows beside it. Code with no license at all is not automatically free to use, so this is worth resolving before you depend on it.
+    wrong: Think about where the license text lives when a project does not advertise it on its front page.
+    [x] Look for a `LICENSE` file in the repository, or a license summary on the project page
+    [ ] Assume it is public domain and use it however you like
+    [ ] Use it for personal projects only, since that never requires a license
+    [ ] Email the author to say that unlicensed code has no legal protection
+    ```
+
+## Resources
+
+- [Choose an open source license](https://choosealicense.com/)
+- [GitHub: licensing a repository](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/licensing-a-repository)
+- [npm: the package.json license field](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#license)
+- [Open Source Initiative: licenses](https://opensource.org/licenses)

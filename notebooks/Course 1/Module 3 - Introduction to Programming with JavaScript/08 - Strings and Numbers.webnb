@@ -1,0 +1,152 @@
+# Strings and Numbers
+
+Recall where we are: we write **expressions**, the JavaScript engine evaluates them and computes a **value**, and every value has a **type**. A type is essentially a category of data, and different types are suitable for representing different kinds of information.
+
+This lesson covers the two most common and important types in JavaScript. **Numbers** represent quantities. **Strings** represent text, which might be a single letter, a word, a sentence, a whole paragraph, or more.
+
+## Literal Expressions
+
+Both of them are usually written as **literal expressions**, which means expressions whose value is the same as the expression itself. There is no arithmetic to do and nothing to look up: you write `42`, and the value is `42`.
+
+```{javascript autorun}
+console.log(42);
+```
+
+That is different from an expression like `1 + 2 + 3`, where the engine has work to do before it arrives at `6`. Every example in this lesson is a literal.
+
+## Numbers
+
+A number literal is written the way you would write the number on paper. JavaScript has one number type, and it covers all of these:
+
+```{javascript autorun}
+console.log(100);    // a whole number
+console.log(10.5);   // a decimal, sometimes called a floating point number
+console.log(-50);    // a negative number, written with a leading dash
+```
+
+Try changing the values, or adding a line with a number of your own, and running the cell again.
+
+## Strings
+
+A string literal has to **start and end with the same quotation character**. There are three you can use: a double quote, a single quote, or a backtick. We will save backticks for later, since they can do something extra; for now, use whichever of the other two suits the text.
+
+```{javascript autorun}
+console.log("this is a string");
+console.log('this is a string');
+console.log('Ann Arbor');
+console.log('12 eggs');
+```
+
+Double quotes and single quotes produce exactly the same value, so `"Ann Arbor"` and `'Ann Arbor'` are the same string. Strings can hold spaces, several words, punctuation, and digits.
+
+### Choosing Between Single and Double Quotes
+
+If the two styles are equivalent, why would you pick one over the other? Because of what is *inside* the text.
+
+If the text contains a single quote, such as an apostrophe, start and end with double quotes. If the text contains a double quote, start and end with single quotes.
+
+```{javascript autorun}
+console.log("Steve's car");
+console.log('Steve said "Hello"');
+```
+
+The reason is that the engine ends the string at the first matching quote it sees. If you wrote `'Steve's car'`, the engine would read `'Steve'` as a complete string and then be left with `s car'`, which is not valid JavaScript at all.
+
+### Escaping With a Backslash
+
+Sometimes you want a quote character inside a string that is already using that style. The special character for this is the **backslash**, `\`. Putting a backslash before a quote tells the engine that this quote is part of the text and does not end the string:
+
+```{javascript autorun}
+console.log("Steve said \"Hello\"");
+console.log('Steve\'s car');
+```
+
+Both of those work. But notice that in each case the easier option was available: switch to the other quote style and no backslashes are needed at all. Reach for the backslash when the text contains both kinds of quote.
+
+### Mixing Quote Types Is an Error
+
+What you cannot do is start with one style and end with the other. Run this cell and read the error:
+
+```{javascript}
+console.log("this is a string');
+```
+
+The engine reports that the string is not properly formatted, because it never found a closing double quote. Fix it by making both ends match, then run it again.
+
+### Anything Between Quotes Is a String
+
+As long as you start and end with matching quotes, whatever sits in between is a string, no matter what it looks like:
+
+```{javascript autorun}
+console.log('');       // an empty string: no text at all, still a string
+console.log(' ');      // a single space
+console.log('42');     // digits, but still a string
+console.log("'");      // a single quote character, inside double quotes
+```
+
+## Telling Numbers and Strings Apart
+
+The last two lines above are worth dwelling on. Compare these:
+
+```{javascript autorun}
+console.log(42);
+console.log('42');
+```
+
+In the console those two lines look almost identical, but they are values of completely different types. One is a quantity; the other is two characters of text that happen to be digits. What you can *do* with them differs accordingly, and in the next lesson, when we start adding things together, that difference will produce results that surprise you if you are not watching for it.
+
+There is a small operator that tells you which is which: **`typeof`**, which reports the type of a value.
+
+```{javascript autorun}
+console.log(typeof 42);
+console.log(typeof '42');
+console.log(typeof 'Ann Arbor');
+console.log(typeof 3.14);
+```
+
+Numbers and strings are the two types we will lean on most. There are more, and we will meet them over the rest of this module, but these two are foundational.
+
+## Exercises
+
+1. Log the text `It's cold in Ann Arbor` to the console. Note the apostrophe in `It's`, and pick your quotes accordingly.
+
+    ```{javascript}
+    console.log();
+    ```
+    ```+solution
+    console.log("It's cold in Ann Arbor");
+    ```
+    ```+test
+    check.consoleLogged("It's cold in Ann Arbor").run('The cell should log `It\'s cold in Ann Arbor`', 'Logged the text with its apostrophe');
+    ```
+
+2. The line below mixes quote styles, so it does not run. Fix it so the cell logs `Go Blue`.
+
+    ```{javascript}
+    console.log("Go Blue');
+    ```
+    ```+solution
+    console.log('Go Blue');
+    ```
+    ```+test
+    check.consoleLogged(/^Go Blue$/).run('Make both ends of the string use the same quote character', 'Fixed the quotes');
+    ```
+
+3. Which of these expressions produce a value of type `string`?
+
+    ```{mcq}
+    Select every expression whose value is a string. (Select all that apply)
+    correct: Correct! Anything between a matching pair of quotes is a string, including digits and including nothing at all. A bare `42` is a number, and an expression that starts and ends with different quote characters is not a valid string at all.
+    wrong: Revisit "Anything Between Quotes Is a String" and "Mixing Quote Types Is an Error".
+    [x] `'42'`
+    [x] `''`
+    [ ] `42`
+    [ ] `"Ann Arbor'`
+    ```
+
+## Resources
+
+- [MDN: String](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String)
+- [MDN: Number](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number)
+- [MDN: JavaScript data types and structures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures)
+- [MDN: typeof](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof)

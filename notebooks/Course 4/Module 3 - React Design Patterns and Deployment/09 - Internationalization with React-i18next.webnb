@@ -1,0 +1,273 @@
+# Internationalization with React-i18next
+
+**Internationalization** is the practice of building a UI that can present its text in more than one language. The word is long enough that it is usually abbreviated **i18n**: an `i`, then 18 more letters, then an `n`. Instead of hard-coding English strings into our JSX, we store every message in a set of *translation resources* and ask a library to look up the right string for whatever language is active.
+
+In the video, two libraries share that job, and both are needed:
+
+- `i18next` is the translation engine. It holds the resources, tracks the current language, and looks messages up. The video installs it with `npm install i18next`.
+- `react-i18next` is the set of React extensions for that engine. It is what lets components ask for translations, and what makes React re-render them automatically when the language changes. The video installs it with `npm install react-i18next` and restarts the dev server.
+
+The app we built - a page whose greeting switches between English and French at the click of a button - is in your workspace, in the `library-demos/react-i18next/` folder next to this notebook, and this reading walks through it. To watch it run, find that folder in the file explorer, right-click `index.html`, and choose "Show Preview", then click the French button.
+
+One difference from the video: there, the project had a build step and `import` statements, and the render call lived in a second file, `src/main.jsx`. The workspace copy runs with no build step: `index.html` loads prebuilt copies of the libraries as `<script>` tags, so they arrive as globals, and everything lives in one `App.jsx` because the in-browser JSX compiler runs one component file per page. Comments in the file mark where the imports would go; everything else is the code from the video.
+
+## Starting the Engine
+
+Everything begins with one call, made once, before the app renders: `i18next.init`. We pass it the language to start in and the translation resources.
+
+```{walkthrough}
+title: Initializing i18next
+step: The init call
+file: library-demos/react-i18next/App.jsx
+region: init
+One configuration object holds the whole setup. (In the video, this line began as a plain `i18next.init({...})`; the `.use(...)` piece was added a few minutes later, when the React extensions came in, and the next section is about it.)
+@"lng:": The default language - the one the app starts in. `en` is English.
+
+step: The translation resources
+file: library-demos/react-i18next/App.jsx
+region: resources
+These are our translation files, typed directly into the configuration the way the video did it.
+@"en: {": Each key directly under `resources` is a language code: `en` for English, `fr` for French. Add a language by adding another code.
+@"translation": Inside each language, `translation` holds the actual key-to-message pairs.
+@"greeting": `greeting` is a **translation key**. It is not text the user sees; it is a name that resolves to different text per language.
+@"fr: {": The same keys again, with the French messages. Whichever language is active decides which set gets read.
+```
+
+Notice that `greeting`, `greet_user`, and `account_message` each appear twice, once per language. That is the contract: every language provides the same keys, and only the messages differ.
+
+## The React Extensions
+
+The engine on its own can look up strings, but it knows nothing about React. The `react-i18next` package supplies the connection, and the file pulls three things from it:
+
+```{walkthrough}
+title: Connecting the engine to React
+step: Three names from the extensions
+file: library-demos/react-i18next/App.jsx
+region: bindings
+In the video this line was an import from `react-i18next`; with no build step, the extensions arrive on a global named `ReactI18next` and we pull the same three names off of it.
+@"= ReactI18next": `initReactI18next` is the connector code, `useTranslation` is a hook for components, and `Trans` is a component for translating messages with markup inside them - each shows up below.
+
+step: Plugging the connector in
+file: library-demos/react-i18next/App.jsx
+region: init
+@"use(initReactI18next)": Passing `initReactI18next` to `use` before calling `init` is what connects the engine to React. It is the reason components will re-render on their own when the language changes, with no state wiring from us.
+```
+
+So the two packages split the work: `i18next` translates, and `react-i18next` keeps React in sync with it. You need both to use translations from components.
+
+## The `t` Function
+
+With the connection made, any component can ask for translations through the `useTranslation` hook:
+
+```{walkthrough}
+title: A component gets its translator
+file: library-demos/react-i18next/App.jsx
+region: hook
+@"useTranslation()": The hook returns an object we destructure. `t` is the **translate function**: give it a key, get back the message for the current language. `i18n` is a reference to the i18next object itself, which saves reaching for the global - we use it for the language buttons below.
+@"React.useState": Ordinary component state, for the input further down. Internationalization changes nothing about how state works.
+```
+
+`t('greeting')` looks up the `greeting` key and returns `Hello World` while English is active, or `Bonjour le monde` in French. In the video, the page's heading started as hard-coded text, became `{t('greeting')}`, and ended up as the `greet_user` call you can see in the file - that last step is the interpolation section below. After previewing the app, try changing the `<h1>` in `App.jsx` to `{t("greeting")}`, saving, and reloading the preview: the heading still switches languages, because any key in the resources works anywhere `t` is called.
+
+## Switching Languages
+
+The two buttons at the top of the page are the whole language switcher:
+
+```{walkthrough}
+title: changeLanguage
+file: library-demos/react-i18next/App.jsx
+region: buttons
+@"English": Clicking calls `i18n.changeLanguage("en")` to make English the active language.
+@"French": The same call with `fr`. Because the components are connected through the React extensions, every piece of text that came from `t` re-renders in the new language - no state variable of ours, no manual updates.
+```
+
+In the video, these handlers first called `i18next.changeLanguage(...)` on the global directly, and then switched to the `i18n` reference from `useTranslation` - it is the same object either way, reached a little more conveniently.
+
+## Interpolation: Filling Values Into a Message
+
+Fixed messages only go so far; sooner or later a message needs a value from the program in the middle of it, like the user's name. For that, a translation string can hold a placeholder - a *wildcard*, as the video calls it - written in double curly braces: the `{{user}}` inside `greet_user`, which you saw in the resources walkthrough. To fill it, `t` takes a second argument: an object with a value for each placeholder.
+
+```{walkthrough}
+title: A message with a placeholder
+file: library-demos/react-i18next/App.jsx
+region: interpolation
+@"greet_user": The second argument to `t` supplies the values: `{ user: username }` fills the `{{user}}` placeholder, so the heading reads `Hello, Alice` in English and `Bonjour, Alice` in French - or whatever the current value of `username` is.
+@"input value": A controlled input, exactly like the forms we built in Module 2. Typing updates the `username` state, the component re-renders, and the greeting re-fills its placeholder with the new name, in whichever language is active.
+```
+
+## Messages with Markup: the `Trans` Component
+
+One kind of message still will not fit through `t`: a sentence with an element inside it, like a link in the middle. We could chop the sentence into separate keys around the link, but that gets awkward fast - word order differs between languages, so the pieces would have to be reassembled differently per language. Instead, `react-i18next` includes the `Trans` component:
+
+```{walkthrough}
+title: Translating around a link
+file: library-demos/react-i18next/App.jsx
+region: trans
+The children of `Trans` are the English sentence written as normal JSX, link and all.
+@"i18nKey": Names the translation to use: the `account_message` key from the resources.
+@"/account": A real `<a>` element, sitting inside the sentence. In the translated strings, `<1>` stands for this element: the pieces of the message are numbered starting from 0, the text `Visit ` is piece 0, and the link is piece 1.
+```
+
+Look back at the `account_message` strings in the resources: `Visit <1>your account page</1> to change the display name.` and `Visitez <1>votre page de compte</1> pour modifier le nom d'affichage.` Each language places `<1>` wherever its own sentence needs the link, wraps its own words in it, and `Trans` renders a real link there - same `href`, translated text, correct word order, and no pile of fragment keys.
+
+## The Idea in a Cell
+
+The real libraries cannot be loaded into a notebook cell, but the idea fits in one: a resources object, a lookup function that fills placeholders, and a state variable for the language. Here the re-rendering that `initReactI18next` provides is played by plain `useState`:
+
+```{react autorun}
+const resources = {
+  en: { greeting: 'Hello World', greet_user: 'Hello, {{user}}' },
+  fr: { greeting: 'Bonjour le monde', greet_user: 'Bonjour, {{user}}' }
+};
+
+function t(lng, key, values = {}) {
+  let message = resources[lng][key];
+  for (const name in values) {
+    message = message.replace('{{' + name + '}}', values[name]);
+  }
+  return message;
+}
+
+function App() {
+  const [lng, setLng] = React.useState('en');
+  return (
+    <div>
+      <button onClick={() => setLng('en')}>English</button>
+      <button onClick={() => setLng('fr')}>French</button>
+      <h1>{t(lng, 'greet_user', { user: 'Alice' })}</h1>
+      <p>{t(lng, 'greeting')}</p>
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+Try adding a `de` (German) entry to `resources` - `greeting: 'Hallo Welt'` and `greet_user: 'Hallo, {{user}}'` - plus a third button that calls `setLng('de')`, and run the cell again. That is the same move you would make in the real app: a new language is another entry in the resources, and nothing about the components has to change.
+
+## Exercises
+
+1. Filling in a placeholder. Complete `t` so it replaces each `{{name}}` placeholder in the message with the matching value from `values`, making the English greeting `Hello, Alice` and the French one `Bonjour, Alice`.
+
+    ```{javascript}
+    const resources = {
+      en: { translation: { greet_user: 'Hello, {{user}}' } },
+      fr: { translation: { greet_user: 'Bonjour, {{user}}' } }
+    };
+
+    function t(lng, key, values = {}) {
+      let message = resources[lng].translation[key];
+      // TODO: replace each {{name}} placeholder in the message
+      // with values[name]
+      return message;
+    }
+
+    const english = t('en', 'greet_user', { user: 'Alice' });
+    const french = t('fr', 'greet_user', { user: 'Alice' });
+
+    console.log(english);
+    console.log(french);
+    ```
+    ```+solution
+    const resources = {
+      en: { translation: { greet_user: 'Hello, {{user}}' } },
+      fr: { translation: { greet_user: 'Bonjour, {{user}}' } }
+    };
+
+    function t(lng, key, values = {}) {
+      let message = resources[lng].translation[key];
+      for (const name in values) {
+        message = message.replace('{{' + name + '}}', values[name]);
+      }
+      return message;
+    }
+
+    const english = t('en', 'greet_user', { user: 'Alice' });
+    const french = t('fr', 'greet_user', { user: 'Alice' });
+
+    console.log(english);
+    console.log(french);
+    ```
+    ```+test
+    wrap(english).should('equal', 'Hello, Alice').run('`t` should fill the `{{user}}` placeholder in the English message', 'Interpolated the English greeting');
+    wrap(french).should('equal', 'Bonjour, Alice').run('`t` should fill the `{{user}}` placeholder in the French message', 'Interpolated the French greeting');
+    ```
+
+2. Completing a language. The French side of this resources object is missing its keys. Add `save` and `cancel` entries to the French `translation` object - the French for Save is `Enregistrer`, and for Cancel it is `Annuler` - so both lookups succeed.
+
+    ```{javascript}
+    const resources = {
+      en: { translation: { save: 'Save', cancel: 'Cancel' } },
+      fr: {
+        translation: {
+          // TODO: add the `save` and `cancel` keys in French
+        }
+      }
+    };
+
+    function t(lng, key) {
+      return resources[lng].translation[key];
+    }
+
+    const saveLabel = t('fr', 'save');
+    const cancelLabel = t('fr', 'cancel');
+
+    console.log(saveLabel);
+    console.log(cancelLabel);
+    ```
+    ```+solution
+    const resources = {
+      en: { translation: { save: 'Save', cancel: 'Cancel' } },
+      fr: {
+        translation: {
+          save: 'Enregistrer',
+          cancel: 'Annuler'
+        }
+      }
+    };
+
+    function t(lng, key) {
+      return resources[lng].translation[key];
+    }
+
+    const saveLabel = t('fr', 'save');
+    const cancelLabel = t('fr', 'cancel');
+
+    console.log(saveLabel);
+    console.log(cancelLabel);
+    ```
+    ```+test
+    wrap(saveLabel).should('equal', 'Enregistrer').run('`t("fr", "save")` should return `Enregistrer`', 'Translated the save label');
+    wrap(cancelLabel).should('equal', 'Annuler').run('`t("fr", "cancel")` should return `Annuler`', 'Translated the cancel label');
+    ```
+
+3. When `t` is not enough
+
+    ```{mcq}
+    Each option shows one English message from a translation resources object. Which one calls for the `Trans` component rather than a plain `t('key')` call?
+    correct: Correct. `Trans` exists for messages with markup inside them: the link stays a real element, placed correctly in each language's sentence, without splitting the message into separate keys.
+    wrong: `t` returns a string, and that covers plain text and `{{...}}` placeholders alike. The odd one out is the message with an HTML element in the middle of the sentence. Look back at "Messages with Markup: the `Trans` Component".
+    [x] `Read our <1>terms of service</1> before continuing.`
+    [ ] `Hello, {{user}}`
+    [ ] `Save`
+    [ ] `You have no new messages.`
+    ```
+
+4. What a language switch does
+
+    ```{mcq}
+    A page built with react-i18next is showing English text. A button's click handler calls `i18n.changeLanguage('fr')`. What updates the text on the screen?
+    correct: Correct. This is what connecting the engine with `initReactI18next` buys: components that use `t` re-render on a language change, and `t` now looks up the French strings.
+    wrong: Nothing edits the resources and nothing reloads. Think about why we passed `initReactI18next` to the engine in the first place. Look back at "The React Extensions".
+    [x] Components that use `t` re-render automatically, and `t` now looks up French strings
+    [ ] The browser reloads the page in French
+    [ ] The English entries in the resources object are overwritten with French text
+    [ ] Nothing, until every component calls `t` again by hand
+    ```
+
+## Resources
+
+- [react-i18next: useTranslation hook](https://react.i18next.com/latest/usetranslation-hook)
+- [react-i18next: Trans component](https://react.i18next.com/latest/trans-component)
+- [i18next: Interpolation](https://www.i18next.com/translation-function/interpolation)
+- [MDN: Intl](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl)

@@ -1,0 +1,227 @@
+# Query Strings
+
+A **query string** is the part of a URL that carries extra information to the server. Web APIs read it to decide exactly what to send back, so query strings are how we say what we want out of a request.
+
+Recall the parts of a URL. In `https://api.datamuse.com/words?ml=giraffe`:
+
+- `https` is the **protocol**, the language used to talk to the server.
+- `api.datamuse.com` is the **host name**, which server we are talking to.
+- `/words` is the **path**, the location of what we are asking for on that server.
+- `?ml=giraffe` is the **query string**, the specifics of what we want.
+
+![The URL https://blueserver.com/path?key=val, with a bracket under each part and a label beneath it: https is labeled Protocol, blueserver.com is labeled Host Name, path is labeled Path, and key=val is labeled Query. The separators, the colon slash slash, the slash, and the question mark, are drawn in black and left unlabeled.](images/query-strings-in-url.png)
+
+## The Structure
+
+A query string starts with a **question mark**, and after it come **key-value pairs**:
+
+- An **equals sign** separates a key from its value.
+- An **ampersand** separates one pair from the next.
+
+![The query string ?sl=jirraf&topics=animal. The keys sl and topics are in red, the values jirraf and animal are in blue, and the question mark, equals signs, and ampersand are in gray and black. A bracket under sl=jirraf and another under topics=animal are each labeled key/value pair.](images/key-value-pairs.png)
+
+```text
+https://example.com/search?query=javascript&sort=asc&page=2
+```
+
+That has three pairs: `query` is `javascript`, `sort` is `asc`, and `page` is `2`. You can have as many as you like.
+
+Query strings encode key-value pairs in the same spirit as a JavaScript object, with a different syntax. Once you can see them you will notice them everywhere. On YouTube, `https://www.youtube.com/watch?v=dQw4w9WgXcQ` uses the `v` key to say which video to load.
+
+## Building Them With `URLSearchParams`
+
+You could write a query string by hand, typing the question mark, the keys, the equals signs, and the ampersands. It is easier and more reliable to use the browser's built-in **`URLSearchParams`** object.
+
+Pass an object of pairs to the constructor:
+
+```{javascript autorun}
+const params = new URLSearchParams({
+  query: 'javascript',
+  sort: 'asc',
+  page: 2
+});
+
+console.log(params.toString());
+console.log('https://example.com/search?' + params.toString());
+```
+
+`toString()` produces the `key=value&key=value` text.
+
+### `.set()` and `.get()`
+
+You can also add pairs one at a time, and read them back:
+
+```{javascript autorun}
+const params = new URLSearchParams();
+
+params.set('ml', 'giraffe');
+params.set('topics', 'animal');
+
+console.log(params.get('ml'));
+console.log(params.get('nothing-here'));
+console.log(params.toString());
+```
+
+`.set()` adds a pair, or replaces the value if that key is already there. `.get()` returns the value as a string, or `null` if the key is absent.
+
+### It Encodes Special Characters for You
+
+A query string cannot contain just any character. Spaces in particular have to be encoded, and this is where `URLSearchParams` really earns its place:
+
+```{javascript autorun}
+const params = new URLSearchParams();
+
+params.set('ml', 'ringing in the ears');
+
+console.log(params.toString());
+```
+
+The spaces came out as `+` signs, without our doing anything. You set the plain value you actually mean and get back a valid query string, and you never have to remember which characters need escaping.
+
+## Query Strings and `fetch`
+
+Query strings become genuinely useful with `fetch`. The pattern:
+
+1. Keep a **base URL**, everything up to and including the `?`.
+2. Build the query string with `URLSearchParams`.
+3. Concatenate the two.
+4. Pass the result to `fetch`.
+
+The [Datamuse API](https://www.datamuse.com/api/) is a good one to practice on. It is a free API for working with words, and needs no key. Its `ml` parameter means "means like":
+
+```javascript
+const BASE_URL = 'https://api.datamuse.com/words?';
+
+const params = new URLSearchParams();
+params.set('ml', 'ringing in the ears');
+
+const fullURL = BASE_URL + params.toString();
+// https://api.datamuse.com/words?ml=ringing+in+the+ears
+
+fetch(fullURL)
+  .then((response) => response.json())
+  .then((result) => {
+    for (const r of result) {
+      console.log(r.word);
+    }
+  });
+```
+
+Datamuse returns JSON, so we call `response.json()` and get back an array of objects, each with a `word` property.
+
+Its documentation lists many more parameters: `sl` for "sounds like", `sp` for "spelled like", and more. Reading an API's documentation to find out which keys it accepts is most of the work of using one.
+
+### A Complete Search Page
+
+Putting it together, here is a page where the user types a word and sees related words:
+
+```javascript
+const input = document.querySelector('input');
+const button = document.querySelector('button');
+const outp = document.querySelector('#output');
+
+const BASE_URL = 'https://api.datamuse.com/words?';
+
+button.addEventListener('click', () => {
+  const searchTerm = input.value;
+
+  const params = new URLSearchParams();
+  params.set('ml', searchTerm);
+
+  fetch(BASE_URL + params.toString())
+    .then((response) => response.json())
+    .then((result) => {
+      outp.innerHTML = '';
+
+      for (const r of result) {
+        const li = document.createElement('li');
+        li.textContent = r.word;
+        outp.append(li);
+      }
+    });
+});
+```
+
+Note the `outp.innerHTML = '';` before the loop. Without it, a second search appends its results underneath the first search's, and the list grows forever. Clearing the container before re-rendering is a habit worth forming.
+
+We will look at more APIs, and at what to do about the ones that need a key, in the next lesson.
+
+## Exercises
+
+1. Read the value of the `city` parameter out of this query string and store it in `cityValue`.
+
+    ```{javascript}
+    const params = new URLSearchParams('city=Ann+Arbor&state=MI');
+
+    const cityValue = /* Your code here */;
+
+    console.log(cityValue);
+    ```
+    ```+solution
+    const params = new URLSearchParams('city=Ann+Arbor&state=MI');
+
+    const cityValue = params.get('city');
+
+    console.log(cityValue);
+    ```
+    ```+test
+    wrap(cityValue).should('equal', 'Ann Arbor').run('Use `params.get(\'city\')`. Note that the `+` is decoded back into a space for you', 'Read the parameter');
+    ```
+
+2. Set two parameters and produce the query string. `ml` should be `ringing in the ears` and `max` should be `5`.
+
+    ```{javascript}
+    const params = new URLSearchParams();
+
+    // Set the two parameters here
+
+    const queryString = /* Your code here */;
+
+    console.log(queryString);
+    ```
+    ```+solution
+    const params = new URLSearchParams();
+
+    params.set('ml', 'ringing in the ears');
+    params.set('max', '5');
+
+    const queryString = params.toString();
+
+    console.log(queryString);
+    ```
+    ```+test
+    wrap(queryString).should('equal', 'ml=ringing+in+the+ears&max=5').run('Set both parameters with `.set()`, then call `params.toString()`. The spaces should be encoded for you', 'Built and encoded the query string');
+    ```
+
+3. Build the full request URL that you would hand to `fetch`.
+
+    ```{javascript}
+    const BASE_URL = 'https://api.datamuse.com/words?';
+
+    const params = new URLSearchParams();
+    params.set('sl', 'giraffe');
+
+    const fullURL = /* Your code here */;
+
+    console.log(fullURL);
+    ```
+    ```+solution
+    const BASE_URL = 'https://api.datamuse.com/words?';
+
+    const params = new URLSearchParams();
+    params.set('sl', 'giraffe');
+
+    const fullURL = BASE_URL + params.toString();
+
+    console.log(fullURL);
+    ```
+    ```+test
+    wrap(fullURL).should('equal', 'https://api.datamuse.com/words?sl=giraffe').run('Concatenate `BASE_URL` with `params.toString()`', 'Built the full request URL');
+    ```
+
+## Resources
+
+- [MDN: URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
+- [MDN: URLSearchParams.set()](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams/set)
+- [MDN: What is a URL? (parameters)](https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL#parameters)
+- [Datamuse API documentation](https://www.datamuse.com/api/)

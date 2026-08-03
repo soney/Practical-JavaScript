@@ -1,0 +1,92 @@
+# Course 4 Welcome
+
+Welcome to Course 4. This course is about building applications with React.
+
+In earlier courses, you learned how HTML, CSS, JavaScript, DOM methods, events, modules, servers, and data fit together. React builds on those ideas by giving you a component model for user interfaces.
+
+You will practice:
+
+- creating React components,
+- writing JSX,
+- passing props,
+- rendering lists,
+- handling events,
+- managing state,
+- using hooks,
+- sharing state across components,
+- using common React libraries,
+- and deploying React applications.
+
+## The Main Shift
+
+In plain DOM code, you often write instructions that change existing elements. In React, you usually describe what the UI should look like for the current data.
+
+```{react}
+function WelcomeCard() {
+  return (
+    <section>
+      <h1>Course 4</h1>
+      <p>React components describe user interfaces.</p>
+    </section>
+  );
+}
+
+renderReact(<WelcomeCard />);
+```
+
+React renders the component output into real DOM elements.
+
+## Exercises
+
+1. What is the main focus of Course 4?
+
+   ```{mcq}
+   What is the main focus of Course 4?
+   correct: Correct. Course 4 focuses on building applications with React.
+   wrong: Think about components, JSX, props, state, hooks, and deployment.
+   [x] Building applications with React.
+   [ ] Replacing HTML with SQL.
+   [ ] Avoiding JavaScript completely.
+   [ ] Only writing terminal commands.
+   ```
+
+2. Create a component that renders the exact text `Ready for React`.
+
+   ```{react}
+   function Practice() {
+     return <p>Change me</p>;
+   }
+
+   renderReact(<Practice />);
+   ```
+   ```+solution
+   function Practice() {
+     return <p>Ready for React</p>;
+   }
+
+   renderReact(<Practice />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('p').should('have.text', 'Ready for React').run('Render the exact text `Ready for React`', 'Rendered the expected text');
+   }, 50);
+   ```
+
+3. What does a React component usually return?
+
+   ```{mcq}
+   What does a React component usually return?
+   correct: Correct. A component usually returns JSX that describes UI.
+   wrong: Think about the markup-like value inside the component.
+   [x] JSX that describes UI.
+   [ ] A database password.
+   [ ] A CSS file path only.
+   [ ] A terminal prompt.
+   ```
+
+## Resources
+
+- [React Docs: Learn React](https://react.dev/learn)
+- [React Docs: Your first component](https://react.dev/learn/your-first-component)

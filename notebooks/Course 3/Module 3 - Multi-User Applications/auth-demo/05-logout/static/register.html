@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!-- auth-demo: the registration page. The same file from stage 1 onward. -->
+<html>
+    <body>
+        <h1>Register for a new account</h1>
+
+        <!-- #region form -->
+        <form id="registrationForm">
+            <input type="email" id="email" placeholder="E-Mail" />
+            <input type="password" id="password" placeholder="Password" />
+            <button type="submit">Register</button>
+            <div id="status"></div>
+        </form>
+        <!-- #endregion -->
+
+        <!-- #region script -->
+        <script>
+            const form = document.querySelector("form#registrationForm");
+            const emailInput = document.querySelector("input#email");
+            const passwordInput = document.querySelector("input#password");
+            const status = document.querySelector("#status");
+
+            form.addEventListener("submit", async (e) => {
+                e.preventDefault();
+                const email = emailInput.value;
+                const password = passwordInput.value;
+
+                const response = await fetch("/register", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                const text = await response.text();
+                status.textContent = text;
+            });
+        </script>
+        <!-- #endregion -->
+    </body>
+</html>

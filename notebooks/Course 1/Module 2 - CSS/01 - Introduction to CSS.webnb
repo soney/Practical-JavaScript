@@ -1,0 +1,163 @@
+# Introduction to CSS
+
+Now that we've covered the essentials of HTML, the language we use to describe the structure of a web page, it is time to turn to CSS.
+
+**CSS** stands for **Cascading Style Sheets**. While HTML defines the **structure** of a web page, CSS describes how that structure should **look**. In other words, if HTML is the skeleton of a web page, CSS is the skin: it controls things like colors, fonts, spacing, borders, and layout.
+
+With CSS, you can:
+
+- Change the color of text
+- Set background images or colors
+- Adjust spacing and alignment
+- Control the layout of elements on the page
+- Apply visual effects like shadows, transitions, and animations
+
+## Three Ways to Add CSS
+
+There are three ways to apply CSS to a web page:
+
+### **Inline CSS**
+
+You can apply styles directly to an individual HTML element using the `style` attribute:
+
+```{html autorun}
+<p style="color: blue;">This is blue text.</p>
+<p>This is not blue text.</p>
+```
+
+Try changing `blue` to another color, such as `red` or `orange`, and run the cell again.
+
+Inline CSS is the quickest way to get started, and it is helpful for a fast test or a demo. However, it should usually be avoided in real projects, since it mixes content with styling and makes code harder to maintain. Notice that the style applies to that one paragraph only: styling a second paragraph would mean writing the `style` attribute all over again.
+
+### **Internal CSS**
+
+You can write CSS inside a `<style>` element in the `<head>` of your document:
+
+```{html autorun}
+<head>
+  <style>
+    p {
+      color: green;
+    }
+  </style>
+</head>
+<body>
+  <p>This is green text.</p>
+  <p>This paragraph is green too.</p>
+</body>
+```
+
+This keeps your styles grouped together, separate from the HTML content. The `p` in front of the curly braces says which elements the rule applies to, so both paragraphs turn green from a single rule. Try adding a third paragraph to the cell and running it again.
+
+### **External CSS**
+
+We can also put our CSS rules in a separate file (typically one that ends with the extension `.css`) and link to it from our HTML. This is the most common way to use CSS in real projects.
+
+```html
+<head>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+```
+
+The rules themselves live in that separate file. `styles.css`:
+
+```css
+p {
+  color: purple;
+}
+```
+
+The cell below has a stylesheet like that one attached to it. The HTML says nothing about color, and yet:
+
+```{html autorun}
+<p>This is purple text.</p>
+```
+```+css
+p {
+  color: purple;
+}
+```
+
+This allows you to reuse styles across multiple pages and keeps your HTML cleaner.
+
+### A Two-File Example
+
+The two files below sit next to this notebook. Click a file name or a line number in the walkthrough to open the real file beside the notebook.
+
+```{walkthrough}
+title: sample.html and sample-style.css
+step: The page
+file: sample.html
+The HTML says what the content is. There is not a color or a font anywhere in it.
+@"link": This one line pulls in the stylesheet. Remove it and the page still loads, just with the browser's default styling.
+
+step: The stylesheet
+file: sample-style.css
+The stylesheet says how that content should look, and nothing about what the content is.
+@"h1": Both rules apply to every matching element in every page that links this file.
+```
+
+## Exercises
+
+1. What CSS stands for
+
+    ```{mcq}
+    What does CSS stand for?
+    correct: Correct! CSS stands for Cascading Style Sheets.
+    wrong: Not quite. Think about the style and how it cascades down rules.
+    [x] Cascading Style Sheets
+    [ ] Computer Style Sheets
+    [ ] Creative Style Sheets
+    [ ] Colorful Style Sheets
+    ```
+
+2. How HTML and CSS relate
+
+    ```{mcq}
+    Which of the following describes the relationship between HTML and CSS?
+    correct: Correct! HTML defines the structure, and CSS describes how the structure should look.
+    wrong: Think about skeletons vs skin!
+    [x] HTML is the skeleton (structure), CSS is the skin (styling).
+    [ ] HTML is for styling, CSS is for structure.
+    [ ] HTML and CSS do the exact same thing.
+    [ ] You cannot use CSS without an external `.css` file.
+    ```
+
+3. Write your first CSS rule. Select every `<p>` element and set `color` to `green`. The HTML below is fixed, so the only way to change it is from the stylesheet.
+
+    ```html id=page1
+    <p>The first paragraph.</p>
+    <p>The second paragraph.</p>
+    ```
+
+    ```{css}
+    /* Write your CSS rule here. Exercises are ungraded, so run it as often as you like. */
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    p {
+      color: green;
+    }
+    ```
+    ```+test
+    assert('p').should('exist').should('have.css', 'color: green').run('Failed to make the paragraphs green. A rule looks like `p { color: green; }`', 'Made both paragraphs green');
+    assert('p:last-child').should('have.css', 'color: green').run('Both paragraphs should be green. A `p` selector reaches every paragraph at once', 'Both paragraphs are green');
+    ```
+
+4. Why inline CSS is avoided
+
+    ```{mcq}
+    Why do we usually avoid inline CSS in real projects?
+    correct: Correct! An inline style reaches one element, so the same declaration has to be repeated on every element you want to look that way, and changing the look later means editing all of them.
+    wrong: Think about what it would take to restyle every paragraph on a site with a hundred pages.
+    [x] Each element needs its own `style` attribute, so the same styling is repeated everywhere and is tedious to change later.
+    [ ] Browsers apply the `style` attribute only after the rest of the page has loaded.
+    [ ] The `style` attribute can set colors but not other properties, such as spacing.
+    [ ] Inline CSS works in a `<p>` element but not in other elements.
+    ```
+
+## Resources
+
+- [MDN: CSS first steps](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics)
+- [MDN: CSS reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference)

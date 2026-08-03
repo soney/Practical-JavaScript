@@ -1,0 +1,143 @@
+# Keys and Component Identity
+
+When React renders a list, each item should have a **key**.
+
+A key helps React understand which item is which when the list changes.
+
+## Stable Keys
+
+Use a stable id when you have one.
+
+```{react}
+function UserList() {
+  const users = [
+    { id: 'ada', name: 'Ada' },
+    { id: 'grace', name: 'Grace' }
+  ];
+
+  return (
+    <ul>
+      {users.map((user) => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+
+renderReact(<UserList />);
+```
+
+The key is not shown on the page. It is information for React.
+
+## What React Does With It
+
+React re-renders by comparing the elements it just produced with the ones from last time and changing only what differs. For a list, that comparison needs to answer one question per item: **is this the same item as before, or a different one?**
+
+Without stable keys React has no way to match them up, so it falls back to comparing by position, which means an insertion at the front looks like *every* item changed. Instead of one insertion you get ten rewrites, and any state living in those elements moves to the wrong row. For example, in the image below, there are three rows in the "before" list and four in the "after" list. React has no way to know which row is new, so it rewrites all of them.
+
+![Two lists side by side with an arrow between them, labeled Before and After. Every row is an identical dark blue bar with no label on it. The before list has three bars and the after list has four, and there is nothing to say which bar is which, or where the new one was added.](images/keys-unknown-component-identity.png =x260)
+
+Keys let us know what actually changed. If we add keys to the rows, React can match them up and only add the new row. For example, here we can see that the third item (`key = X`) was added so React does not need to rewrite the other three rows.
+
+![The same two lists, now with a key on every row. The before list holds three colored rows labeled key = A, key = B, and key = C. The after list holds four rows: the same A and B rows in the same colors, then a new green row labeled key = X, then the same C row. The keys make it clear that only one row was added and the other three are unchanged.](images/keys-component-identity.png =x260)
+
+So a good key buys two things: less work, and correctness for anything stateful inside the list.
+
+## Avoid Weak Keys
+
+Array indexes can be tempting, but they are often a weak key when items can be inserted, removed, or reordered.
+
+```jsx
+items.map((item, index) => <li key={index}>{item.name}</li>)
+```
+
+Use a real id when the data has one.
+
+## Exercises
+
+1. What does a key help React track?
+
+   ```{mcq}
+   What does a key help React track?
+   correct: Correct. A key helps React track item identity across list changes.
+   wrong: Think about what happens when list items are inserted or reordered.
+   [x] Item identity across list changes.
+   [ ] CSS color inheritance only.
+   [ ] Database permissions.
+   [ ] Browser storage size.
+   ```
+
+2. Use `product.id` as the key for each product.
+
+   ```{react}
+   function ProductList() {
+     const products = [
+       { id: 'notebook', name: 'Notebook' },
+       { id: 'pencil', name: 'Pencil' }
+     ];
+
+     return (
+       <ul>
+         {products.map((product) => (
+           <li>{product.name}</li>
+         ))}
+       </ul>
+     );
+   }
+
+   renderReact(<ProductList />);
+   ```
+   ```+solution
+   function ProductList() {
+     const products = [
+       { id: 'notebook', name: 'Notebook' },
+       { id: 'pencil', name: 'Pencil' }
+     ];
+
+     return (
+       <ul>
+         {products.map((product) => (
+           <li key={product.id}>{product.name}</li>
+         ))}
+       </ul>
+     );
+   }
+
+   renderReact(<ProductList />);
+   ```
+   ```+test
+   wrap(source.includes('key={product.id}')).should('equal', true).run('Use `product.id` as the key', 'Used a stable key');
+   // React commits its render asynchronously, so this DOM check runs on a later tick.
+   setTimeout(function () {
+     wrap(document.querySelectorAll('li').length).should('equal', 2).run('Render both products', 'Rendered both products');
+   }, 50);
+   ```
+
+3. Why can array indexes be a weak key?
+
+   ```{mcq}
+   Why can array indexes be a weak key?
+   correct: Correct. Indexes can point to different items after insertion, deletion, or sorting.
+   wrong: Think about what happens when the order changes.
+   [x] Indexes can point to different items after insertion, deletion, or sorting.
+   [ ] Indexes are not numbers.
+   [ ] React cannot render arrays.
+   [ ] Keys are displayed as text automatically.
+   ```
+
+4. What does React gain when list items have stable keys?
+
+   ```{mcq}
+   Why is a stable key worth having?
+   correct: Correct! React can match each item with the same item from the previous render, so it updates only what actually changed instead of rebuilding the list.
+   wrong: Think about what React has to work out when it re-renders a list, and what a key lets it skip.
+   [x] It can compare against the previous render and update only what changed, rather than reprocessing the whole list
+   [ ] It sorts the list alphabetically for you
+   [ ] It stores each item in the browser's cache
+   [ ] It makes the list items focusable with the keyboard
+   ```
+
+## Resources
+
+- [React Docs: Keeping list items in order with key](https://react.dev/learn/rendering-lists#keeping-list-items-in-order-with-key)
+- [React Docs: Preserving and resetting state](https://react.dev/learn/preserving-and-resetting-state)

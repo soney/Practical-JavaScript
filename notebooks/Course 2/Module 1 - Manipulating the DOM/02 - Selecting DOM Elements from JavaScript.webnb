@@ -1,0 +1,221 @@
+# Selecting DOM Elements from JavaScript
+
+Last lesson we said the DOM is what the user actually sees. Now we reach into it from JavaScript and pull out an element so we can work with it.
+
+The way in is the **`document`** object, and two of its methods:
+
+- **`document.querySelector(selector)`** gives us the **first** element matching a CSS selector, or `null` if nothing matches.
+- **`document.querySelectorAll(selector)`** gives us an array-like object containing **every** element that matches, or an empty one if nothing does.
+
+Remembering the history of JavaScript, you will not be shocked that there are other ways to do this: `document.getElementById`, `getElementsByClassName`, `getElementsByTagName`, `document.body`, and more. `querySelector` and `querySelectorAll` are more versatile and more modern than all of them, so those are the two we will use. You will see the others in example code you find elsewhere.
+
+## Selecting With CSS Selectors
+
+The argument is a string, and it can be any CSS selector you could write in a stylesheet. Here is a page to practice on:
+
+```html id=sampledom
+<div id="main_panel">
+  <p class="box">A paragraph in a box.</p>
+  <a href="#" class="highlight">A highlighted link</a>
+  <ul>
+    <li class="highlight">Item 1</li>
+    <li>Item 2</li>
+    <li class="highlight">Item 3</li>
+  </ul>
+  <div class="highlight box">A highlighted box</div>
+</div>
+```
+
+Run this and read each line against that markup:
+
+```{javascript autorun}
+console.log(document.querySelector('p.box').innerText);
+console.log(document.querySelector('.highlight').innerText);
+console.log(document.querySelectorAll('.highlight').length);
+console.log(document.querySelectorAll('ul .highlight').length);
+console.log(document.querySelectorAll('li.highlight').length);
+console.log(document.querySelector('#main_panel') !== null);
+```
+```+id=sampledom
+```
+
+Taking them in turn:
+
+- `p.box` is the first `p` element with class `box`. The dot means "class".
+- `.highlight` is the first element with class `highlight`, whichever kind of element that is. Here it is the link, because the link comes first in the document. The other three highlighted elements are not selected, because this is `querySelector` rather than `querySelectorAll`.
+- `querySelectorAll('.highlight')` finds all four: the link, two list items, and the div.
+- `ul .highlight` narrows it to highlighted elements *inside* a `ul`, which is the two list items.
+- `li.highlight` narrows it a different way: list items that have the class, which is the same two here.
+- `#main_panel` selects by ID. The `#` means "id".
+
+If nothing matches, you do not get an error. `querySelector` gives `null`, and `querySelectorAll` gives an empty list:
+
+```{javascript autorun}
+console.log(document.querySelector('.no_match'));
+console.log(document.querySelectorAll('.no_match').length);
+```
+```+id=sampledom
+```
+
+## NodeLists
+
+What `querySelectorAll` returns looks like an array and behaves like one for our purposes, but it is technically something slightly different called a **NodeList**: a list of DOM nodes. It has a `length`, you can index into it, and you can walk it with `for...of`.
+
+```{javascript autorun}
+const highlighted = document.querySelectorAll('.highlight');
+
+console.log(highlighted.length);
+console.log(highlighted[0].innerText);
+
+for (const element of highlighted) {
+  console.log(element.innerText);
+}
+```
+```+id=sampledom
+```
+
+## Timing Matters
+
+Here is the mistake that catches everyone once. JavaScript runs from top to bottom, and so does the browser's work of building the page. **A script cannot select an element that has not been created yet.**
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <script>
+      const p = document.querySelector('p');
+      console.log(p);          // null
+    </script>
+  </head>
+  <body>
+    <p>This is a paragraph.</p>
+  </body>
+</html>
+```
+
+That logs `null`. When the script runs, the browser has not reached the `<p>` yet, so no such element exists in the DOM. A moment later the paragraph appears, but by then our line has already run and `p` is stuck holding `null`.
+
+You can watch both moments happen. No HTML is attached to the cell below, so it starts with an empty page, exactly like the document at the instant the `<head>` script runs. The middle line stands in for the browser reading on and building the paragraph, and the last line runs at the moment a script at the end of the `<body>` would:
+
+```{javascript autorun}
+// The browser is at the <script> in the <head>. The body is still empty.
+console.log(document.querySelector('p'));
+
+// Reading on, the browser reaches the paragraph and creates it.
+document.body.innerHTML = '<p>This is a paragraph.</p>';
+
+// A script at the end of the <body> would run here.
+console.log(document.querySelector('p'));
+```
+
+The selector is identical on both lines. The only thing that changed is what existed in the DOM at the moment each one ran. (`innerHTML` is how we add markup from JavaScript, which we get to in a couple of lessons. Here it is only standing in for the browser building that part of the page.)
+
+There are several ways to fix this. The simplest is to move the script so it runs *after* the elements it needs:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>DOM Selection Example</title>
+  </head>
+  <body>
+    <p>This is a paragraph.</p>
+    <script>
+      const p = document.querySelector('p');
+      console.log(p);          // the p element
+    </script>
+  </body>
+</html>
+```
+
+Putting the `<script>` at the end of the `<body>` is a common habit for exactly this reason. If a selector is unexpectedly `null`, check the order before you check the selector.
+
+Next we will look more closely at what we can do with the element objects these two methods hand back.
+
+## Exercises
+
+1. Select the paragraph by its ID and store it in `greeting`.
+
+    ```html id=page1
+    <p id="message">Hello from the DOM</p>
+    ```
+
+    ```{javascript}
+    // Write your code here
+
+    console.log(greeting.innerText);
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const greeting = document.querySelector('#message');
+
+    console.log(greeting.innerText);
+    ```
+    ```+test
+    wrap(greeting === null).should('equal', false).run('`greeting` should hold the paragraph element. Select it with `document.querySelector` and a `#` selector', 'Selected the element');
+    wrap(greeting.innerText).should('equal', 'Hello from the DOM').run('`greeting` should be the paragraph with `id="message"`', 'Selected the right paragraph');
+    ```
+
+2. Select every list item that has the class `done` and store the result in `doneItems`. There are two of them.
+
+    ```html id=page2
+    <ul>
+      <li class="done">Buy milk</li>
+      <li>Walk the dog</li>
+      <li class="done">Rake leaves</li>
+    </ul>
+    <p class="done">This paragraph is not a list item.</p>
+    ```
+
+    ```{javascript}
+    // Write your code here
+
+    console.log(doneItems.length);
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const doneItems = document.querySelectorAll('li.done');
+
+    console.log(doneItems.length);
+    ```
+    ```+test
+    wrap(doneItems.length).should('equal', 2).run('`doneItems` should contain exactly the two list items with class `done`. The paragraph also has that class, so your selector needs to mention `li` as well', 'Selected exactly the two list items');
+    ```
+
+3. A script logs `null` instead of the element it wanted. What is the simplest fix?
+
+    ```{mcq}
+    Opening this page logs `null` rather than the paragraph element:
+
+    ~~~html
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <script>
+          const p = document.querySelector('p');
+          console.log(p);
+        </script>
+      </head>
+      <body>
+        <p>This is a paragraph.</p>
+      </body>
+    </html>
+    ~~~
+
+    What is the simplest change that makes it log the paragraph instead?
+    correct: Correct! The script ran before the browser had built the paragraph. Moving the whole `<script>` element to just after the `<p>` means the element already exists by the time the selector runs.
+    wrong: Think about what exists in the DOM at the moment that script runs, and compare the two versions of the page in "Timing Matters".
+    [x] Move the whole `<script>` element down, to just after the `<p>` inside the `<body>`
+    [ ] Change the selector to `document.querySelectorAll('p')`, which never returns `null`
+    [ ] Add `id="message"` to the `<p>` and select it with `document.querySelector('#message')`
+    [ ] Write the selector as `document.querySelector("p")`, with double quotes
+    ```
+
+## Resources
+
+- [MDN: document.querySelector()](https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelector)
+- [MDN: document.querySelectorAll()](https://developer.mozilla.org/en-US/docs/Web/API/Document/querySelectorAll)
+- [MDN: NodeList](https://developer.mozilla.org/en-US/docs/Web/API/NodeList)
+- [MDN: CSS selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors)

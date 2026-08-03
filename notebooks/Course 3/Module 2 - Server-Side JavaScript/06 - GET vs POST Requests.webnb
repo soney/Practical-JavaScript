@@ -1,0 +1,411 @@
+# GET vs POST Requests
+
+Not every request a client sends is the same. Roughly speaking, sometimes a client wants to *get* data from our server, and sometimes it wants to *send* data to it. The last reading gave us the vocabulary:
+
+- **`GET`**: the client wants data *from* the server. The server sends back a file or a resource.
+- **`POST`**: the client has data to send *to* the server. The server should answer with something indicating whether it worked.
+
+Everything our servers have done so far has been the first kind, including every request the last reading's demo logged. This reading is about the second kind. Its demo is `demo-server/form-server.js`, next to this notebook, with the page it serves in `demo-server/form-page/`.
+
+## Where POST Comes From: Forms
+
+The most common source of a `POST` is an HTML form, where the user is sending data by filling something in. Here is the one this reading's page serves:
+
+```{walkthrough}
+title: demo-server/form-page/index.html
+file: demo-server/form-page/index.html
+region: form
+Two attributes on the `form` element decide what happens on submit.
+@"form method=": `method` is *how* to send the submission, and it **defaults to `GET`**, so a form that should send data needs `method="POST"` written explicitly. `action` is the URL to send it to.
+@"input type=": Each input's `name` attribute is about to matter: whatever the user types is sent under that name.
+@"Submit via POST": A button with `type="submit"` submits the form it sits inside. No JavaScript is involved anywhere on this page.
+```
+
+Fill the form in and click Submit with the Network panel open, and you will see the browser send a `POST` to `/submit_form` carrying the form's data. What should the server do with it? That is the rest of this reading.
+
+## Routing on the Method
+
+A Lesson 1 server would have answered that submission with a `404`: it treated every request as a file lookup, no file is called `submit_form`, and that was that. The data never even got looked at.
+
+So the server has to treat the two kinds of request differently, and `request.method` from the last reading is how. The whole of `form-server.js` is one `if` / `else if` / `else` over it:
+
+```{walkthrough}
+title: demo-server/form-server.js
+file: demo-server/form-server.js
+region: url
+@"let url = request.url;": The URL cleanup from Lesson 1 sits above the method check, outside of it, because more than one branch below needs the cleaned-up URL.
+
+step: The POST branch
+file: demo-server/form-server.js
+region: post
+@"if (request.method === 'POST')": A `POST` is handled here whatever its URL is; this server does not even look. The lines inside collect the submitted data, and they are the next section's subject.
+
+step: The GET branch
+file: demo-server/form-server.js
+region: get
+@"} else if (request.method === 'GET')": A `GET` gets what a `GET` always got: the file-serving code from Lesson 1, reading out of `form-page/`.
+
+step: Everything else
+file: demo-server/form-server.js
+region: method-not-allowed
+@"writeHead(405": One more status code for the collection: `405 Method Not Allowed`, for a method this server does not support. It is a more honest answer than `404`, which would claim the URL does not exist when the real problem is what you tried to *do* to it.
+```
+
+## The Body Arrives in Pieces
+
+Here is the part that surprises people. The data attached to a `POST` is **not** sitting on the request object waiting to be read. It arrives **streamed in chunks**, and the server collects it. Look inside the `POST` branch again:
+
+```{walkthrough}
+title: Collecting the body
+file: demo-server/form-server.js
+region: post
+The same branch, this time reading the lines that gather the data.
+@"let body = '';": An empty string to collect into.
+@"request.on('data'": `request.on` works like `addEventListener` from Course 2. The `data` event fires each time a piece of the body arrives, and the callback gets that piece as `chunk`.
+@"chunk.toString()": The chunk arrives as raw bytes; `toString` makes it text, so it can be added onto the string.
+@"request.on('end'": `end` fires once, when the whole body has arrived. **This is the only place the complete body exists**, so it is where the response belongs.
+```
+
+Why go to this trouble instead of reading a single `request.body` property? Because a body can be enormous. A form with two text fields is a few dozen bytes, and the same mechanism carries a four-gigabyte video upload. Streaming lets a server start working on data as it arrives, instead of holding an entire upload in memory before it can begin. The cost is that small bodies are read the same slightly awkward way as large ones.
+
+## What the Body Looks Like
+
+Submit the form with `Steve` and `Oney` and the server answers:
+
+```
+Received POST request with body first=Steve&last=Oney
+```
+
+Each input contributes `name=value`, using the input's **`name`** attribute as the key and whatever the user typed as the value, and the pairs are joined with `&`. An input left empty still contributes its key, with nothing after the `=`.
+
+If that format looks familiar from Course 2, great: it is a **query string**. It is the default encoding for a text form, and it is the same shape whether it arrives in a `POST` body or after a `?` in a URL, which is the subject of the next reading.
+
+Forms can also carry file uploads, which use a different and more involved encoding. Text fields are the plain case.
+
+## Watching the Chunks Arrive
+
+The notebook has no network to stream over, but a stand-in request lets us deliver chunks on demand, so the collecting code can run right here:
+
+```{node autorun}
+function makeFakeRequest(method, url, chunks) {
+  const listeners = {};
+
+  const request = { method: method, url: url };
+
+  request.on = function (eventName, callback) {
+    listeners[eventName] = callback;
+  };
+
+  // Node would call these as the data arrives over the network.
+  request.deliver = function () {
+    for (const chunk of chunks) {
+      if (listeners.data) {
+        listeners.data(chunk);
+      }
+    }
+
+    if (listeners.end) {
+      listeners.end();
+    }
+  };
+
+  return request;
+}
+
+function makeFakeResponse() {
+  const sent = { statusCode: null, headers: null, body: '' };
+
+  sent.writeHead = function (code, headers) {
+    sent.statusCode = code;
+    sent.headers = headers;
+  };
+
+  sent.end = function (text) {
+    sent.body = text;
+  };
+
+  return sent;
+}
+
+function handleRequest(request, response) {
+  let body = '';
+
+  request.on('data', (chunk) => {
+    body += chunk.toString();
+    console.log('chunk arrived, body is now: ' + body);
+  });
+
+  request.on('end', () => {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('Received POST request with body ' + body);
+  });
+}
+
+// The body arrives in three pieces, as it might over a slow connection.
+const request = makeFakeRequest('POST', '/submit_form', ['first=Ste', 've&last=', 'Oney']);
+const response = makeFakeResponse();
+
+handleRequest(request, response);
+request.deliver();
+
+console.log(response.statusCode + ' ' + response.body);
+```
+
+Watch the log: the body is incomplete twice before it is complete once. Responding from inside the `'data'` listener would have sent `first=Ste`.
+
+## Running It Yourself
+
+Stop any other server on port 3000, then:
+
+```
+$ cd "demo-server"
+$ node form-server.js
+Listening on port 3000
+```
+
+Open `http://localhost:3000` with the Network tab open, and try these:
+
+1. Fill in both names and submit. The browser navigates to `/submit_form` and shows the server's answer, collected body included. In the Network tab, click the `submit_form` request: the method column says `POST`, and the Payload section (use "view source" for the raw version) shows `first=Steve&last=Oney`, exactly what the `data` listener collected.
+2. Watch the terminal across one full visit: `GET /` for the page, then `POST /submit_form` for the submission. The two directions, one line each.
+3. Submit with the last name empty. The body is `first=Steve&last=`, and the key is still there.
+4. Open `form-page/index.html`, delete `method="POST"` from the form, reload the page, and submit again. The data moves *into the URL*: the browser sends `GET /submit_form?first=Steve&last=Oney`, because the form fell back to its default method. Our `GET` branch goes looking for a file by that name and answers `404`. Data riding inside a `GET` URL like this is a query string doing its real job, and it is the next reading. Put `method="POST"` back when you are done.
+
+## Exercises
+
+1. Complete the handler so it collects the whole body and answers with it. The helpers are written for you.
+
+    ```{node}
+    function makeFakeRequest(method, url, chunks) {
+      const listeners = {};
+
+      const request = { method: method, url: url };
+
+      request.on = function (eventName, callback) {
+        listeners[eventName] = callback;
+      };
+
+      request.deliver = function () {
+        for (const chunk of chunks) {
+          if (listeners.data) {
+            listeners.data(chunk);
+          }
+        }
+
+        if (listeners.end) {
+          listeners.end();
+        }
+      };
+
+      return request;
+    }
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      let body = '';
+
+      // TODO: collect each chunk into body, and once the body is complete,
+      // answer with 200, Content-Type text/plain, and the body as the response.
+    }
+
+    const request = makeFakeRequest('POST', '/submit_form', ['first=Ja', 'ne&last=Doe']);
+    const response = makeFakeResponse();
+
+    handleRequest(request, response);
+    request.deliver();
+
+    console.log(response.statusCode + ' ' + response.body);
+    ```
+    ```+solution
+    function makeFakeRequest(method, url, chunks) {
+      const listeners = {};
+
+      const request = { method: method, url: url };
+
+      request.on = function (eventName, callback) {
+        listeners[eventName] = callback;
+      };
+
+      request.deliver = function () {
+        for (const chunk of chunks) {
+          if (listeners.data) {
+            listeners.data(chunk);
+          }
+        }
+
+        if (listeners.end) {
+          listeners.end();
+        }
+      };
+
+      return request;
+    }
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      let body = '';
+
+      request.on('data', (chunk) => {
+        body += chunk.toString();
+      });
+
+      request.on('end', () => {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end(body);
+      });
+    }
+
+    const request = makeFakeRequest('POST', '/submit_form', ['first=Ja', 'ne&last=Doe']);
+    const response = makeFakeResponse();
+
+    handleRequest(request, response);
+    request.deliver();
+
+    console.log(response.statusCode + ' ' + response.body);
+    ```
+    ```+test
+    wrap(response.statusCode).should('equal', 200).run('Answer with a `200` status once the body has arrived', 'Sent a success status');
+    wrap(response.body).should('equal', 'first=Jane&last=Doe').run('The response body should be the whole request body, `first=Jane&last=Doe`. Add each chunk to `body` in the `data` listener', 'Assembled the whole body');
+    wrap(/on\s*\(\s*['"]end['"]/.test(source)).should('equal', true).run('Respond inside the `end` listener, which is the only point at which the body is complete', 'Responded at the end of the stream');
+    ```
+
+2. Complete the handler so a `POST` is acknowledged, a `GET` gets the page, and any other method is refused.
+
+    ```{node}
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      // TODO:
+      //   POST -> 200, body 'Received POST request'
+      //   GET  -> 200, body '<h1>Home</h1>'
+      //   anything else -> 405, body 'Method not allowed'
+      //   Content-Type text/plain for the first and third, text/html for the second.
+    }
+
+    const posted = makeFakeResponse();
+    handleRequest({ method: 'POST', url: '/submit_form' }, posted);
+
+    console.log(posted.statusCode + ' ' + posted.body);
+    ```
+    ```+solution
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      if (request.method === 'POST') {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('Received POST request');
+      } else if (request.method === 'GET') {
+        response.writeHead(200, { 'Content-Type': 'text/html' });
+        response.end('<h1>Home</h1>');
+      } else {
+        response.writeHead(405, { 'Content-Type': 'text/plain' });
+        response.end('Method not allowed');
+      }
+    }
+
+    const posted = makeFakeResponse();
+    handleRequest({ method: 'POST', url: '/submit_form' }, posted);
+
+    console.log(posted.statusCode + ' ' + posted.body);
+    ```
+    ```+test
+    wrap(posted.statusCode + '|' + posted.body).should('equal', '200|Received POST request').run('A `POST` should answer `200` with the body `Received POST request`', 'Handled the POST');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ method: 'GET', url: '/' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '200|<h1>Home</h1>').run('A `GET` should answer `200` with the page', 'Handled the GET');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ method: 'PUT', url: '/' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '405|Method not allowed').run('Any other method should answer `405 Method Not Allowed`, which says the URL exists but the method is not supported', 'Refused the unsupported method');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ method: 'GET', url: '/' }, r); return r.headers && r.headers['Content-Type']; })()).should('equal', 'text/html').run('The page should be sent as `text/html`', 'Set the content type for the page');
+    ```
+
+3. Responding at the wrong moment.
+
+    ```{mcq}
+    A handler answers a `POST` from inside the `data` listener:
+
+    ~~~js
+    let body = '';
+
+    request.on('data', (chunk) => {
+      body += chunk.toString();
+      response.end('got ' + body);
+    });
+    ~~~
+
+    The body arrives as two chunks, `first=Ja` and then `ne&last=Doe`. What does the client receive?
+    correct: Correct! `response.end` sends the response and finishes it, and here it runs on the first chunk, when `body` is only `first=Ja`. The complete body exists only once `end` fires, which is why the response belongs in the `end` listener.
+    wrong: The response goes out the first time `response.end` runs. How much of the body has arrived at that moment?
+    [x] `got first=Ja`
+    [ ] `got first=Jane&last=Doe`
+    [ ] Nothing, because responses cannot be sent from inside a listener
+    [ ] An error page, because `body` is not defined yet
+    ```
+
+4. Predicting the body.
+
+    ```{mcq}
+    A form has three text inputs: one with `name="food"` where the user types `pizza`, one with `name="drink"` where the user types `water`, and one with `name="notes"` that the user leaves empty. What has the server collected once `end` fires?
+    correct: Correct! Each input contributes `name=value` with the pairs joined by `&`, and an empty input still contributes its key, with nothing after the `=`.
+    wrong: Every named input contributes a pair, filled in or not, and the pairs are joined with `&`. Look back at "What the Body Looks Like".
+    [x] `food=pizza&drink=water&notes=`
+    [ ] `food=pizza&drink=water`
+    [ ] `{"food": "pizza", "drink": "water", "notes": ""}`
+    [ ] `pizza water`
+    ```
+
+## Resources
+
+- [MDN: POST](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods/POST)
+- [MDN: sending form data](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Forms/Sending_and_retrieving_form_data)
+- [MDN: 405 Method Not Allowed](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/405)
+- [Node.js: class http.IncomingMessage](https://nodejs.org/api/http.html#class-httpincomingmessage)

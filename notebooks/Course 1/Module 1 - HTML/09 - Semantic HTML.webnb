@@ -1,0 +1,205 @@
+# Semantic HTML
+
+There are a *lot* of HTML elements. You are not expected to memorize them all. The reason there are so many elements is that each one is designed to convey a specific **meaning**.
+
+For example:
+
+* `<h1>` represents a top-level heading.
+* `<a>` creates a link.
+* `<img>` displays an image.
+* ...etc.
+
+These elements are not just for presentation. They communicate what kind of content they contain. When you choose an element that matches the meaning or purpose of your content, you are writing **semantic HTML**.
+
+## Why Semantics Matter
+
+Semantic HTML helps both **people** and **machines** understand your web page. When a page uses the correct elements:
+
+* Screen readers (which convert HTML to speech for blind users) can announce the content more clearly and let users navigate between the important parts of the page.
+* Search engines can better index your content.
+* AI programs that read and interpret pages can understand what each part of the page is for.
+* Developers (including future you) can more readily understand the structure and purpose of the page.
+
+For instance, the main heading of a page should use an `<h1>` tag:
+
+```{html autorun}
+<h1>Visit Ann Arbor</h1>
+```
+
+`<h1>` elements are displayed in a large font by default but that *alone*, is not the reason that we use them (as we'll learn in CSS, we could style any element to have a similarly large font). Using elements like `<h1>` correctly tells browsers, assistive technologies, and search engines that this is the main title of the page. A search engine can read that `<h1>` and know it is a high-level summary of the page, so it might recommend the page when someone searches for "visiting Ann Arbor" and even show that text in the search preview.
+
+## Heading Levels: `h1` Through `h6`
+
+HTML gives us six heading elements, `<h1>` through `<h6>`. The number is the heading's *level*: `<h1>` is the "topmost" heading on the page, and `<h6>` is the least.
+
+```{html autorun}
+<h1>Visit Ann Arbor</h1>
+<h2>Museums</h2>
+<h3>The Museum of Natural History</h3>
+<h2>Parks</h2>
+```
+
+Browsers display `<h1>` in the largest font and shrink each level after it. But again, the font size is a side effect, not the reason for using the element. The job of a heading is to say "a new section starts here, and this is how it fits into the rest of the page."
+
+Read the levels in the example above in order and you get an outline:
+
+* Visit Ann Arbor (level 1: the entire page)
+    * Museums (level 2: a major section)
+        * The Museum of Natural History (level 3: part of the Museums section)
+    * Parks (level 2: another major section)
+
+Screen readers build this outline automatically and let users jump from heading to heading. Many blind users skim a page this way rather than reading it from top to bottom, so your heading levels act as a table of contents. Three guidelines follow from that:
+
+**Use one `<h1>` per page.** It names what the whole page is about, and everything else is a section inside it.
+
+**Do not skip levels.** Jumping from `<h1>` straight to `<h3>` implies a level 2 section that is not there:
+
+```html
+<h1>Visit Ann Arbor</h1>
+<h3>Museums</h3>
+```
+
+**Choose the level by structure, not by size.** It is tempting to reach for `<h4>` because you want smaller text, or `<h1>` because you want something to look big. Instead, pick the level that describes where the content sits in the outline. When we cover CSS, we will see how to make a heading any size we want, regardless of its level.
+
+## Semantic Structural Elements: `header`, `main`, and `footer`
+
+Other useful semantic elements describe the *structure* of a page: which part is the top, which part is the main content, and which part is the bottom.
+
+* `<header>` represents the introductory section at the top of a page or section (often containing the main heading).
+* `<main>` represents the main content of the page.
+* `<footer>` represents the closing section at the bottom, often with things like copyright or contact information.
+
+Note that `<header>` is not the same thing as a heading element. `<header>` is a container for the introductory part of a page or section, and it usually holds an `<h1>` or `<h2>` inside it, but the two elements do different jobs.
+
+Here is a small page that uses them:
+
+```{html autorun}
+<header>
+  <h1>Visit Ann Arbor</h1>
+</header>
+<main>
+  <p>Ann Arbor is home to museums, parks, and Nichols Arcade.</p>
+  <p>There is something to do in every season.</p>
+</main>
+<footer>
+  <p>Written by a fan of the city.</p>
+</footer>
+```
+
+Try editing the text and running the cell. Each element still just displays its content, but the element *names* now describe what each part of the page is.
+
+If we replaced `<header>`, `<main>`, and `<footer>` with `<div>` elements, the page would look **exactly the same** in the browser, but we would lose the meaning. A screen reader would no longer know that the footer is a distinct region users might want to jump to, and a search engine would have a harder time understanding the structure. The visual result is identical; the *meaning* is what we lose.
+
+## Meaning vs. Appearance: `em` vs `i` and `strong` vs `b`
+
+Two pairs of elements look the same on screen but mean different things. This is one of the clearest ways to see the difference between semantics and styling.
+
+* `<em>` marks text that should be **emphasized**. By default it renders as *italic*.
+* `<i>` renders text as *italic*, but says nothing about meaning: it is purely visual.
+
+```{html autorun}
+<p>Do not miss <em>Nichols Arcade</em> while you are here.</p>
+```
+
+Both `<em>` and `<i>` produce italic text, but `<em>` tells the browser and assistive technologies that the words carry emphasis. When a screen reader reads `<em>Nichols Arcade</em>` aloud, it can stress those words the way you would when speaking.
+
+The same pattern applies to bold text:
+
+* `<strong>` marks text of **strong importance**, something crucial to understanding the message. By default it renders as **bold**.
+* `<b>` renders text as **bold**, but carries no meaning: it is purely visual.
+
+```{html autorun}
+<p><strong>Bring a jacket</strong> - evenings get cold.</p>
+```
+
+We typically choose `<em>` and `<strong>`, which carry meaning (emphasis and importance).
+
+## What Not to Do: Overusing Generic Containers
+
+HTML also includes generic container elements: `<div>` and `<span>`. These are useful for grouping content, but they do not carry any semantic meaning.
+
+* `<div>` is a block-level element. It starts on a new line and stretches the full width available.
+* `<span>` is an inline element. It only takes up as much space as its content needs.
+
+Here is what using them might look like:
+
+```{html autorun}
+<div>This is an example of a div</div>
+<span>My Page</span>
+```
+
+These elements tell us nothing about the meaning of the content. A screen reader would not know that "My Page" is supposed to be a heading.
+
+## Semantic HTML in This Specialization
+
+In this specialization, we will *not* always follow best practices for semantic HTML. That is because our main focus is learning JavaScript. So you will often see `<div>` and `<span>` used as shortcuts.
+
+Still, whenever possible, you should use the most appropriate, meaningful element for the job. Writing semantic HTML makes your code cleaner, more accessible, and easier to maintain.
+
+## Exercises
+
+1. Rebuild the layout below using **semantic** structural elements instead of generic `<div>` containers. Replace the `<div id="top">` with a `<header>`, the `<div id="middle">` with a `<main>`, and the `<div id="bottom">` with a `<footer>`. Keep the `<h1>` and paragraphs where they are. The `id` attributes are only there to tell the three containers apart, so you can keep them or delete them.
+
+    ```{html}
+    <div id="top">
+      <h1>Visit Ann Arbor</h1>
+    </div>
+    <div id="middle">
+      <p>Ann Arbor is home to museums, parks, and Nichols Arcade.</p>
+    </div>
+    <div id="bottom">
+      <p>Written by a fan of the city.</p>
+    </div>
+    ```
+    ```+solution
+    <header id="top">
+      <h1>Visit Ann Arbor</h1>
+    </header>
+    <main id="middle">
+      <p>Ann Arbor is home to museums, parks, and Nichols Arcade.</p>
+    </main>
+    <footer id="bottom">
+      <p>Written by a fan of the city.</p>
+    </footer>
+    ```
+    ```+test
+    assert('header').should('exist').run('Could not find a header element', 'Created a header element')
+    assert('main').should('exist').run('Could not find a main element', 'Created a main element')
+    assert('footer').should('exist').run('Could not find a footer element', 'Created a footer element')
+    assert('header').should('contain', 'h1').run('The header should contain the h1 element', 'The header contains the h1 element')
+    assert('h1').should('have.text', 'Visit Ann Arbor').run('The h1 should have the text "Visit Ann Arbor"', 'The h1 has the correct text')
+    assert('main').should('contain', 'p').run('The main should contain a paragraph', 'The main contains a paragraph')
+    assert('footer').should('contain', 'p').run('The footer should contain a paragraph', 'The footer contains a paragraph')
+    ```
+
+2. Emphasis for a screen reader
+
+    ```{mcq}
+    You want to mark the words "Nichols Arcade" so a screen reader emphasizes them when reading aloud. Which element should you use?
+    correct: Correct! `<em>` marks text as emphasized, which carries meaning that assistive technologies can use, unlike `<i>`, which only changes the visual style.
+    wrong: Remember the difference between meaning and appearance. One of these elements only changes how the text looks.
+    [x] `<em>`, because it marks the text as emphasized (meaning), not just italic.
+    [ ] `<i>`, because italic text is always read with emphasis.
+    [ ] `<div>`, because it groups the important words together.
+    [ ] `<b>`, because bold text conveys emphasis to screen readers.
+    ```
+
+3. Replacing semantic elements with `<div>`
+
+    ```{mcq}
+    If you replace a page's `<main>` and `<footer>` elements with `<div>` elements, what happens?
+    correct: Correct! The page looks identical, but you lose the semantic meaning that helps screen readers, search engines, and AI understand the structure.
+    wrong: Think about the difference between how a page looks and what its elements mean.
+    [ ] The page will look broken and the content will disappear.
+    [x] The page looks the same, but it loses the semantic meaning that helps screen readers and search engines understand its structure.
+    [ ] The text automatically becomes bold and italic.
+    [ ] The browser refuses to display `<div>` elements.
+    ```
+
+## Resources
+
+- [MDN: Semantics in HTML](https://developer.mozilla.org/en-US/docs/Glossary/Semantics#semantics_in_html)
+- [MDN: Document and website structure](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Structuring_documents)
+- [MDN: The HTML section heading elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/Heading_Elements)
+- [MDN: The main element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/main)
+- [MDN: The em element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/em)

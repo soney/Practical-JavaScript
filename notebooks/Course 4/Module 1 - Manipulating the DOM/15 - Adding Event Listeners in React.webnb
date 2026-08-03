@@ -1,0 +1,186 @@
+# Adding Event Listeners in React
+
+In React, event listeners are passed as props.
+
+Instead of writing `addEventListener(...)`, you usually write a JSX prop such as `onClick`.
+
+## Click Events
+
+```{react}
+function SaveButton() {
+  function handleClick() {
+    console.log('Saved');
+  }
+
+  return <button onClick={handleClick}>Save</button>;
+}
+
+renderReact(<SaveButton />);
+```
+
+`onClick={handleClick}` passes the function to React. React calls it later when the click happens.
+
+## The Naming Rule
+
+Every DOM event you know has a React prop, and the names follow one rule: **`on` plus the event name in camelCase.**
+
+| DOM event | React prop |
+| --- | --- |
+| `click` | `onClick` |
+| `mouseenter` | `onMouseEnter` |
+| `mouseleave` | `onMouseLeave` |
+| `change` | `onChange` |
+| `submit` | `onSubmit` |
+| `keydown` | `onKeyDown` |
+
+So the all-lowercase DOM name `mouseenter` becomes `onMouseEnter`. Writing `onMouseenter` or `onmouseenter` silently does nothing, since React does not recognize it as an event prop and passes it through as an unknown attribute.
+
+## Inline Handlers
+
+The handler does not have to be a named function declared beforehand. You can pass an arrow function expression straight into the prop:
+
+```{react autorun}
+function InlineExample() {
+  const [count, setCount] = React.useState(0);
+
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      Clicked {count} times
+    </button>
+  );
+}
+
+renderReact(<InlineExample />);
+```
+
+Both forms are ordinary and the choice is about readability: inline for a one-liner, a named function once there is anything to read.
+
+## Updating the UI
+
+Event handlers often update state.
+
+```{react}
+function ToggleMessage() {
+  const [message, setMessage] = React.useState('Not saved');
+
+  function handleClick() {
+    setMessage('Saved');
+  }
+
+  return (
+    <section>
+      <button onClick={handleClick}>Save</button>
+      <p>{message}</p>
+    </section>
+  );
+}
+
+renderReact(<ToggleMessage />);
+```
+
+Click the button and watch the message change.
+
+## Exercises
+
+1. How do you add a click handler in React JSX?
+
+   ```{mcq}
+   How do you add a click handler in React JSX?
+   correct: Correct. Use the `onClick` prop and pass a function.
+   wrong: Think about event props in JSX.
+   [x] Use `onClick` and pass a function.
+   [ ] Use `href` on every button.
+   [ ] Use `className` as the handler.
+   [ ] Put the handler in a CSS file.
+   ```
+
+2. Make the button change the message to `Clicked`.
+
+   ```{react}
+   function ClickMessage() {
+     const [message, setMessage] = React.useState('Waiting');
+
+     function handleClick() {
+       setMessage('Waiting');
+     }
+
+     return (
+       <section>
+         <button onClick={handleClick}>Click</button>
+         <p>{message}</p>
+       </section>
+     );
+   }
+
+   renderReact(<ClickMessage />);
+   ```
+   ```+solution
+   function ClickMessage() {
+     const [message, setMessage] = React.useState('Waiting');
+
+     function handleClick() {
+       setMessage('Clicked');
+     }
+
+     return (
+       <section>
+         <button onClick={handleClick}>Click</button>
+         <p>{message}</p>
+       </section>
+     );
+   }
+
+   renderReact(<ClickMessage />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('button').click().run('Click the button', 'Clicked the button');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('p').should('have.text', 'Clicked').run('The message should change to `Clicked`', 'Updated the message');
+     }, 50);
+   }, 50);
+   ```
+
+3. Why do we pass a function to `onClick`?
+
+   ```{mcq}
+   Why do we pass a function to `onClick`?
+   correct: Correct. React needs a function it can call when the event happens.
+   wrong: Think about running now versus running later.
+   [x] React needs a function it can call when the event happens.
+   [ ] React needs the function to run during render immediately.
+   [ ] `onClick` only accepts strings.
+   [ ] `onClick` is the same as `className`.
+   ```
+
+4. What is the React prop for the DOM `mouseenter` event?
+
+   ```{mcq}
+   How are DOM event names written as React props?
+   correct: Correct! `on` followed by the event name in camelCase. The DOM name is all lowercase; the React prop capitalizes each word after the `on`.
+   wrong: Look at the table of event names. What happens to the capitalization?
+   [x] `onMouseEnter`
+   [ ] `onmouseenter`
+   [ ] `on-mouse-enter`
+   [ ] `addEventListener('mouseenter')`
+   ```
+
+5. Must an event handler be declared as a separate named function first?
+
+   ```{mcq}
+   Can a handler be written directly in the JSX?
+   correct: Correct! An arrow function expression can go straight into the prop, which is common for short handlers. A named function is nicer once the body grows.
+   wrong: The prop needs a function. Does it care where the function came from?
+   [x] No, you can pass an arrow function expression directly into the prop
+   [ ] Yes, React only accepts a reference to a named function
+   [ ] Yes, unless the component uses state
+   [ ] No, but only for `onClick`
+   ```
+
+## Resources
+
+- [React Docs: Responding to events](https://react.dev/learn/responding-to-events)
+- [MDN: click event](https://developer.mozilla.org/en-US/docs/Web/API/Element/click_event)

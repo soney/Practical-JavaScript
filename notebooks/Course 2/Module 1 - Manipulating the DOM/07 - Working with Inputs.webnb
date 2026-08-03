@@ -1,0 +1,343 @@
+# Working with Inputs
+
+Input elements have a notion of **status** that we can read and modify from JavaScript. For a text input, the status is the text in it. For a checkbox, it is whether the box is checked. For radio buttons, it is which option is selected.
+
+Here are the properties and methods we will use, on an element `el` fetched with `querySelector`:
+
+- **`el.value`** is the current value of the input.
+- **`el.focus()`** gives the element keyboard focus, so the next key the user presses goes into it.
+- **`el.select()`** selects all the contents of the input.
+- **`el.disabled`** controls whether the input is disabled.
+- **`el.checked`** is whether a checkbox or radio button is on.
+
+## Text Inputs and `.value`
+
+A text input is an `<input>` with `type="text"`. Whatever the user has typed lives in its `.value`:
+
+```html id=page1
+<input id="username" type="text" value="Hello world">
+```
+
+```{javascript autorun}
+const input = document.querySelector('#username');
+
+console.log(input.value);
+
+input.value = 'changed from JavaScript';
+
+console.log(input.value);
+```
+```+id=page1
+```
+
+Reading `.value` gives us the text, and assigning to it changes what the field shows.
+
+### Focus, Select, and Disable
+
+Three more controls, all worth knowing:
+
+- **`input.focus()`** puts the keyboard cursor in the field. Most browsers draw a colored outline around the focused element.
+- **`input.select()`** highlights all the text already in the field, so that if the user starts typing it replaces the lot.
+- **`input.disabled = true`** grays the field out and stops it being edited. `input.disabled = false` re-enables it.
+
+Setting `.disabled` does the same job as the attribute methods from the last lesson: `input.disabled = true` is equivalent to `input.setAttribute('disabled', '')`, and `input.disabled = false` is equivalent to `input.removeAttribute('disabled')`. For a lot of people the property is the more straightforward of the two, since you say `true` or `false` and mean it.
+
+### A Worked Example: Greet and Refocus
+
+Let's build something with all of this. The user types a name and clicks a button, and we show a greeting.
+
+```html id=page2
+<label for="name">Enter your name</label>
+<input id="name" type="text">
+<button id="greet">Greet me</button>
+<p id="greeting"></p>
+```
+
+```{javascript autorun}
+const input = document.querySelector('#name');
+const button = document.querySelector('#greet');
+const greetingP = document.querySelector('#greeting');
+
+function onGreet() {
+  greetingP.textContent = 'Hello, ' + input.value;
+}
+
+button.addEventListener('click', onGreet);
+```
+```+id=page2
+```
+
+Type a name and click the button. It works, but try greeting a second person: you have to click back into the field and delete the old name first. We can fix that in two lines.
+
+```{javascript autorun}
+const input = document.querySelector('#name');
+const button = document.querySelector('#greet');
+const greetingP = document.querySelector('#greeting');
+
+function onGreet() {
+  greetingP.textContent = 'Hello, ' + input.value;
+  input.value = '';
+  input.focus();
+}
+
+button.addEventListener('click', onGreet);
+```
+```+id=page2
+```
+
+Now clicking the button empties the field and puts the cursor back in it, so the next name can be typed straight away.
+
+An alternative to clearing the field is `input.select()`, which leaves the old name in place but highlights it, so typing replaces it. Which one you want depends on whether the previous value is worth keeping on screen.
+
+### Tidying Up What the User Typed
+
+Whatever comes out of `.value` is exactly what the user typed, spaces and capitals included, and that is rarely what you want to compare against. Two string methods do almost all of the cleaning up.
+
+- **`.trim()`** returns the string with any spaces at the start and end removed.
+- **`.toLowerCase()`** returns the string with every letter in lowercase. There is a matching `.toUpperCase()`.
+
+Here is a value with both problems, spaces around it and a stray capital:
+
+```html id=page3
+<input id="word" type="text" value="  JavaScript  ">
+```
+
+```{javascript autorun}
+const input = document.querySelector('#word');
+
+console.log(input.value.length);
+console.log(input.value.trim().length);
+
+console.log(input.value.trim() === 'javascript');
+console.log(input.value.trim().toLowerCase() === 'javascript');
+```
+```+id=page3
+```
+
+The raw value has stray spaces and a capital S, so comparing it directly fails. Trimming and lowercasing first makes the comparison succeed.
+
+Note that neither method changes the input; both **return a new string**, leaving `input.value` exactly as it was. If you want the field itself tidied up, assign the result back: `input.value = input.value.trim();`
+
+`.trim()` is also the usual way to reject an entry that is empty or only spaces:
+
+```html id=page4
+<input id="word" type="text" value="     ">
+```
+
+```{javascript autorun}
+const input = document.querySelector('#word');
+
+if (input.value.trim() === '') {
+  console.log('nothing was entered');
+} else {
+  console.log('got: ' + input.value.trim());
+}
+```
+```+id=page4
+```
+
+## Checkboxes and `.checked`
+
+A checkbox is an `<input>` with `type="checkbox"`, and its on/off status lives in `.checked`, not in `.value`:
+
+```html id=page5
+<input id="subscribe" type="checkbox">
+<label for="subscribe">Email me updates</label>
+```
+
+```{javascript autorun}
+const box = document.querySelector('#subscribe');
+
+console.log('starts out: ' + box.checked);
+
+function onClick() {
+  console.log('now: ' + box.checked);
+}
+
+box.addEventListener('click', onClick);
+```
+```+id=page5
+```
+
+Tick and untick the box a few times. Every click logs the new status: `true` when the box is on, `false` when it is off. Reading `.checked` always gives the box's status right now, so there is nothing to keep in sync yourself.
+
+Assigning to `.checked` works too, and moves the box on screen:
+
+```{javascript autorun}
+const box = document.querySelector('#subscribe');
+
+console.log(box.checked);
+
+box.checked = true;
+
+console.log(box.checked);
+```
+```+id=page5
+```
+
+The box above is drawn ticked as soon as the cell runs, even though nobody clicked it.
+
+Radio buttons work the same way: each option is its own `<input type="radio">`, and `.checked` says whether that particular one is selected.
+
+### Always Use a Label
+
+A checkbox on its own is a small square with no meaning, so it needs text beside it. Putting that text next to the box as plain text works visually and is worse than it looks: clicking the words does nothing, and the user has to hit the small box exactly.
+
+The better approach is a **`<label>`** element connected to the input. Give the input an `id`, and give the label a `for` attribute with the same value:
+
+```{html autorun}
+<input type="checkbox" id="a"> No label element, so clicking this text does nothing
+
+<input type="checkbox" id="b"> <label for="b">Properly labeled, so clicking this text toggles the box</label>
+```
+
+Try clicking each piece of text. Only the second one toggles its checkbox. The connection also matters for screen readers, which is reason enough on its own.
+
+## Finding Which Inputs Are Checked
+
+With several checkboxes on a page, we usually want to know which ones the user selected. **CSS pseudo-classes** let us query elements that are in a particular state, and they are written with a colon. The one we want is **`:checked`**.
+
+```html id=page6
+<label><input type="checkbox" checked> A</label>
+<label><input type="checkbox"> B</label>
+<label><input type="checkbox" checked> C</label>
+<label><input type="checkbox"> D</label>
+<button id="go">Submit</button>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#go');
+
+function onClick() {
+  const selectedInputs = document.querySelectorAll('input:checked');
+  console.log(selectedInputs.length + ' selected');
+}
+
+button.addEventListener('click', onClick);
+```
+```+id=page6
+```
+
+Toggle some boxes and click Submit. `input:checked` matches every input that is currently on, and nothing else. If none are checked you get an empty NodeList, with a length of `0`.
+
+Note that this gives back the checkbox elements themselves, not their labels.
+
+## Exercises
+
+1. Read the text input's value into `username`.
+
+    ```html id=page7
+    <input id="user" type="text" value="Alice">
+    ```
+
+    ```{javascript}
+    const input = document.querySelector('#user');
+
+    const username = /* Your code here */;
+
+    console.log(username);
+    ```
+    ```+id=page7
+    ```
+    ```+solution
+    const input = document.querySelector('#user');
+
+    const username = input.value;
+
+    console.log(username);
+    ```
+    ```+test
+    wrap(username).should('equal', 'Alice').run('Read the text from the input with `.value`', 'Read the input value');
+    ```
+
+2. The checkbox starts unchecked. Check it from JavaScript, and disable it so the user cannot change it back.
+
+    ```{javascript}
+    const box = document.querySelector('#subscribe');
+
+    // Write your code here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const box = document.querySelector('#subscribe');
+
+    box.checked = true;
+    box.disabled = true;
+    ```
+    ```+test
+    wrap(box.checked).should('equal', true).run('Set the checkbox\'s `.checked` property to `true`', 'Checked the box');
+    wrap(box.disabled).should('equal', true).run('Set the checkbox\'s `.disabled` property to `true`', 'Disabled the box');
+    ```
+
+3. Count how many checkboxes are currently checked and store the number in `count`.
+
+    ```html id=page8
+    <label><input type="checkbox" checked> A</label>
+    <label><input type="checkbox"> B</label>
+    <label><input type="checkbox" checked> C</label>
+    <label><input type="checkbox" checked> D</label>
+    ```
+
+    ```{javascript}
+    const count = /* Your code here */;
+
+    console.log(count);
+    ```
+    ```+id=page8
+    ```
+    ```+solution
+    const count = document.querySelectorAll('input:checked').length;
+
+    console.log(count);
+    ```
+    ```+test
+    wrap(count).should('equal', 3).run('`count` should be `3`. Use `document.querySelectorAll(\'input:checked\')` and read its `length`', 'Counted the checked inputs');
+    wrap(source.includes(':checked')).should('equal', true).run('Use the `:checked` pseudo-class in your selector', 'Used the :checked pseudo-class');
+    ```
+
+4. Wire up the button so that clicking it puts `You typed: ` followed by the input's value into the paragraph, then clears the input and returns keyboard focus to it.
+
+    ```html id=page9
+    <input id="entry" type="text" value="hello">
+    <button id="send">Send</button>
+    <p id="output"></p>
+    ```
+
+    ```{javascript}
+    const input = document.querySelector('#entry');
+    const button = document.querySelector('#send');
+    const output = document.querySelector('#output');
+
+    // Write your code here
+    ```
+    ```+id=page9
+    ```
+    ```+solution
+    const input = document.querySelector('#entry');
+    const button = document.querySelector('#send');
+    const output = document.querySelector('#output');
+
+    function onSend() {
+      output.textContent = 'You typed: ' + input.value;
+      input.value = '';
+      input.focus();
+    }
+
+    button.addEventListener('click', onSend);
+    ```
+    ```+test
+    assert('#output').should('have.text', '').run('The paragraph should stay empty until the button is clicked', 'Nothing happens before the click');
+    assert('#send').click().run('Could not find the `#send` button', 'Clicked the button');
+    assert('#output').should('have.text', 'You typed: hello').run('Clicking should set the paragraph to `You typed: ` followed by the input value', 'Showed what was typed');
+    wrap(input.value).should('equal', '').run('Clicking should also clear the input by setting `input.value` to an empty string', 'Cleared the input');
+    wrap(source.includes('.focus()')).should('equal', true).run('Call `input.focus()` so the user can type again straight away', 'Returned focus to the input');
+    ```
+
+## Resources
+
+- [MDN: HTMLInputElement](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement)
+- [MDN: HTMLInputElement.value](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement/value)
+- [MDN: HTMLElement.focus()](https://developer.mozilla.org/en-US/docs/Web/API/HTMLElement/focus)
+- [MDN: The :checked pseudo-class](https://developer.mozilla.org/en-US/docs/Web/CSS/:checked)
+- [MDN: The label element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label)

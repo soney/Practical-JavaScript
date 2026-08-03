@@ -1,0 +1,26 @@
+# Course 3 End Survey
+
+Please complete the Course 3 end survey in Coursera.
+
+The survey helps the course team understand what worked, what was confusing, and how learners used the course materials.
+
+## What to Do
+
+1. Open the survey item in Coursera.
+2. Answer honestly based on your experience in Course 3.
+3. Return to the course after submitting it.
+
+There are no right or wrong programming answers on this page.
+
+## Before You Go
+
+Course 3 covered a lot of ground. If any of it has gone hazy, these are the pieces the next course builds on most directly:
+
+- **[Modules](<../Module 1 - Libraries and Modules/12 - Modules Overview.webnb>)**, `import` and `export`, and [what a bundler does with them](<../Module 1 - Libraries and Modules/24 - Introduction to Bundlers.webnb>). Course 4 is written as modules from the first line.
+- **[npm](<../Module 1 - Libraries and Modules/21 - Using npm to Manage Packages.webnb>)**, [`package.json`](<../Module 1 - Libraries and Modules/21a - The package.json File.webnb>), and installing a dependency, since React arrives that way.
+- **[Servers and endpoints](<../Module 2 - Server-Side JavaScript/02 - Handling Requests and Responses.webnb>)**: sending a request, reading a response, and returning JSON.
+- **[Semantic HTML and accessibility](<06 - Introduction to Accessibility and WCAG.webnb>)**, which do not stop mattering because a framework is generating the markup.
+
+Everything else, the databases, the sessions, the operational transformations, is yours to reach for when a project needs it.
+
+Thank you for working through it, and see you in Course 4.

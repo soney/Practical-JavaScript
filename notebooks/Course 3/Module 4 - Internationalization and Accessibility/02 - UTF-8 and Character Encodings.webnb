@@ -1,0 +1,164 @@
+# UTF-8 and Character Encodings
+
+The first hurdle for building applications that work in many languages is deciding how to represent text at all. Computers only store numbers, so before we can store the letter `A`, a Greek letter, a Chinese character, or an emoji, we need an agreed-upon way to turn characters into numbers and those numbers into ones and zeros. That agreement is what a **character encoding** provides. Most of the time the answer is **UTF-8**, and this lesson explains what that means and why.
+
+## Characters as Numbers
+
+Computers work with only ones and zeros, but we can group those bits together to represent larger numbers. Each position in a binary number stands for a power of two. Reading from right to left, the places are the 1's place, the 2's place, the 4's place, the 8's place, the 16's place, and so on (each place is the next power of 2).
+
+To read a binary number, multiply each digit by its place value and add the results. For example, `01001`:
+
+```
+0 * 16  +  1 * 8  +  0 * 4  +  0 * 2  +  1 * 1  =  9
+```
+
+With five bits we can represent every number from `0` up to `11111` (which is 31), so five bits give us 32 possible values. In general, `n` bits can represent `2 ** n` different numbers. Bits are usually grouped in eights (a byte), and 8 bits can represent `2 ** 8`, or 256, values.
+
+Computers store numbers this way in binary. To store text, we represent each character as a number. The remaining question is: which number stands for which character?
+
+## ASCII: Characters as Code Points
+
+In the United States, the United Kingdom, and much of Western Europe, a standard called **ASCII** (created in 1963) answers that question. ASCII assigns a number to each character:
+
+- Capital `A` is `65`, and capital `Z` is `90`.
+- Lowercase `a` is `97`.
+- Digits, punctuation, and spaces each get a number too.
+
+The number assigned to a character is called its **code point**. So the code point of capital `A` is `65`. The overall mapping from characters to code points is called a **character set**.
+
+A **character encoding** is related but distinct: the character set is the mapping of characters to numbers, while the encoding is how those numbers are actually written as bits. Keeping these two ideas separate matters later, because the same set of code points can be encoded into bytes in more than one way.
+
+ASCII uses 7 bits per character, which means it can represent only `2 ** 7`, or 128, characters. That is enough for unaccented English, but not for diacritics (the accent marks in words like `café`), Greek letters, Chinese characters, or the thousands of other symbols used around the world.
+
+## Incompatible Encodings and the Rise of Unicode
+
+Because 128 characters were not enough, many different character sets appeared. Some extended ASCII by using one extra bit to add another 128 characters; others, used in Russia, Japan, China, and elsewhere, differed from ASCII significantly. Most of these standards were incompatible with one another. That was tolerable while software stayed local, but it became a serious problem once computers began exchanging text over the internet: the same bytes meant different characters on different systems, producing garbled text.
+
+**Unicode**, introduced in 1991, was designed to be a single character set for every writing system. Unicode currently has about 150,000 assigned code points out of more than a million possible, covers over 150 scripts, and includes thousands of emoji and other pictographs. Unicode gives every character one universal code point, no matter what language or platform you are on.
+
+## Why UTF-8
+
+Unicode is the character set (the mapping of characters to code points). It still needs an **encoding** to turn those code points into bytes, and Unicode defines several:
+
+- **UTF-8** is the one you almost always want. It is used by roughly 99% of the web, and it is backward compatible with ASCII, meaning any valid ASCII document is already valid UTF-8. That compatibility was critical to its adoption.
+- **UTF-16** is not common on the web, though Windows uses it internally. It is not compatible with ASCII.
+- **UTF-32** has never found wide use.
+
+That near-universal share is recent. UTF-8 passed half of all web pages around 2010 and has climbed steadily since, largely at the expense of the older regional encodings:
+
+![A stacked bar chart of the character encodings used by web pages from 2010 to 2021. The UTF-8 band grows from about 50 percent in 2010 to about 96 percent in 2021. ISO-8859-1 shrinks from roughly 30 percent to almost nothing, and the remaining bands, Windows-1251, Windows-1252, GB2312, Shift JIS, and Other, are thin slivers that shrink as well.](images/utf-8-popularity.png =x400)
+
+UTF-8 and UTF-16 are **variable width**: a character can use a different number of bytes depending on which character it is, so common characters stay compact. UTF-32 is **fixed width**: every character takes the same amount of space. The numbers 8, 16, and 32 might make UTF-16 or UTF-32 look newer or better, but that is not the case. UTF-8 is the right default the vast majority of the time.
+
+## Declaring UTF-8 in HTML
+
+To tell a browser that a page is encoded as UTF-8, include this meta tag in the document's `<head>`:
+
+```html
+<meta charset="UTF-8">
+```
+
+This tells the browser how to decode the bytes of the document back into characters. You may have already seen UTF-8 named in other places too, such as when reading a file as a UTF-8 file on the server.
+
+## HTML Numeric Character Escapes
+
+In HTML you can also write any character by its Unicode code point using a numeric escape: an ampersand, a `#`, the code point number, and a semicolon. Because capital `A` is code point 65, `&#65;` renders as `A`. Some characters must be escaped so the browser does not misread them, such as the less-than sign: `&#60;` (also written `&lt;`) keeps `<` from being interpreted as the start of a tag.
+
+```html
+<p>&#65; equals A, and &#60; is a less-than sign.</p>
+```
+
+It can be tempting to use these escapes for accented or non-English characters, but once your document is UTF-8 it is clearer to type the character directly (`café`, not an escape).
+
+## Characters and Length
+
+Because UTF-8 (and JavaScript's internal UTF-16 representation) are variable width, the number of user-visible characters in a string is not always the same as the number of code units the language uses to store it. JavaScript's `String.prototype.length` counts UTF-16 code units, not visible characters.
+
+```{javascript autorun}
+const party = '🎉';
+console.log(party.length);        // 2  -> stored as two UTF-16 code units
+console.log([...party].length);   // 1  -> one visible character
+
+const cafe = 'café';
+console.log(cafe.length);                  // 4
+console.log(cafe.normalize('NFD').length); // 5  -> é split into e + accent
+```
+
+- Spreading a string with `[...str]` (or `Array.from(str)`) iterates by Unicode code point, so it counts the emoji as one item while `.length` reports the two code units used to store it.
+- The same visible character can even be stored more than one way: `normalize('NFD')` rewrites `é` as a plain `e` followed by a separate combining accent, which changes `.length` without changing what you see.
+
+The practical takeaway: use UTF-8 everywhere, and when character counts matter, test with real text from every language you support rather than English-only placeholders.
+
+## Exercises
+
+1. ASCII uses 7 bits per character. How many distinct characters can it represent, and what limitation does that create?
+
+   ```{mcq}
+   Why was ASCII, with its 7 bits per character, not enough for the world's text?
+   correct: Correct. 7 bits give 2 ** 7 = 128 code points, which cannot cover accents, Greek, Chinese, and other scripts.
+   wrong: Recall that n bits represent 2 ** n values, and think about how many characters the world's languages need.
+   [x] 7 bits allow only 128 characters, too few for accents and non-Latin scripts.
+   [ ] 7 bits allow 128 characters, which is plenty for every language.
+   [ ] ASCII could represent any character but was too slow.
+   [ ] ASCII stored characters as text instead of numbers.
+   ```
+
+2. `String.prototype.length` counts UTF-16 code units, not visible characters. Implement `countVisibleCharacters` so it returns the number of Unicode code points (visible characters) in a string. Iterating with the spread operator counts code points.
+
+   ```{javascript}
+   function countVisibleCharacters(str) {
+     // TODO: return the number of visible characters (code points)
+   }
+   ```
+   ```+test
+   wrap(countVisibleCharacters('café')).should('equal', 4).run('countVisibleCharacters("café") should be 4', 'Counted a plain accented word');
+   wrap(countVisibleCharacters('🎉')).should('equal', 1).run('An emoji should count as 1 visible character', 'Counted the emoji as one character');
+   wrap(countVisibleCharacters('')).should('equal', 0).run('An empty string should count as 0', 'Handled the empty string');
+   ```
+   ```+solution
+   function countVisibleCharacters(str) {
+     return [...str].length;
+   }
+   ```
+
+3. Declare UTF-8 for this document by adding the appropriate meta tag inside the `<head>`.
+
+   ```{html}
+   <head>
+     <title>Encoding</title>
+   </head>
+   <body>
+     <h1>Hello</h1>
+   </body>
+   ```
+   ```+solution
+   <head>
+     <meta charset="UTF-8">
+     <title>Encoding</title>
+   </head>
+   <body>
+     <h1>Hello</h1>
+   </body>
+   ```
+   ```+test
+   wrap(source.includes('charset="UTF-8"') || source.includes("charset='UTF-8'")).should('equal', true).run('Add `<meta charset="UTF-8">` inside the head', 'Added the UTF-8 meta tag');
+   ```
+
+4. You are starting a new web project. What is the right choice of encoding?
+
+   ```{mcq}
+   Which encoding should a new project use, and why?
+   correct: Correct! UTF-8 covers every Unicode code point, is backward compatible with ASCII so existing documents stay valid, and is what almost the entire web already uses.
+   wrong: A higher number in the name does not mean a better encoding. Think about coverage, compatibility, and what everyone else uses.
+   [x] UTF-8, because it is ASCII compatible, covers over a million code points including emoji, and is used by about 99% of the web
+   [ ] UTF-32, because the larger number means it is more modern
+   [ ] ASCII, to keep the site as small as possible even without emoji
+   [ ] UTF-16, because Windows uses it internally
+   ```
+
+## Resources
+
+- [MDN: Character encoding (glossary)](https://developer.mozilla.org/en-US/docs/Glossary/Character_encoding)
+- [MDN: Unicode (glossary)](https://developer.mozilla.org/en-US/docs/Glossary/Unicode)
+- [MDN: `<meta>` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/meta)
+- [MDN: `String.prototype.length`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length)

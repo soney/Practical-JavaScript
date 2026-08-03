@@ -1,0 +1,178 @@
+# Introduction to the Console
+
+Most of the time we tell a computer what to do by pointing and clicking: double-click an icon, and an application opens. The **console** is the other way. You type the name of a program and press Enter.
+
+It also goes by **terminal** and **shell**, and the three names are used more or less interchangeably. It is not a new or advanced thing: before macOS and Windows, typing commands was the *primary* way people used computers. It has stayed around because for some jobs it is simply better, and the jobs coming up in this lesson, installing packages and running build tools, are among them.
+
+## Command, Arguments, Flags
+
+Every line you type has the same shape. Here is one:
+
+```
+ls -l Documents
+```
+
+- **`ls` is the command**: the program to run. When you press Enter, the console looks through a list of preset directories until it finds a program with that name.
+- **`-l` is a flag**: it customizes *how* the program behaves.
+- **`Documents` is an argument**: it says *what* the program should work on.
+
+`ls` lists the contents of a directory, so on its own it lists the directory you are currently in:
+
+```
+ls
+```
+
+Give it an argument and it lists that directory instead:
+
+```
+ls Documents
+```
+
+## Flags
+
+Single-letter flags start with one dash. For `ls`, three useful ones are:
+
+```
+ls -a Documents      list all entries, including hidden ones
+ls -r Documents      list in reverse order
+ls -l Documents      list in long format, with sizes and dates
+```
+
+**The letters mean whatever the command decides they mean.** `-l` is "long" for `ls`, and in another program the same letter could mean something unrelated. When you meet a new command, its documentation is the only way to know.
+
+Single-letter flags can be combined behind one dash, so these two lines are the same request:
+
+```
+ls -a -r -l Documents
+ls -arl Documents
+```
+
+Some flags have longer names and start with **two** dashes, often taking a value with `=`:
+
+```
+ls -al --color=never Documents
+```
+
+## Opening a Console
+
+**In VS Code**, which is what I would recommend, use **Terminal > New Terminal**. There is a keyboard shortcut too, usually Control and the backtick key. The terminal opens at the bottom of the window, already sitting in your project's directory, which saves you navigating there.
+
+**On macOS**, the standalone application is Terminal, in Applications > Utilities.
+
+**On Windows** there are two, and they are not the same. **PowerShell** understands `ls`. The older **Command Prompt** does not; there the equivalent command is `dir`. If you type `ls` and are told the command is not recognized, that is usually the reason, and nothing is broken.
+
+Whichever you open, you get a **prompt**: some text ending in a symbol such as `$` or `>`, telling you the console is waiting for a command. Yours will not look exactly like anyone else's.
+
+One more command worth knowing immediately, because output piles up fast:
+
+```
+clear
+```
+
+That empties the console's display.
+
+## Try It
+
+The terminal below is simulated. It records what you type so the notebook can check your work, and it does not touch any real files, so nothing you type here can do damage.
+
+```{external}
+title: Console practice
+interval: off
+- command: ls | Run `ls` on its own to list the current directory
+- command: ls -a | Add the `-a` flag to include hidden entries
+- command: ls -al Documents | Combine two flags and pass `Documents` as the argument
+- command: clear | Clear the console
+```
+```+terminal
+welcome: Type each command and press Enter. Run the cell to check them.
+prompt: $
+```
+
+## Exercises
+
+1. Run these three commands in the simulated terminal.
+
+    ```{external}
+    title: Commands, flags, and arguments
+    interval: off
+    - command: ls Documents | Pass `Documents` as an argument to `ls`
+    - command: ls -r | Use the reverse flag on its own
+    - command: ls -arl | Combine three single-letter flags behind one dash
+    ```
+    ```+terminal
+    welcome: Practice the three forms, then run the cell.
+    prompt: $
+    ```
+
+2. Split a command line into its three parts.
+
+    ```{javascript}
+    const line = 'ls -a -l Documents';
+
+    const parts = line.split(' ');
+
+    let command = '';
+    const flags = [];
+    const args = [];
+
+    // TODO: the first part is the command; parts starting with '-' are flags;
+    // everything else is an argument
+
+    console.log(command, flags, args);
+    ```
+    ```+solution
+    const line = 'ls -a -l Documents';
+
+    const parts = line.split(' ');
+
+    let command = '';
+    const flags = [];
+    const args = [];
+
+    for (const part of parts) {
+      if (command === '') {
+        command = part;
+      } else if (part.startsWith('-')) {
+        flags.push(part);
+      } else {
+        args.push(part);
+      }
+    }
+
+    console.log(command, flags, args);
+    ```
+    ```+test
+    wrap(command).should('equal', 'ls').run('The command is the first part of the line', 'Found the command');
+    wrap(flags).should('equal', ['-a', '-l']).run('Flags are the parts that start with a dash', 'Found both flags');
+    wrap(args).should('equal', ['Documents']).run('Whatever is left over is an argument', 'Found the argument');
+    ```
+
+3. In `ls -l Documents`, which part is which?
+
+    ```{mcq}
+    Label the three parts of `ls -l Documents`.
+    correct: Correct! The program to run comes first, a dash marks a flag that changes how it behaves, and the remaining word is what it operates on.
+    wrong: One part names the program, one changes how it runs, and one says what to run it on.
+    [x] `ls` is the command, `-l` is the flag, `Documents` is the argument
+    [ ] `ls` is the flag, `-l` is the command, `Documents` is the argument
+    [ ] `ls` is the command, `-l` is the argument, `Documents` is the flag
+    [ ] `ls` is the argument, `-l` is the flag, `Documents` is the command
+    ```
+
+4. You type `ls` into the Windows Command Prompt and it tells you the command is not recognized. What is going on?
+
+    ```{mcq}
+    Why does `ls` fail there?
+    correct: Correct! `ls` comes from Unix and macOS, and PowerShell understands it too, but the older Command Prompt does not. Its equivalent is `dir`.
+    wrong: Not every console understands the same command names.
+    [x] `ls` is a Unix and macOS command; in Command Prompt the equivalent is `dir`
+    [ ] Something is broken, because `ls` works on every computer
+    [ ] The command needs an argument such as `Documents` after it
+    [ ] VS Code has to be restarted before the terminal recognizes commands
+    ```
+
+## Resources
+
+- [VS Code: the integrated terminal](https://code.visualstudio.com/docs/terminal/basics)
+- [MDN: command line crash course](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Transform/Command_line)
+- [Microsoft: Windows commands reference](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/windows-commands)

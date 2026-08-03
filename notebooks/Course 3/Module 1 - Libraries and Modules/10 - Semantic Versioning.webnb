@@ -1,0 +1,207 @@
+# Semantic Versioning
+
+Look at the version of almost any library you use and you will find three numbers separated by periods. Lodash, for instance, has been at `4.17.15` and `4.17.21`. That format is a standard called **semantic versioning**, and the three numbers are not arbitrary: each one tells you something about what changed.
+
+```
+MAJOR . MINOR . PATCH
+  4   .  17   .  21
+```
+
+- The **major** version is incremented for **breaking changes**: anything that could stop old code from working.
+- The **minor** version is incremented for **new features** that do not break old uses.
+- The **patch** version is incremented for **bug fixes**.
+
+That is the whole standard, and it is enough to tell you how nervous to be about an upgrade.
+
+## A Library Through Four Updates
+
+Say we publish a library called `simple-math.js`. Version `1.0.0` has two functions, `add` and `subtract`. Now we make four changes in turn.
+
+**Make `add` more efficient.** Nothing about how it is used changes, and no feature is added. That is a patch: `1.0.1`.
+
+**Fix a bug in `subtract`.** Also a patch: `1.0.2`.
+
+**Add a `multiply` function.** New feature, and every existing call still works, so this is a minor bump: `1.1.0`. Notice the patch number went back to `0`.
+
+**Rename `subtract` to `minus`.** Anyone calling `subtract` is now broken. That is a breaking change, so the major goes up: `2.0.0`, with minor and patch both reset.
+
+The resetting is part of the rule: bumping a number sets everything to its right back to zero. Here is that history, computed rather than typed:
+
+```{javascript autorun}
+function bump(version, kind) {
+  const parts = version.split('.');
+
+  let major = Number(parts[0]);
+  let minor = Number(parts[1]);
+  let patch = Number(parts[2]);
+
+  if (kind === 'major') {
+    major = major + 1;
+    minor = 0;
+    patch = 0;
+  } else if (kind === 'minor') {
+    minor = minor + 1;
+    patch = 0;
+  } else {
+    patch = patch + 1;
+  }
+
+  return major + '.' + minor + '.' + patch;
+}
+
+let version = '1.0.0';
+
+console.log('start                          ' + version);
+
+version = bump(version, 'patch');
+console.log('made add more efficient        ' + version);
+
+version = bump(version, 'patch');
+console.log('fixed a bug in subtract        ' + version);
+
+version = bump(version, 'minor');
+console.log('added multiply                 ' + version);
+
+version = bump(version, 'major');
+console.log('renamed subtract to minus      ' + version);
+```
+
+## Why You Care as a User
+
+The version number is how you decide whether an upgrade is safe.
+
+Going from `4.17.15` to `4.17.21` is a patch change: bug fixes, nothing you call has changed, so take it. Going from `4.17.21` to `4.18.0` adds features you can ignore. Going from `6.7.0` to `7.0.0` is the one to read the release notes for, because the maintainers are telling you something you were using may be gone.
+
+This is also why CDN and package tools let you say how much you are willing to accept: the latest patch of the version you pinned, the latest minor, the latest major, or one exact version and nothing else. On the Lodash CDN page those are literally the choices in a dropdown.
+
+Real examples are everywhere. D3, a library for interactive visualizations, went `7.8.5` then `7.9.0`, and its history shows new functionality landing at each minor bump. Its `6.7.0` to `7.0.0` release lists the breaking changes that forced the major bump. Chart.js, for interactive charts, does the same.
+
+## Pre-release Versions
+
+Sometimes there is more than three numbers. Chart.js has released versions like:
+
+```
+4.0.0-alpha.3
+```
+
+The suffix marks a **pre-release**: a version published before the real `4.0.0` so developers can try it early. Anything with `alpha`, `beta`, or `rc` in it is a version that is not finished, and you would not normally point production code at one.
+
+## It Is a Convention, Not a Guarantee
+
+Semantic versioning is the most widely used versioning scheme there is, and it is neither universal nor enforced. Plenty of software numbers itself differently. And nothing stops a maintainer of a library that *does* use semantic versioning from getting it wrong: a patch release can break your code if the person who cut it misjudged the change.
+
+So treat the version number as good information about intent, not as a promise.
+
+## Exercises
+
+1. Finish `bump` so it handles all three kinds of change, including resetting the numbers to the right.
+
+    ```{javascript}
+    function bump(version, kind) {
+      const parts = version.split('.');
+
+      let major = Number(parts[0]);
+      let minor = Number(parts[1]);
+      let patch = Number(parts[2]);
+
+      // TODO: adjust major, minor, and patch according to kind
+
+      return major + '.' + minor + '.' + patch;
+    }
+
+    console.log(bump('1.2.4', 'patch'));
+    console.log(bump('1.2.4', 'minor'));
+    console.log(bump('1.2.4', 'major'));
+    ```
+    ```+solution
+    function bump(version, kind) {
+      const parts = version.split('.');
+
+      let major = Number(parts[0]);
+      let minor = Number(parts[1]);
+      let patch = Number(parts[2]);
+
+      if (kind === 'major') {
+        major = major + 1;
+        minor = 0;
+        patch = 0;
+      } else if (kind === 'minor') {
+        minor = minor + 1;
+        patch = 0;
+      } else {
+        patch = patch + 1;
+      }
+
+      return major + '.' + minor + '.' + patch;
+    }
+
+    console.log(bump('1.2.4', 'patch'));
+    console.log(bump('1.2.4', 'minor'));
+    console.log(bump('1.2.4', 'major'));
+    ```
+    ```+test
+    wrap(bump('1.2.4', 'patch')).should('equal', '1.2.5').run('A patch bump adds one to the last number', 'Patch bump works');
+    wrap(bump('1.2.4', 'minor')).should('equal', '1.3.0').run('A minor bump adds one to the middle number and resets the patch to `0`', 'Minor bump works');
+    wrap(bump('1.2.4', 'major')).should('equal', '2.0.0').run('A major bump adds one to the first number and resets the other two to `0`', 'Major bump works');
+    wrap(bump('4.17.21', 'minor')).should('equal', '4.18.0').run('Check your minor case against a larger version, like `4.17.21`', 'Minor bump works in general');
+    ```
+
+2. Write `isRiskyUpgrade`, which returns `true` when moving between two versions could break existing code.
+
+    ```{javascript}
+    function isRiskyUpgrade(from, to) {
+      // TODO: return true only when the major version differs
+      return false;
+    }
+
+    console.log(isRiskyUpgrade('6.7.0', '7.0.0'));
+    console.log(isRiskyUpgrade('4.17.15', '4.17.21'));
+    ```
+    ```+solution
+    function isRiskyUpgrade(from, to) {
+      const fromMajor = Number(from.split('.')[0]);
+      const toMajor = Number(to.split('.')[0]);
+
+      return fromMajor !== toMajor;
+    }
+
+    console.log(isRiskyUpgrade('6.7.0', '7.0.0'));
+    console.log(isRiskyUpgrade('4.17.15', '4.17.21'));
+    ```
+    ```+test
+    wrap(isRiskyUpgrade('6.7.0', '7.0.0')).should('equal', true).run('A change in the major version is the one that signals breaking changes', 'Caught the major change');
+    wrap(isRiskyUpgrade('4.17.15', '4.17.21')).should('equal', false).run('A patch change should not be reported as risky', 'Allowed the patch change');
+    wrap(isRiskyUpgrade('4.17.21', '4.18.0')).should('equal', false).run('A minor change adds features without breaking old code, so it is not risky', 'Allowed the minor change');
+    wrap(isRiskyUpgrade('2.0.0', '1.9.9')).should('equal', true).run('Moving in either direction across a major version is risky', 'Caught the downgrade too');
+    ```
+
+3. Your library is at `1.2.4`. You add a brand new function, and every existing function keeps working exactly as before. What should the next version be?
+
+    ```{mcq}
+    A new feature, no breaking changes, from `1.2.4`.
+    correct: Correct! A new feature that breaks nothing is a minor bump, and bumping the minor resets the patch to `0`.
+    wrong: Decide which of the three numbers a new feature affects, and remember what happens to the numbers after it.
+    [x] `1.3.0`
+    [ ] `1.2.5`
+    [ ] `1.3.4`
+    [ ] `2.0.0`
+    ```
+
+4. A maintainer renames `getData()` to `fetchData()` and publishes it as `4.1.2`, up from `4.1.1`. What is wrong with that?
+
+    ```{mcq}
+    Why is `4.1.2` the wrong version for this change?
+    correct: Correct! Every existing call to `getData()` now fails, which is the definition of a breaking change, and breaking changes require a major bump to `5.0.0`. Published as a patch, it will reach people who thought they were taking a bug fix.
+    wrong: Ask what happens to code that was calling `getData()` after this update.
+    [x] It is a breaking change, since code calling `getData()` now fails, so it should have been `5.0.0`
+    [ ] Renaming a function is a bug fix, so the patch number was right but the minor should have changed too
+    [ ] Semantic versioning does not allow renaming functions after version 4
+    [ ] It should have been `4.2.0`, because a rename counts as a new feature
+    ```
+
+## Resources
+
+- [Semantic Versioning specification](https://semver.org/)
+- [npm: about semantic versioning](https://docs.npmjs.com/about-semantic-versioning)
+- [D3 release notes](https://github.com/d3/d3/releases)
+- [MDN: String.prototype.split()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split)

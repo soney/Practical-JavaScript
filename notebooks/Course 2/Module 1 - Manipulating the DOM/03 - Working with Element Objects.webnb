@@ -1,0 +1,189 @@
+# Working with Element Objects
+
+Now that we can retrieve elements with `querySelector` and `querySelectorAll`, let's look at what those element objects can do.
+
+Here is the page we will work with for the whole lesson: a heading and two lists, some of whose items are highlighted.
+
+```html id=twolists
+<h1>Lists</h1>
+<ul id="list">
+  <li class="highlight">First</li>
+  <li>Second</li>
+  <li class="highlight">Third</li>
+  <li>Fourth</li>
+</ul>
+<ul id="other">
+  <li class="highlight">Other first</li>
+  <li>Other second</li>
+</ul>
+```
+
+## Checking Whether an Element Exists
+
+`querySelector` returns an element object when it finds something and `null` when it does not. That means we can put the result straight into an `if` to check:
+
+```{javascript autorun}
+const p = document.querySelector('p');
+
+if (p) {
+  console.log(p.innerText);
+} else {
+  console.log('paragraph does not exist');
+}
+```
+```+id=twolists
+```
+
+There is no `p` element on this page, so we get the message. Change the selector to `h1` and run it again, and the other branch runs instead.
+
+This is a habit worth forming. Any time you are not certain an element is there, guard the code that uses it, because reading a property off `null` is an error that stops your script.
+
+## Looping Over Several Elements
+
+`querySelectorAll` gives back a list, and the natural thing to do with a list is walk it with `for...of`:
+
+```{javascript autorun}
+const items = document.querySelectorAll('li');
+
+for (const item of items) {
+  console.log(item.innerText);
+}
+```
+```+id=twolists
+```
+
+That visits all six list items, from both lists, in document order.
+
+## Moving Around the Tree
+
+Every element object knows where it sits in the tree:
+
+- **`element.parentNode`** is the node that contains it. You will also see **`element.parentElement`**, which is almost always the same thing.
+- **`element.children`** is the list of elements it contains.
+
+```{javascript autorun}
+const item = document.querySelector('li');
+
+console.log(item.innerText);
+console.log(item.parentNode.id);
+
+const list = document.querySelector('ul#list');
+
+console.log(list.children.length);
+```
+```+id=twolists
+```
+
+The first list item's parent is the `ul` with id `list`, and that list has four children.
+
+## Searching Inside One Element
+
+This is the important one. **Every element object has its own `querySelector` and `querySelectorAll`**, and they work exactly like the ones on `document`, except that they search only inside that element.
+
+```{javascript autorun}
+const list = document.querySelector('ul#list');
+
+console.log(document.querySelectorAll('.highlight').length);
+console.log(list.querySelectorAll('.highlight').length);
+```
+```+id=twolists
+```
+
+Three versus two. `document.querySelectorAll('.highlight')` finds every highlighted element on the page, including the one in the second list. `list.querySelectorAll('.highlight')` finds only the highlighted elements *inside* that first `ul`, so the one under `#other` is not included.
+
+That difference is the whole point. Once you have a container element, scoping your search to it means you do not have to write an ever more complicated selector to avoid picking up things elsewhere on the page, and your code keeps working when someone adds another list.
+
+Element objects have many more properties than these. Over the next few lessons we will use them to change an element's text, its classes, and its attributes.
+
+## Exercises
+
+1. Using the `#other` list, select only the highlighted items inside it and store the result in `otherHighlights`. There is exactly one.
+
+    ```{javascript}
+    const other = document.querySelector('#other');
+
+    const otherHighlights = /* Your code here */;
+
+    console.log(otherHighlights.length);
+    ```
+    ```+id=twolists
+    ```
+    ```+solution
+    const other = document.querySelector('#other');
+
+    const otherHighlights = other.querySelectorAll('.highlight');
+
+    console.log(otherHighlights.length);
+    ```
+    ```+test
+    wrap(otherHighlights.length).should('equal', 1).run('`otherHighlights` should contain only the highlighted item inside `#other`. Call `querySelectorAll` on the `other` element rather than on `document`', 'Scoped the search to one list');
+    ```
+
+2. Write an existence check. Set `status` to `found` if the page has an element with class `banner`, and to `missing` if it does not.
+
+    ```{javascript}
+    const banner = document.querySelector('.banner');
+
+    let status;
+
+    // Write your code here
+
+    console.log(status);
+    ```
+    ```+id=twolists
+    ```
+    ```+solution
+    const banner = document.querySelector('.banner');
+
+    let status;
+
+    if (banner) {
+      status = 'found';
+    } else {
+      status = 'missing';
+    }
+
+    console.log(status);
+    ```
+    ```+test
+    wrap(status).should('equal', 'missing').run('There is no element with class `banner` on this page, so `status` should be `missing`', 'Handled the missing case');
+    wrap(source.includes('if')).should('equal', true).run('Use an `if` statement to check whether `banner` is null', 'Used an if statement');
+    ```
+
+3. Count the direct children of `#menu` and store the number in `childCount`.
+
+    ```html id=page1
+    <nav id="menu">
+      <a href="#">Home</a>
+      <a href="#">About</a>
+      <a href="#">Contact</a>
+    </nav>
+    ```
+
+    ```{javascript}
+    const menu = document.querySelector('#menu');
+
+    const childCount = /* Your code here */;
+
+    console.log(childCount);
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const menu = document.querySelector('#menu');
+
+    const childCount = menu.children.length;
+
+    console.log(childCount);
+    ```
+    ```+test
+    wrap(childCount).should('equal', 3).run('`childCount` should be `3`. Read `menu.children.length`', 'Counted the menu children');
+    wrap(source.includes('children')).should('equal', true).run('Use the `children` property rather than a new query', 'Used the children property');
+    ```
+
+## Resources
+
+- [MDN: Element](https://developer.mozilla.org/en-US/docs/Web/API/Element)
+- [MDN: Element.querySelector()](https://developer.mozilla.org/en-US/docs/Web/API/Element/querySelector)
+- [MDN: Element.children](https://developer.mozilla.org/en-US/docs/Web/API/Element/children)
+- [MDN: Node.parentNode](https://developer.mozilla.org/en-US/docs/Web/API/Node/parentNode)

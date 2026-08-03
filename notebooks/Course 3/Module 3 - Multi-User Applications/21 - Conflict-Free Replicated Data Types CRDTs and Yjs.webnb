@@ -1,0 +1,522 @@
+# Conflict-Free Replicated Data Types (CRDTs) and Yjs
+
+ShareDB works, and it needs a **central server**. Each client applies its own operation immediately, sends a copy in, and the server decides the canonical order, transforms the operations to fit it, and hands them back so every copy converges. Three consequences follow:
+
+- Two people in the same room cannot send each other anything directly. Every keystroke goes to the server, possibly on another continent, and comes back.
+- You have to **trust** the server, which holds the whole document.
+- It is a **single point of failure**, and it can be overwhelmed when there are many users.
+
+ShareDB's own creator has acknowledged these limitations and pointed at serverless designs as the way forward. This reading is that alternative: the same shared document, carried over the WebRTC connections from the last two readings, with no server deciding anything.
+
+## A Different Way to Number Positions
+
+The problem with the `cat` example back in the OT reading was that positions shifted: delete character 0 and every later index moves. What if positions did not move?
+
+Suppose we describe positions not by counting characters but by **where they fall between 0 and 100**. The first character sits at 0, the last at 100, and anything inserted goes somewhere in between.
+
+Now run the same conflict:
+
+- Blue deletes the character at position 0, giving `at`.
+- Red inserts `r` at position 75, between the `a` and the `t`.
+
+Apply both, in either order:
+
+```
+delete at 0, then insert at 75  ->  art
+insert at 75, then delete at 0  ->  art
+```
+
+**The order does not matter.** Nothing had to be transformed, and no server had to choose an order, because red's position 75 still means the same place after blue's deletion. It never referred to a character count in the first place.
+
+That is the core trick, and it is the difference between the two approaches:
+
+- **Operational transformation** fixes operations up so that a chosen order works.
+- **A CRDT** designs the data so that **any** order gives the same answer.
+
+A **conflict-free replicated data type** is a data structure built, and mathematically proven, to converge no matter what order changes arrive in. Because there is nothing to arbitrate, there is nothing for a central server to do, which is what makes it work peer to peer.
+
+The real ones are considerably stranger under the hood than positions between 0 and 100, and there is real math in the convergence proofs. That is fine: the whole point is that somebody else has done the math, and you use the result.
+
+## Order Independence, Running
+
+The claim that order does not matter is the whole argument, so here it is with positions instead of indexes:
+
+```{javascript autorun}
+// Each character carries a fixed position between 0 and 100.
+const start = [
+  { character: 'c', position: 0 },
+  { character: 'a', position: 50 },
+  { character: 't', position: 100 }
+];
+
+function applyOp(characters, op) {
+  const result = [];
+
+  for (const item of characters) {
+    if (!(op.type === 'delete' && item.position === op.position)) {
+      result.push(item);
+    }
+  }
+
+  if (op.type === 'insert') {
+    // Position, not arrival order, decides where the character sits.
+    // Walking backwards leaves insertAt at the first greater position.
+    let insertAt = result.length;
+
+    for (let i = result.length - 1; i >= 0; i--) {
+      if (result[i].position > op.position) {
+        insertAt = i;
+      }
+    }
+
+    result.splice(insertAt, 0, { character: op.character, position: op.position });
+  }
+
+  return result;
+}
+
+function render(characters) {
+  let text = '';
+
+  for (const item of characters) {
+    text = text + item.character;
+  }
+
+  return text;
+}
+
+const deleteC = { type: 'delete', position: 0 };
+const insertR = { type: 'insert', character: 'r', position: 75 };
+
+console.log('delete then insert: ' + render(applyOp(applyOp(start, deleteC), insertR)));
+console.log('insert then delete: ' + render(applyOp(applyOp(start, insertR), deleteC)));
+```
+
+Both orders give `art`, with nothing transformed and nobody coordinating. Compare that with the OT reading, where swapping the order needed a `transform` function to rescue it.
+
+## Merging Instead of Overwriting
+
+Text is not the only thing worth sharing, and position tricks are not the only CRDT idea. Take a shared settings object, with two people changing different parts of it at the same time:
+
+```{javascript autorun}
+const original = { theme: 'light', fontSize: 12 };
+
+// Amara turns on dark mode. Ben makes the text bigger. Each edited their
+// own copy without seeing the other's change.
+const fromAmara = { theme: 'dark', fontSize: 12 };
+const fromBen = { theme: 'light', fontSize: 16 };
+
+// The naive rule: "last write wins". Whoever saved later replaces the
+// whole object. Ben saved a moment after Amara, so:
+const lastWriteWins = fromBen;
+
+console.log('last write wins: ' + JSON.stringify(lastWriteWins));
+
+// The merge rule: look at each key separately, and keep whichever side
+// changed it.
+const merged = {};
+
+for (const key of ['theme', 'fontSize']) {
+  if (fromAmara[key] !== original[key]) {
+    merged[key] = fromAmara[key];
+  } else if (fromBen[key] !== original[key]) {
+    merged[key] = fromBen[key];
+  } else {
+    merged[key] = original[key];
+  }
+}
+
+console.log('merged by key:   ' + JSON.stringify(merged));
+```
+
+Last write wins threw Amara's theme away, even though Ben never touched the theme. Merging by key kept both changes, and it would produce the same object whichever replica you started from. That per-key idea is a map CRDT in miniature; only two people changing the *same* key needs a tie-breaking rule, and the proven data structures have one.
+
+## Yjs
+
+**Yjs** is a JavaScript library that implements several CRDTs, with the math already done. It provides:
+
+- **`Y.Text`** for plain or rich text,
+- **`Y.Array`** for ordered sequences,
+- **`Y.Map`** for key-value pairs, merging the way we just did by hand,
+
+and more, plus **editor bindings** that make it easy to connect those types to real editors, and a **`y-webrtc`** package that deals with all the logistics of WebRTC. The Yjs creators even maintain a public **signaling server**, so we do not have to run our own.
+
+That last point deserves emphasis: everything we built by hand in the last two readings, the signaling relay, the offers and answers, the candidate shuffling, is handled for us here.
+
+## The Project
+
+The video starts from a project with webpack and the HTML webpack plugin already set up, the arrangement from Module 1's bundler readings, and installs four packages:
+
+```
+$ npm install yjs y-webrtc y-quill quill
+```
+
+`yjs` is the library itself, `y-webrtc` its WebRTC provider, `y-quill` its Quill editor binding, and Quill is the same editor ShareDB used in the last reading. The workspace copy is in `p2p-demo/03-shared-editor/` next to this notebook, and its dependencies are in the shared `p2p-demo/package.json`, so the one `npm install` from the previous readings already covered it:
+
+    p2p-demo/
+      03-shared-editor/
+        webpack.config.js   the bundler setup from Module 1
+        src/
+          index.html        an empty page with a container for the editor
+          editor.js         the whole application
+        server.js           serves the built page, and nothing else
+        dist/               what webpack builds (already built for you)
+
+One difference from the video: there, the page is served by webpack's own development server, with `npx webpack serve --mode development`. The workspace copy runs `npx webpack` to build `dist/` and a small `server.js` to serve it, like the ShareDB projects, so the run steps stay the same across the module. The application code is identical either way.
+
+```{walkthrough}
+title: The page and the build
+step: The page
+file: p2p-demo/03-shared-editor/src/index.html
+An empty document with a container for the editor, exactly as in the video.
+@"quill.snow.css": Quill's stylesheet, from its documentation's quick-start code, loaded from a CDN. This is the one part of the page that needs a network connection.
+@'<div id="editor">': The container the editor is created into. There is nothing else on the page; webpack adds the script tag when it builds.
+
+step: The build
+file: p2p-demo/03-shared-editor/webpack.config.js
+The webpack setup from Module 1: one entry file, and the HTML plugin copying the page in.
+@"entry": Everything starts from `editor.js`; webpack follows its imports through `node_modules` and bundles the result into `dist/`.
+```
+
+## A Collaborative Editor
+
+Here is the entire application. It is short enough that every line gets a note:
+
+```{walkthrough}
+title: editor.js, the whole application
+step: The imports
+file: p2p-demo/03-shared-editor/src/editor.js
+region: imports
+Real `import` statements, because this project has a bundler; webpack resolves each one from `node_modules`, as in Module 1.
+@"from 'quill'": The editor. In the last reading, ShareDB connected to Quill; today Yjs does, so the comparison is fair.
+@"from 'yjs'": The whole library comes in as one object named `Y`, which is why the pieces below are written `Y.Doc`.
+@"y-webrtc": The provider that will do the WebRTC work.
+@"y-quill": The editor binding.
+
+step: The editor
+file: p2p-demo/03-shared-editor/src/editor.js
+region: editor
+@"new Quill": Quill's own quick-start code, from its documentation: point it at the container, pick the `snow` theme, and there is an editor with a toolbar. It knows nothing about anyone else yet.
+
+step: The document and the provider
+file: p2p-demo/03-shared-editor/src/editor.js
+region: ydoc
+@"new Y.Doc()": The shared document, the equivalent of a ShareDB doc, except that every peer holds a full copy and no server holds anything.
+@"my-yjs-quill-room": The **room name** is how peers find each other: anyone whose provider uses the same name shares this document. This one line replaces the signaling server, the offers and answers, and the candidate handling from the last two readings, using the Yjs project's public signaling servers.
+
+step: The text and the binding
+file: p2p-demo/03-shared-editor/src/editor.js
+region: binding
+@"getText('quill')": A shared `Y.Text` inside the document, stored under a name. A `Y.Doc` can hold several shared values, and the name is how you get the same one back everywhere.
+@"new QuillBinding": Connects the CRDT to the editor, in both directions. In the last reading we wrote the two handlers and the source checks that stop them echoing; the binding is that code, already written.
+```
+
+Most of this code appears in the Yjs and Quill documentation, and that is the point: it is wiring, not logic. There is no operation handling, no transform, and **no server code at all**.
+
+## No Server Left to Trust
+
+There is still a `server.js` in the project, so it is worth reading what remains in it:
+
+```{walkthrough}
+title: What the server has left to do
+step: A file server, nothing more
+file: p2p-demo/03-shared-editor/server.js
+region: static-server
+@"path.join(__dirname, 'dist'": It serves the files webpack built, and that is the whole job. Compare this with the previous two stages: there is no `WebSocket.Server` here, no relay, no connection handling. The document lives in the browsers, and the synchronization happens between them.
+```
+
+That answers the three complaints from the top of this reading. Clients in the same room talk directly. There is no server holding the document to trust. And there is no single point of failure: once the pages are loaded, you can stop `server.js` and the editors keep syncing.
+
+## Which to Reach For
+
+Neither approach is simply better.
+
+**CRDTs** avoid the central server, so they suit peer-to-peer, offline-first, and local-first applications, and they cost some bookkeeping: the data carries more metadata than the text you can see.
+
+**Operational transformation** keeps a server, which is inconvenient in some ways and useful in others: a server can hold the authoritative copy, enforce permissions, and persist the document without every client having to be online.
+
+Real products exist on both sides, and the honest answer is that it depends on whether you want a server in the middle.
+
+## Running It Yourself
+
+Two cursors in one paragraph take two windows:
+
+```
+$ cd "p2p-demo/03-shared-editor"
+$ node server.js
+Listening on http://localhost:3000
+```
+
+(`dist/` is already built; run `npx webpack` in this folder first if you have edited anything under `src/`.)
+
+Open `http://localhost:3000` in **two** browser windows and type in either. Then:
+
+1. Text appears in both as you type, and so does formatting: bold something, and it arrives bold. `Y.Text` carries rich text, which is why the toolbar works.
+2. Stop the server with Ctrl+C and keep typing. The editors keep syncing, because the pages are already loaded and the document is in the browsers, not on the server. That is the difference from every other reading in this module.
+3. Open a third window before stopping the server: three peers, all in the room, all converging.
+
+## Exercises
+
+1. Complete `applyOp` so a document made of positioned characters converges whatever the order.
+
+    ```{javascript}
+    const start = [
+      { character: 'c', position: 0 },
+      { character: 'a', position: 50 },
+      { character: 't', position: 100 }
+    ];
+
+    function applyOp(characters, op) {
+      const result = [];
+
+      // TODO: copy across every character except one being deleted at
+      // op.position. If this is an insert, put the new character in the
+      // place its position calls for, rather than at the end.
+
+      return result;
+    }
+
+    function render(characters) {
+      let text = '';
+
+      for (const item of characters) {
+        text = text + item.character;
+      }
+
+      return text;
+    }
+
+    const deleteC = { type: 'delete', position: 0 };
+    const insertR = { type: 'insert', character: 'r', position: 75 };
+
+    console.log(render(applyOp(applyOp(start, deleteC), insertR)));
+    console.log(render(applyOp(applyOp(start, insertR), deleteC)));
+    ```
+    ```+solution
+    const start = [
+      { character: 'c', position: 0 },
+      { character: 'a', position: 50 },
+      { character: 't', position: 100 }
+    ];
+
+    function applyOp(characters, op) {
+      const result = [];
+
+      for (const item of characters) {
+        if (!(op.type === 'delete' && item.position === op.position)) {
+          result.push(item);
+        }
+      }
+
+      if (op.type === 'insert') {
+        // Walking backwards leaves insertAt at the first greater position.
+        let insertAt = result.length;
+
+        for (let i = result.length - 1; i >= 0; i--) {
+          if (result[i].position > op.position) {
+            insertAt = i;
+          }
+        }
+
+        result.splice(insertAt, 0, { character: op.character, position: op.position });
+      }
+
+      return result;
+    }
+
+    function render(characters) {
+      let text = '';
+
+      for (const item of characters) {
+        text = text + item.character;
+      }
+
+      return text;
+    }
+
+    const deleteC = { type: 'delete', position: 0 };
+    const insertR = { type: 'insert', character: 'r', position: 75 };
+
+    console.log(render(applyOp(applyOp(start, deleteC), insertR)));
+    console.log(render(applyOp(applyOp(start, insertR), deleteC)));
+    ```
+    ```+test
+    wrap(render(applyOp(start, deleteC))).should('equal', 'at').run('Deleting the character at position 0 should leave `at`', 'Applied a delete');
+    wrap(render(applyOp(start, insertR))).should('equal', 'cart').run('Inserting `r` at position 75 should give `cart`, because 75 falls between the `a` at 50 and the `t` at 100', 'Applied an insert');
+    wrap(render(applyOp(applyOp(start, deleteC), insertR))).should('equal', 'art').run('Delete then insert should give `art`', 'One order converged');
+    wrap(render(applyOp(applyOp(start, insertR), deleteC))).should('equal', 'art').run('Insert then delete should give `art` as well. Sorting by position is what makes the order irrelevant', 'Both orders converged');
+    ```
+
+2. Complete `merge` so two replicas combine without losing either side's change.
+
+    ```{javascript}
+    const original = { theme: 'light', fontSize: 12, language: 'en' };
+
+    const fromAmara = { theme: 'dark', fontSize: 12, language: 'en' };
+    const fromBen = { theme: 'light', fontSize: 16, language: 'en' };
+
+    function merge(base, first, second) {
+      const result = {};
+
+      for (const key of ['theme', 'fontSize', 'language']) {
+        // TODO: if the first replica changed this key from the base, keep
+        // its value; otherwise if the second replica changed it, keep
+        // that; otherwise keep the base value
+      }
+
+      return result;
+    }
+
+    console.log(merge(original, fromAmara, fromBen));
+    console.log(merge(original, fromBen, fromAmara));
+    ```
+    ```+solution
+    const original = { theme: 'light', fontSize: 12, language: 'en' };
+
+    const fromAmara = { theme: 'dark', fontSize: 12, language: 'en' };
+    const fromBen = { theme: 'light', fontSize: 16, language: 'en' };
+
+    function merge(base, first, second) {
+      const result = {};
+
+      for (const key of ['theme', 'fontSize', 'language']) {
+        if (first[key] !== base[key]) {
+          result[key] = first[key];
+        } else if (second[key] !== base[key]) {
+          result[key] = second[key];
+        } else {
+          result[key] = base[key];
+        }
+      }
+
+      return result;
+    }
+
+    console.log(merge(original, fromAmara, fromBen));
+    console.log(merge(original, fromBen, fromAmara));
+    ```
+    ```+test
+    wrap(merge(original, fromAmara, fromBen)).should('equal', { theme: 'dark', fontSize: 16, language: 'en' }).run('Both changes should survive: Amara changed the theme and Ben changed the font size, and nobody touched the language', 'Kept both changes');
+    wrap(merge(original, fromBen, fromAmara)).should('equal', { theme: 'dark', fontSize: 16, language: 'en' }).run('Swapping the order of the replicas should not change the result. Compare each replica against the base, not against each other', 'The merge is order-independent');
+    wrap(merge(original, { theme: 'light', fontSize: 12, language: 'en' }, fromBen)).should('equal', { theme: 'light', fontSize: 16, language: 'en' }).run('When the first replica did not change a key, the second replica\'s change should still come through', 'Fell through to the second replica');
+    ```
+
+3. Set up a Yjs document bound to a Quill editor. The imports are done for you.
+
+    ```{node}
+    // Stand-ins for the libraries.
+    function Doc() {
+      const doc = { texts: {} };
+
+      doc.getText = function (name) {
+        if (!doc.texts[name]) {
+          doc.texts[name] = { name: name };
+        }
+
+        return doc.texts[name];
+      };
+
+      return doc;
+    }
+
+    const created = { provider: null, binding: null };
+
+    function WebrtcProvider(roomName, ydoc) {
+      created.provider = { roomName: roomName, ydoc: ydoc };
+
+      return created.provider;
+    }
+
+    function QuillBinding(ytext, quill) {
+      created.binding = { ytext: ytext, quill: quill };
+
+      return created.binding;
+    }
+
+    const quill = { name: 'the editor' };
+
+    // TODO: create the shared document, connect it over WebRTC using the room
+    // name 'my-yjs-quill-room', get the text named 'quill' out of the
+    // document, and bind that text to the editor.
+
+    console.log(created.provider.roomName, created.binding.ytext.name);
+    ```
+    ```+solution
+    // Stand-ins for the libraries.
+    function Doc() {
+      const doc = { texts: {} };
+
+      doc.getText = function (name) {
+        if (!doc.texts[name]) {
+          doc.texts[name] = { name: name };
+        }
+
+        return doc.texts[name];
+      };
+
+      return doc;
+    }
+
+    const created = { provider: null, binding: null };
+
+    function WebrtcProvider(roomName, ydoc) {
+      created.provider = { roomName: roomName, ydoc: ydoc };
+
+      return created.provider;
+    }
+
+    function QuillBinding(ytext, quill) {
+      created.binding = { ytext: ytext, quill: quill };
+
+      return created.binding;
+    }
+
+    const quill = { name: 'the editor' };
+
+    const ydoc = new Doc();
+
+    const provider = new WebrtcProvider('my-yjs-quill-room', ydoc);
+
+    const ytext = ydoc.getText('quill');
+
+    const binding = new QuillBinding(ytext, quill);
+
+    console.log(created.provider.roomName, created.binding.ytext.name);
+    ```
+    ```+test
+    wrap(created.provider && created.provider.roomName).should('equal', 'my-yjs-quill-room').run('Create the provider with the room name `my-yjs-quill-room`; peers using the same name share the document', 'Connected to the room');
+    wrap(created.provider && created.provider.ydoc === ydoc).should('equal', true).run('Pass the shared document to the provider, so it is the thing being synchronized', 'Connected the right document');
+    wrap(created.binding && created.binding.ytext.name).should('equal', 'quill').run('Get the text with `ydoc.getText(\'quill\')` and bind that, since a document can hold several shared values', 'Bound the right shared text');
+    wrap(created.binding && created.binding.quill === quill).should('equal', true).run('Bind the shared text to the editor with `new QuillBinding(ytext, quill)`', 'Bound the editor');
+    ```
+
+4. Two rooms
+
+    ```{mcq}
+    You run the shared editor, and a friend runs the same code, but she typed `'my-yjs-quill-r00m'` as her room name where yours says `'my-yjs-quill-room'`. What happens?
+    correct: Correct! The room name is how the provider finds peers: same name, same document. With different names you are in different rooms, so both editors work normally and never see each other.
+    wrong: Neither editor breaks. Think about what the provider uses the room name for.
+    [x] Both editors work normally, but you are in different rooms and never sync
+    [ ] The provider throws an error, because her room does not exist yet
+    [ ] Her changes arrive in your editor, but yours do not reach hers
+    [ ] The two rooms merge once the signaling server notices the names are similar
+    ```
+
+5. What the proof buys you
+
+    ```{mcq}
+    Two peers apply the same two changes in opposite orders and still end with identical documents, with no server choosing an order. What makes that work?
+    correct: Correct! A CRDT is designed, and mathematically proven, so that every order of the same changes converges on the same result. OT reaches agreement the other way: a central server picks one order and transforms operations to fit it.
+    wrong: Nothing here timestamps, relays, or reorders the changes. The guarantee lives in the data structure itself.
+    [x] The data structure is designed so that any order of the same changes gives the same result
+    [ ] WebRTC guarantees that every peer receives messages in the same order
+    [ ] The newest change always overwrites the older one
+    [ ] The signaling server sorts the changes before forwarding them
+    ```
+
+## Resources
+
+- [Yjs](https://yjs.dev/)
+- [y-webrtc](https://github.com/yjs/y-webrtc)
+- [y-quill](https://github.com/yjs/y-quill)
+- [CRDT.tech: an introduction to CRDTs](https://crdt.tech/)

@@ -1,0 +1,118 @@
+# What Are Functions
+
+In this lesson we are going to learn how to create our own **functions**. We have already *called* functions, `console.log` being the obvious one, but now we are going to take pieces of code and package them so we can reuse them in several places.
+
+Imagine some complicated piece of code that we want to run more than once. Do not worry about what the code actually is; just imagine it is complicated. Instead of copying it everywhere, we can put it inside a function, which is like putting it inside a box. Whenever we call the function, it reruns that code for us.
+
+## The Box, the Input, and the Output
+
+We will use these boxes to represent functions throughout the course:
+
+![A picture of a box with a funnel on top, representing an argument coming in to a function, and an opening at the bottom, representing the return value coming out](images/function_object.png)
+
+A function has three parts to keep in mind:
+
+- **Input (arguments):** when we call a function, we can pass values *into* it through the funnel on top. These values are called **arguments**, and they customize the way the function runs.
+- **The box (the code):** the function holds the code we grouped together. Calling the function reruns that code.
+- **Output (return value):** when the function finishes, it spits a value back *out* of the bottom. This is called the **return value**.
+
+![The same box, with the funnel on top labeled "argument" and the opening at the bottom labeled "return value"](images/function_single_arg.png)
+
+## Calling Built-In Functions
+
+We have been calling a function all along: `console.log`. It is a **built-in** function, meaning every browser provides it for us. Writing `console.log('hello')` does two separate things worth naming. The parentheses say "call this function", and whatever we put inside them is the argument we feed in.
+
+```{javascript autorun}
+console.log('hello');
+```
+
+So `'hello'` funnels into the `console.log` box, the function runs and prints `hello` to the console, and when it is done it spits a value back out of the bottom. For `console.log`, that return value is the special value `undefined`, which we will come back to later.
+
+```{javascript autorun}
+const whatConsoleLogReturns = console.log('hello');
+
+console.log(whatConsoleLogReturns);
+```
+
+Not every function is as quiet about its output. `Math.pow` raises one number to the power of another:
+
+```{javascript autorun}
+console.log(Math.pow(3, 2));
+```
+
+- `Math.pow` names a built-in function, and the parentheses say to call it.
+- `3` and `2` are the arguments, separated by a comma, funneled in through the top.
+- `9` is the return value, funneled out of the bottom.
+
+## A Function Call Is an Expression
+
+Something important is going on in that last cell. **A function call is an expression, and its value is whatever the function returns.** Because `Math.pow(3, 2)` returns `9`, the expression `Math.pow(3, 2)` *is* `9`, in exactly the way that `4 + 5` is `9`.
+
+That means a function call can go anywhere a value can go: stored in a variable, used in arithmetic, compared, or passed to another function.
+
+```{javascript autorun}
+const area = Math.pow(3, 2) + 1;
+console.log(area);
+
+console.log(Math.pow(2, 3) > 5);
+
+console.log(Math.pow(Math.pow(2, 2), 2));
+```
+
+The last line calls `Math.pow` twice. The inner call returns `4`, and then the outer call raises `4` to the power of `2` and returns `16`. Nothing new is happening there; it is the same rule that lets us write `(10 + 30) / 2`.
+
+Everything above is us calling functions that already exist. In the next lesson we will learn how to define functions of our own.
+
+## Exercises
+
+1. Use `Math.pow` to compute 5 to the power of 3, and store the return value in `cubed`.
+
+    ```{javascript}
+    const cubed = /* Your code here */;
+
+    console.log(cubed);
+    ```
+    ```+solution
+    const cubed = Math.pow(5, 3);
+
+    console.log(cubed);
+    ```
+    ```+test
+    wrap(cubed).should('equal', 125).run('`cubed` should be 5 to the power of 3. Call `Math.pow` with the arguments `5` and `3`', 'Called Math.pow correctly');
+    wrap(source.includes('Math.pow')).should('equal', true).run('Use the `Math.pow` function rather than typing the answer', 'Used Math.pow');
+    ```
+
+2. A square room is `4` meters on each side and a square rug is `2` meters on each side. Using `Math.pow` twice in one expression, set `uncoveredArea` to the floor area the rug does not cover.
+
+    ```{javascript}
+    const uncoveredArea = /* Your code here */;
+
+    console.log(uncoveredArea);
+    ```
+    ```+solution
+    const uncoveredArea = Math.pow(4, 2) - Math.pow(2, 2);
+
+    console.log(uncoveredArea);
+    ```
+    ```+test
+    wrap(uncoveredArea).should('equal', 12).run('`uncoveredArea` should be `12`: the room is 16 square meters and the rug covers 4', 'Computed the uncovered area');
+    wrap((source.match(/Math\.pow/g) || []).length).should('equal', 2).run('Call `Math.pow` twice in the same expression, once for each square', 'Used two function calls in one expression');
+    ```
+
+3. The value of a `console.log` call
+
+    ```{mcq}
+    `console.log('hi')` is a function call, so it is an expression with a value. What is that value?
+    correct: Correct! `console.log` does its work as a side effect, printing to the console, and the value it hands back is `undefined`.
+    wrong: Look back at the cell that stored the result of a `console.log` call in a variable and then logged it.
+    [x] `undefined`
+    [ ] `'hi'`
+    [ ] The console itself
+    [ ] It has no value, because it is not an expression
+    ```
+
+## Resources
+
+- [MDN: Functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions)
+- [MDN: Math.pow()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/pow)
+- [MDN: console.log()](https://developer.mozilla.org/en-US/docs/Web/API/console/log_static)

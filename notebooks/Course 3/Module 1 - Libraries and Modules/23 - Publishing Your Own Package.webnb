@@ -1,0 +1,182 @@
+# Publishing Your Own Package
+
+Everything so far has been about consuming packages. This reading is the other direction: putting one on npm yourself. You are not expected to publish anything as part of this specialization, and it is still worth seeing, both because it demystifies where all those packages come from and because it explains a real security problem.
+
+## Publishing, Step by Step
+
+**Get an account.** Sign up at [npmjs.com](https://www.npmjs.com) and log in. Your account page lists the packages you have published, which starts out empty.
+
+**Create the project.**
+
+```
+$ mkdir my-simple-math-package
+$ cd my-simple-math-package
+$ npm init -y
+```
+
+**Choose a name.** This is in `package.json`, and there are two rules that bite immediately:
+
+```json
+{
+  "name": "my-simple-math-package",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "ISC"
+}
+```
+
+- **No capital letters.** npm rejects `My-Simple-Math-Package`. Lowercase, with dashes or underscores.
+- **The name has to be free.** Every public package shares one namespace, and the good short names went years ago.
+
+The second rule is what **scoped packages** are for. Put your username in front, separated by a slash, and you get a namespace of your own:
+
+```json
+"name": "@alice/my-simple-math-package"
+```
+
+Nobody else can publish under `@alice`, so nothing you name there can collide with anyone.
+
+**Write the code.** The `main` field names the file that gets loaded when somebody requires or imports your package. It defaults to `index.js`; either write that file or change the field.
+
+```javascript
+// index.js
+export function add(a, b) {
+  return a + b;
+}
+```
+
+Hopefully your package does something more useful than that.
+
+**Publish.**
+
+```
+$ npm publish --access=public
+```
+
+`npm publish` on its own tries to publish a *private* package, which is a paid npm feature, so a public package needs that flag. npm will ask you to authenticate, giving you a URL to open in a browser.
+
+Two things that go wrong here. The name may already be taken, and npm also will not let you republish a name you recently unpublished, which is why the video ends up with a package called `my-simple-math-package2`. And you cannot republish the *same version* twice: once `1.0.0` is out, `1.0.0` is out forever.
+
+## Publishing an Update
+
+That last rule means every publish needs a new version number. npm will do the arithmetic:
+
+```
+$ npm version patch      1.0.0 -> 1.0.1
+$ npm version minor      1.0.0 -> 1.1.0
+$ npm version major      1.0.0 -> 2.0.0
+```
+
+Those are the [semantic versioning rules](<10 - Semantic Versioning.webnb>) from Lesson 2, and the command names match them exactly. It edits `package.json` for you. Then publish again:
+
+```
+$ npm version minor
+$ npm publish --access=public
+```
+
+And the new version, `1.1.0`, is what people installing your package now get.
+
+## The Security Problem
+
+Look again at how few steps that took. Anyone can put a legitimate-looking package on npm, and that includes people whose package does something you would not agree to.
+
+This is not hypothetical. In recent years there have been several real incidents:
+
+- A self-replicating worm compromised more than 500 packages in September 2025.
+- In separate cases, attackers got into the npm accounts of popular packages and pushed malicious code inside specific versions.
+
+The part that makes this serious is dependencies. When you install one package, you install everything *it* depends on, and everything those depend on, often dozens of packages you never chose and never heard of. A single compromised link in that chain runs code inside your project.
+
+There is a command that helps:
+
+```
+$ npm audit
+```
+
+It checks everything installed against a database of known vulnerabilities, reports what it finds, and tells you what fixes each problem. It is worth running on any project you have inherited, and it is not a guarantee: it knows about problems that have been *found and reported*, which is not the same as all of them.
+
+The habits that go with this are the ones from Lesson 2, now with a sharper reason: prefer well-known packages, check what you are adding, pin versions when it matters, and be suspicious of a dependency list that is far longer than the job requires.
+
+## Exercises
+
+1. Publish a package and then publish an update to it.
+
+    ```{external}
+    title: Publishing a package
+    interval: off
+    - command: npm init -y | Create the package.json
+    - command: npm publish --access=public | Publish it publicly rather than privately
+    - command: npm version minor | Bump the minor version, since a version cannot be published twice
+    - command: npm publish --access=public | Publish the new version
+    - command: npm audit | Check the project for known vulnerabilities
+    ```
+    ```+terminal
+    welcome: Run the commands in order, then run the cell to check them.
+    prompt: $
+    ```
+
+2. Write `isValidPackageName`, rejecting names npm will not accept.
+
+    ```{javascript}
+    function isValidPackageName(name) {
+      // TODO: reject anything with a capital letter or a space
+      return true;
+    }
+
+    console.log(isValidPackageName('cool-weather-tool'));
+    console.log(isValidPackageName('My-Weather-App'));
+    ```
+    ```+solution
+    function isValidPackageName(name) {
+      if (name !== name.toLowerCase()) {
+        return false;
+      }
+
+      if (name.includes(' ')) {
+        return false;
+      }
+
+      return true;
+    }
+
+    console.log(isValidPackageName('cool-weather-tool'));
+    console.log(isValidPackageName('My-Weather-App'));
+    ```
+    ```+test
+    wrap(isValidPackageName('cool-weather-tool')).should('equal', true).run('An all-lowercase name with dashes is fine', 'Accepted a valid name');
+    wrap(isValidPackageName('weather_123')).should('equal', true).run('Underscores and digits are allowed too', 'Accepted underscores and digits');
+    wrap(isValidPackageName('@alice/weather-checker')).should('equal', true).run('A scoped name is valid, so long as it is lowercase', 'Accepted a scoped name');
+    wrap(isValidPackageName('My-Weather-App')).should('equal', false).run('npm rejects capital letters. Compare the name with its lowercase form', 'Rejected the capital letters');
+    wrap(isValidPackageName('my weather app')).should('equal', false).run('A name with a space should be rejected as well', 'Rejected the spaces');
+    ```
+
+3. Which of these package names would npm reject?
+
+    ```{mcq}
+    Pick the name npm will not accept.
+    correct: Correct! npm package names have to be lowercase. The other three are all fine, including the scoped one.
+    wrong: Only one rule is being broken here, and it is about how the name is written rather than what it says.
+    [x] `My-Weather-App`
+    [ ] `cool-weather-tool`
+    [ ] `@username/weather-checker`
+    [ ] `weather_123`
+    ```
+
+4. You inherit a project with 50 dependencies and want to know whether any of them carry known security problems. What do you run?
+
+    ```{mcq}
+    Which command reports known vulnerabilities?
+    correct: Correct! `npm audit` compares everything installed, dependencies of dependencies included, against a database of reported vulnerabilities and tells you how to address what it finds.
+    wrong: Three of these change your packages. Only one inspects them.
+    [x] `npm audit`
+    [ ] `npm update`
+    [ ] `npm version patch`
+    [ ] `npm publish --access=public`
+    ```
+
+## Resources
+
+- [npm: creating and publishing scoped public packages](https://docs.npmjs.com/creating-and-publishing-scoped-public-packages)
+- [npm: npm publish](https://docs.npmjs.com/cli/v10/commands/npm-publish)
+- [npm: npm version](https://docs.npmjs.com/cli/v10/commands/npm-version)
+- [npm: npm audit](https://docs.npmjs.com/cli/v10/commands/npm-audit)

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>WebRTC Video Chat</title>
+        <script src="main.js" defer></script>
+        <!-- #region style -->
+        <style>
+            .video-container {
+                display: flex;
+                justify-content: center;
+                gap: 20px;
+                margin-top: 20px;
+            }
+
+            /* Black placeholder boxes at a fixed size. */
+            video {
+                background-color: black;
+                width: 400px;
+                height: 300px;
+                border-radius: 8px;
+            }
+        </style>
+        <!-- #endregion -->
+    </head>
+    <body>
+        <!-- #region button -->
+        <button id="start-button" disabled>Start Call</button>
+        <!-- #endregion -->
+        <!-- #region videos -->
+        <div class="video-container">
+            <div>
+                <h3>Local Video</h3>
+                <video id="local-video" autoplay playsinline muted></video>
+            </div>
+            <div>
+                <h3>Remote Video</h3>
+                <video id="remote-video" autoplay playsinline></video>
+            </div>
+        </div>
+        <!-- #endregion -->
+    </body>
+</html>

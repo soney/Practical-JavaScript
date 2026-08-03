@@ -1,0 +1,123 @@
+# Introduction to Animations
+
+Next we are going to talk about **animation**. Animations can make an interface more engaging, and, used well, they make it *easier to use*, because they make it clear how things change as someone works with your page.
+
+## What Animation Is For
+
+In a user interface, animation can help usability by:
+
+- giving understandable feedback to a user's action
+- showing, at least abstractly, where an object came from or where it went
+- drawing attention to something
+- visually explaining a change, particularly one the user did not make
+- keeping the user oriented as elements move around over time
+
+Here is the smallest possible example of the first two. Hover over the box:
+
+```{html autorun}
+<div class="grower">Hover me</div>
+```
+```+css
+.grower {
+  width: 120px;
+  padding: 12px;
+  background-color: #00274c;
+  color: #ffcb05;
+  text-align: center;
+  transition: width 0.4s;
+}
+.grower:hover {
+  width: 240px;
+}
+```
+
+Without the animation the box would snap to its new size, and it would be less obvious that it is the *same* box that got wider rather than a different box appearing. That is animation doing real work: showing continuity.
+
+Used excessively, though, animation gets in the way. It delays people who already know what they want, it draws the eye away from what matters, and it can make a page feel slow. So: **always have a purpose when using animation.** If you cannot say what a particular animation communicates, take it out.
+
+## CSS First, JavaScript When You Must
+
+In web applications, prefer **CSS** animations whenever you can:
+
+- They are more efficient. The browser can often run them without involving JavaScript at all, so they keep moving smoothly even while your code is busy.
+- They are shorter to write.
+- They are easier to maintain, because the animation lives with the styling instead of being spread through your logic.
+
+Sometimes CSS is not enough. You need JavaScript when the animation depends on something computed at run time, when it has to follow user input continuously, or when what you want has no CSS equivalent.
+
+## Why Start By Doing It the Hard Way
+
+This lesson and the next two build animations **manually** in JavaScript, moving things a small amount at a time. In practice you would usually not write animations this way.
+
+We are doing it because it is the only way to understand what the convenient tools are actually doing for you. Once you have written a frame loop by hand, `transition: width 0.4s` stops being magic, and the reasons some animations stutter and others do not start to make sense.
+
+So let's start learning how to animate things manually, and then work up to the APIs that do it for us.
+
+## Exercises
+
+1. Why should every animation have a purpose?
+
+    ```{mcq}
+    What is the argument against adding an animation just because you can?
+    correct: Correct! Animation costs the user time and attention, so it has to earn that cost by communicating something.
+    wrong: Look back at the paragraph after the hover demo.
+    [x] Excessive animation distracts users, delays them, and can make a page feel slow
+    [ ] CSS animations do not work in most browsers
+    [ ] JavaScript cannot change styles
+    [ ] Animations always require an external library
+    ```
+
+2. Give this box a `transition` so its background color changes over `0.5s` when hovered, instead of snapping.
+
+    ```html id=page1
+    <div class="swatch">Hover me</div>
+    ```
+
+    ```{css}
+    .swatch {
+      width: 150px;
+      padding: 20px;
+      background-color: #ffcb05;
+      /* Write your code here */
+    }
+
+    .swatch:hover {
+      background-color: #00274c;
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    .swatch {
+      width: 150px;
+      padding: 20px;
+      background-color: #ffcb05;
+      transition: background-color 0.5s;
+    }
+
+    .swatch:hover {
+      background-color: #00274c;
+    }
+    ```
+    ```+test
+    assertRule('.swatch').should('have.css', 'transition-duration: 0.5s').run('Add a `transition` to `.swatch` lasting `0.5s`', 'Added a half-second transition');
+    assertRule('.swatch').should('have.css', 'transition-property: background-color').run('The transition should apply to `background-color`', 'Transitioned the background color');
+    ```
+
+3. When do you have to reach for JavaScript instead of CSS?
+
+    ```{mcq}
+    Which of these genuinely needs JavaScript rather than CSS? (Select all that apply)
+    correct: Correct! CSS handles fixed, declarative animations well. JavaScript is for animations whose values are computed at run time, that follow input continuously, or that CSS has no way to express.
+    wrong: Revisit "CSS First, JavaScript When You Must".
+    [x] An element that follows the mouse pointer as it moves
+    [x] An animation whose distance is calculated from data fetched at run time
+    [x] An animation that CSS has no equivalent for
+    [ ] A button that fades its background color when hovered
+    ```
+
+## Resources
+
+- [MDN: Using CSS transitions](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_transitions/Using_CSS_transitions)
+- [MDN: Using CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_animations/Using_CSS_animations)
+- [MDN: requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)

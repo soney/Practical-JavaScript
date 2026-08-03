@@ -1,0 +1,308 @@
+# Synchronizing Text Editors
+
+Sharing JSON is useful. The thing people actually picture when they hear "collaborative editing" is two cursors in the same paragraph, so let us connect ShareDB to a real text editor.
+
+We will use **Quill**, an open-source rich-text editor, and the approach applies to any editor that can tell you what changed and apply a change it is given. The finished project is `sharedb-demo/05-richtext/` in your workspace, and it is the smallest stage of the lesson: the machinery from the earlier stages does almost all the work.
+
+## Quill, on Its Own
+
+The page comes straight from Quill's own quick-start code:
+
+```{walkthrough}
+title: The editor page
+step: The stylesheet
+file: sharedb-demo/05-richtext/src/index.html
+region: stylesheet
+@"quill.snow.css": Quill's "snow" theme, loaded from a CDN. This stage's page needs a network connection for the editor's files; everything else in the lesson runs locally.
+
+step: The editor
+file: sharedb-demo/05-richtext/src/index.html
+region: editor
+@"div id=": The container Quill takes over. We keep it empty; the shared document will provide the content.
+@"dist/quill.js": The library itself, from the same CDN.
+@"new Quill('#editor'": Quill's quick-start line: point it at the container and pick the theme. This alone is a working editor with a formatting toolbar, and it knows nothing about anyone else.
+@"quill.disable();": Start the editor read-only. `client.js` enables it once the shared document has arrived, so nothing can be typed into a document that is not there yet.
+```
+
+Because Quill arrives through a script tag, `quill` is a global that the bundled `client.js` can use, the arrangement the video uses too.
+
+## A Rich-Text Document on the Server
+
+Text with formatting is not JSON, so `json0` is the wrong OT type. This is the moment the previous reading set up: install **`rich-text`** and register it.
+
+    $ npm install rich-text
+
+```{walkthrough}
+title: What the server gained
+step: Registering the type
+file: sharedb-demo/05-richtext/server.js
+region: register
+@"ShareDB.types.register(richText.type)": The registration from the OT types reading, now doing real work.
+
+step: Creating a rich-text document
+file: sharedb-demo/05-richtext/server.js
+region: doc
+The fetch-and-create logic is unchanged from the counter; the document it creates is not.
+@"'examples', 'richtext'": A third document id, beside the counter and the to-do list.
+@"[{ insert: 'Type here...' }]": The contents are an array of **Deltas**, Quill's format for describing text and formatting, rather than a plain string. Each Delta describes one piece; here, one insert. A string could not carry "this word is bold", and carrying that is the whole point of rich text.
+@"], 'rich-text'": `create`'s second argument, which the previous reading showed defaulting to `'json0'`, now names the new type.
+```
+
+## The Client Side of the Type
+
+The client has to register `rich-text` too. This is a mistake worth expecting: register it on the server alone and the client cannot apply or transform the operations that arrive.
+
+```{walkthrough}
+title: What the client gained
+step: Registering on the client
+file: sharedb-demo/05-richtext/src/client.js
+region: register
+@"sharedb.types.register": The same registration call as the server, on the browser's copy of ShareDB, with the same `richText.type` imported from the same package.
+
+step: Showing the document
+file: sharedb-demo/05-richtext/src/client.js
+region: subscribe
+The subscribe callback does two things and then sets up the incoming direction, which the next section reads closely.
+@"quill.setContents(doc.data)": `doc.data` is the Delta array, and `setContents` takes exactly that format. No conversion in either direction is why this editor and this OT type fit together so well; the video calls it Quill having bindings for ShareDB's operations built in.
+@"quill.enable()": The other half of the `disable()` in the page: the editor opens for typing only once there is a document to type into.
+```
+
+## The Two Directions
+
+This is the heart of the stage. Changes travel both ways, and each direction must not re-trigger the other.
+
+```{walkthrough}
+title: Two listeners, each ignoring its own echo
+step: From the document to the editor
+file: sharedb-demo/05-richtext/src/client.js
+region: incoming
+@"doc.on('op', (op, source)": The `op` listener's *second* argument, which the OT types reading did not need: where this operation came from.
+@"source === quill": ShareDB passes back whatever `source` value was given to `submitOp`. We pass `quill` below, so seeing `quill` here means "my own change, already on screen": return without touching the editor.
+@"quill.updateContents(op)": Anything else is somebody else's change, so apply it to the editor.
+
+step: From the editor to the document
+file: sharedb-demo/05-richtext/src/client.js
+region: outgoing
+@"'text-change'": Quill fires this for every edit, handing over the change as a Delta, the old contents (which we ignore), and its own source label.
+@"source === 'user'": Quill labels a change `'user'` when a person typed it, and something else (`'api'`) when it came from code such as `updateContents`. Only the `'user'` ones are submitted.
+@"{ source: quill }": The marker that comes back to us in the op listener above. Any value would do; the `quill` object is handy and cannot collide with anybody else's.
+```
+
+Follow one keystroke through. You type; `text-change` fires with source `'user'`; we submit, tagged with `quill`. The submission fires our own `op` listener with source `quill`, which returns without applying, because the editor already shows the keystroke. Meanwhile a remote change arrives with neither marker: not `quill`, so `updateContents` applies it, which fires `text-change` with source `'api'`, which is not `'user'`, so it is not submitted back. Each change is applied exactly once, everywhere, and the loop never starts.
+
+The source checks are the part most often gotten wrong, so here they are running against stand-ins:
+
+```{javascript autorun}
+// Stand-ins for Quill and a ShareDB document.
+const quill = { contents: 'start', applied: [] };
+const doc = { submitted: [] };
+
+quill.updateContents = function (delta) {
+  quill.applied.push(delta.text);
+};
+
+doc.submitOp = function (delta, options) {
+  doc.submitted.push(delta.text);
+
+  // ShareDB echoes every operation back, with the source we gave it.
+  handleOp(delta, options.source);
+};
+
+function handleTextChange(delta, source) {
+  if (source !== 'user') {
+    console.log('ignoring an editor change from ' + source);
+    return;
+  }
+
+  doc.submitOp(delta, { source: quill });
+}
+
+function handleOp(op, source) {
+  if (source === quill) {
+    console.log('ignoring my own operation coming back');
+    return;
+  }
+
+  quill.updateContents(op);
+}
+
+// A person types.
+handleTextChange({ text: 'hello' }, 'user');
+
+// Somebody else's change arrives from the server.
+handleOp({ text: 'from a colleague' }, undefined);
+
+console.log('submitted: ' + doc.submitted);
+console.log('applied to the editor: ' + quill.applied);
+```
+
+Typing was submitted once and never re-applied. The remote change was applied once and never submitted. Remove either `return` and run it again to see the duplication.
+
+## Sharing It Beyond Your Machine
+
+In the video, this stage is where the socket URL gets fixed, and it is worth understanding what was wrong with the obvious version. Writing the address in by hand gives you `ws://localhost:8000`, which works right up until anyone else is involved. **`localhost` means "this computer"**, and it means that on *your friend's* computer too: their browser would look for a server on their own machine, find nothing, and fail. Building the address out of `location` instead is what lets a colleague on another computer type into the same document, and it is why every stage in this lesson is written the way it is.
+
+```{walkthrough}
+title: Connecting to wherever the page came from
+step: The socket URL
+file: sharedb-demo/05-richtext/src/client.js
+region: connect
+@"window.location.host": The host the page itself was served from, port included. On your machine that is `localhost:8000`; for a friend it is whatever address they loaded the page from. Right in development and right after deployment, with no change, which is the same reasoning as the WebSockets reading.
+@"'wss:' : 'ws:'": The scheme has to match how the page arrived: a page loaded over `https://` is not allowed to open an insecure `ws://` connection, so a hard-coded scheme breaks as soon as the page is served securely.
+```
+
+Whether other computers can actually reach yours depends on your network, and the video says as much: your mileage may vary. The code, at least, is no longer the obstacle.
+
+## Running It Yourself
+
+From `sharedb-demo/` (stop any other stage first with Ctrl+C; this stage's page needs a network connection for the CDN):
+
+    $ cd "05-richtext"
+    $ npx webpack
+    $ node server.js
+    Document created!
+    Listening on http://localhost:8000
+
+(While editing `client.js`, the video keeps `npx webpack --watch` running in a second terminal so every save rebuilds on its own.)
+
+Open `http://localhost:8000` in **two** windows side by side and type in either. The text appears in the other as you type. Then use the toolbar: **bold** something, make a list, add a heading. Formatting synchronizes exactly like text, because the `rich-text` type knows how to transform formatting changes; none of it needed special handling from us. A Google Docs-style collaborative editor, in a few dozen lines on top of the stages you already read.
+
+## Exercises
+
+1. Complete both handlers so changes travel in both directions without echoing.
+
+    ```{javascript}
+    const quill = { applied: [] };
+    const doc = { submitted: [] };
+
+    quill.updateContents = function (delta) {
+      quill.applied.push(delta.text);
+    };
+
+    doc.submitOp = function (delta, options) {
+      doc.submitted.push(delta.text);
+
+      handleOp(delta, options.source);
+    };
+
+    function handleTextChange(delta, source) {
+      // TODO: submit the change only when the person typed it, and tell
+      // ShareDB that this operation came from quill
+    }
+
+    function handleOp(op, source) {
+      // TODO: apply the operation to the editor, unless it is one we sent
+    }
+
+    handleTextChange({ text: 'hello' }, 'user');
+    handleTextChange({ text: 'from updateContents' }, 'api');
+    handleOp({ text: 'from a colleague' }, undefined);
+
+    console.log(doc.submitted, quill.applied);
+    ```
+    ```+solution
+    const quill = { applied: [] };
+    const doc = { submitted: [] };
+
+    quill.updateContents = function (delta) {
+      quill.applied.push(delta.text);
+    };
+
+    doc.submitOp = function (delta, options) {
+      doc.submitted.push(delta.text);
+
+      handleOp(delta, options.source);
+    };
+
+    function handleTextChange(delta, source) {
+      if (source !== 'user') {
+        return;
+      }
+
+      doc.submitOp(delta, { source: quill });
+    }
+
+    function handleOp(op, source) {
+      if (source === quill) {
+        return;
+      }
+
+      quill.updateContents(op);
+    }
+
+    handleTextChange({ text: 'hello' }, 'user');
+    handleTextChange({ text: 'from updateContents' }, 'api');
+    handleOp({ text: 'from a colleague' }, undefined);
+
+    console.log(doc.submitted, quill.applied);
+    ```
+    ```+test
+    wrap(doc.submitted).should('equal', ['hello']).run('Only a change whose source is `\'user\'` should be submitted. The one from `api` came from `updateContents` and must be ignored', 'Submitted only what the person typed');
+    wrap(quill.applied).should('equal', ['from a colleague']).run('Only an operation from somewhere else should be applied to the editor. Your own, whose source is `quill`, is already there', 'Applied only the remote change');
+    wrap((function () { handleOp({ text: 'echo of my own edit' }, quill); return quill.applied.length; })()).should('equal', 1).run('An operation whose source is `quill` is your own change coming back; do not apply it again', 'Ignored the echo');
+    wrap((function () { handleTextChange({ text: 'typed later' }, 'user'); return doc.submitted[doc.submitted.length - 1]; })()).should('equal', 'typed later').run('Pass `{ source: quill }` to `submitOp` so your own operations can be recognized when they come back', 'Tagged submissions with their source');
+    ```
+
+2. Fix the socket URL so the page works for someone on another computer.
+
+    ```{javascript}
+    // Stands in for the browser's window.location on a deployed page.
+    const location = { protocol: 'https:', host: 'example.com:8000' };
+
+    const socketUrl = 'ws://localhost:8000';
+
+    // TODO: build the URL from the page's own address instead: 'wss:' when
+    // location.protocol is 'https:', 'ws:' otherwise, followed by location.host
+
+    console.log(socketUrl);
+    ```
+    ```+solution
+    // Stands in for the browser's window.location on a deployed page.
+    const location = { protocol: 'https:', host: 'example.com:8000' };
+
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socketUrl = wsProtocol + '//' + location.host;
+
+    console.log(socketUrl);
+    ```
+    ```+test
+    wrap(socketUrl).should('equal', 'wss://example.com:8000').run('Build the URL from `location`: the scheme from `location.protocol` and the host from `location.host`, so it points at wherever the page came from. `localhost` would mean the visitor\'s own machine', 'Used the page\'s own address');
+    wrap(socketUrl.includes('localhost')).should('equal', false).run('Nothing in the URL should be written in by hand; `localhost` is the visitor\'s own machine, not your server', 'Dropped the hard-coded host');
+    ```
+
+3. Deltas, not strings
+
+    ```{mcq}
+    The server creates the editor's document with:
+
+    ~~~js
+    doc.create([{ insert: 'Type here...' }], 'rich-text', ...);
+    ~~~
+
+    Why is the initial content an array of objects rather than the string `'Type here...'`?
+    correct: Correct! The `rich-text` type works in Deltas, an array of operation objects, because that format can carry formatting as well as characters. A plain string could only carry the characters.
+    wrong: Think about what a rich-text document has to be able to express that a plain string cannot.
+    [x] The rich-text type needs Delta format, which can describe formatting such as bold and lists
+    [ ] ShareDB cannot store strings, only objects
+    [ ] It makes the text load faster on phones
+    [ ] It prevents the document being tampered with
+    ```
+
+4. A link that only works for you
+
+    ```{mcq}
+    You leave the client connecting to `ws://localhost:8000` and send the page's address to a friend on another computer. What happens when they open it?
+    correct: Correct! `localhost` is relative to whoever is running the browser, so their machine tries to reach a server on itself, finds nothing, and never connects. Building the URL from `window.location.host` is the fix.
+    wrong: Ask what `localhost` refers to when the code is running on somebody else's computer.
+    [x] Their browser tries to connect to their own computer instead of your server, and syncing fails
+    [ ] It works, because every computer is on the same internet
+    [ ] The text appears reversed on their screen
+    [ ] The server detects their address and corrects the URL
+    ```
+
+## Resources
+
+- [Quill](https://quilljs.com/)
+- [ottypes/rich-text](https://github.com/ottypes/rich-text)
+- [Quill: Deltas](https://quilljs.com/docs/delta/)
+- [ShareDB: the Doc class](https://share.github.io/sharedb/api/doc)

@@ -1,0 +1,196 @@
+# Logical Operators
+
+In the last lesson we produced booleans by comparing two values. **Logical operators** let us combine those booleans into larger, more nuanced ones. There are three:
+
+- `&&` (logical AND)
+- `||` (logical OR)
+- `!` (logical NOT)
+
+Throughout this lesson, imagine two expressions `a` and `b` whose values are booleans. They might be the literals `true` and `false`, but far more often they are comparisons like `x > y` and `z === 5`.
+
+## Logical AND (`&&`)
+
+The AND operator is two ampersands. The expression `a && b` is `true` only when `a` is `true` **and** `b` is `true`. If either side is `false`, the whole thing is `false`.
+
+That is easiest to see as a **truth table**, which lists every combination the two sides can have:
+
+| `a`     | `b`     | `a && b` |
+|---------|---------|----------|
+| `true`  | `true`  | `true`   |
+| `true`  | `false` | `false`  |
+| `false` | `true`  | `false`  |
+| `false` | `false` | `false`  |
+
+```{javascript autorun}
+console.log(true && true);
+console.log(true && false);
+console.log(false && true);
+console.log(false && false);
+```
+
+In real code the two sides are usually comparisons. Checking that a number falls inside a range takes two comparisons joined with `&&`:
+
+```{javascript autorun}
+const num = 15;
+
+console.log(num > 10 && num < 20);
+```
+
+`num > 10` is `true` and `num < 20` is `true`, so the whole expression is `true`. Change `num` to `25` and run it again: the second comparison becomes `false`, so the result does too.
+
+## Logical OR (`||`)
+
+The OR operator is two vertical bars. The expression `a || b` is `true` when `a` is `true`, or `b` is `true`, or both. It is `false` only when both sides are `false`.
+
+| `a`     | `b`     | `a \|\| b` |
+|---------|---------|------------|
+| `true`  | `true`  | `true`     |
+| `true`  | `false` | `true`     |
+| `false` | `true`  | `true`     |
+| `false` | `false` | `false`    |
+
+```{javascript autorun}
+console.log(true || true);
+console.log(true || false);
+console.log(false || true);
+console.log(false || false);
+```
+
+A natural use is "either of these is good enough":
+
+```{javascript autorun}
+const isWeekend = false;
+const isHoliday = true;
+
+const canRelax = isWeekend || isHoliday;
+
+console.log(canRelax);
+```
+
+It is not the weekend, but it is a holiday, so `canRelax` is `true`.
+
+## Logical NOT (`!`)
+
+The NOT operator is an exclamation point, and unlike the other two it takes only one expression. `!a` is the opposite of `a`.
+
+| `a`     | `!a`    |
+|---------|---------|
+| `true`  | `false` |
+| `false` | `true`  |
+
+```{javascript autorun}
+const isHot = true;
+const isCold = !isHot;
+
+console.log(isCold);
+console.log(!(1 === 2));
+```
+
+The last line is worth a look. `1 === 2` is `false`, so `!(1 === 2)` is `true`. The parentheses matter: they make the comparison happen first, so that `!` has a boolean to flip.
+
+## Combining More Than Two
+
+Nothing stops us from chaining these together, and this is where the "more nuanced" part comes in. Suppose we want to know whether a letter is a vowel:
+
+```{javascript autorun}
+const letter = 'a';
+
+const isA = letter === 'a';
+const isE = letter === 'e';
+const isI = letter === 'i';
+const isO = letter === 'o';
+const isU = letter === 'u';
+
+const isVowel = isA || isE || isI || isO || isU;
+const isConsonant = !isVowel;
+
+console.log(isVowel);
+console.log(isConsonant);
+```
+
+`isVowel` is `true` if *any* of the five comparisons is true, so the five are joined with `||`. And a letter is a consonant exactly when it is not a vowel, which is what `!isVowel` says. Change `letter` to `'m'` and run it again; both values flip.
+
+Note what would happen if we had written `&&` instead of `||` in `isVowel`. No letter can be `a` and `e` at the same time, so the expression could never be true. Choosing the wrong one of these two operators produces a condition that is always wrong rather than an error, which is why it pays to read them out loud: "a or e or i or o or u".
+
+Here is a more realistic one. Imagine a site where people sign up and we want to know whether a chosen username is acceptable:
+
+```{javascript autorun}
+const username = 'soney';
+
+const isLongEnough = username.length > 3;
+const isAlreadyTaken = false;
+const hasSpecialCharacters = false;
+
+const isValid = isLongEnough && !isAlreadyTaken && !hasSpecialCharacters;
+
+console.log(isValid);
+```
+
+`username.length` gives the number of characters in a string, so `isLongEnough` checks that the name is longer than three characters. `isValid` is `true` only when the name is long enough **and** is not already taken **and** has no special characters. In a real site the last two would be worked out by code that checks a list of existing users; we will learn to write that kind of code when we get to functions in a later lesson.
+
+So logical operators let us combine boolean expressions into ones that say exactly what we mean. You might reasonably ask what we can do with a boolean other than log it. That is the next lesson: **conditional execution**, where a boolean decides which parts of our code run at all.
+
+## Exercises
+
+1. Write an expression for `isTeenager` that is `true` when `age` is at least `13` and at most `19`.
+
+    ```{javascript}
+    const age = 15;
+
+    const isTeenager = /* Your code here */;
+
+    console.log(isTeenager);
+    ```
+    ```+solution
+    const age = 15;
+
+    const isTeenager = age >= 13 && age <= 19;
+
+    console.log(isTeenager);
+    ```
+    ```+test
+    wrap(isTeenager).should('equal', true).run('`isTeenager` should be `true` when `age` is 15', 'isTeenager is true for 15');
+    wrap(source.includes('&&')).should('equal', true).run('Combine two comparisons with `&&`', 'Used the `&&` operator');
+    ```
+
+2. Write an expression for `needsCoat` that is `true` when it is either cold or raining.
+
+    ```{javascript}
+    const isCold = false;
+    const isRaining = true;
+
+    const needsCoat = /* Your code here */;
+
+    console.log(needsCoat);
+    ```
+    ```+solution
+    const isCold = false;
+    const isRaining = true;
+
+    const needsCoat = isCold || isRaining;
+
+    console.log(needsCoat);
+    ```
+    ```+test
+    wrap(needsCoat).should('equal', true).run('`needsCoat` should be `true` when it is raining, even though it is not cold', 'needsCoat is true');
+    wrap(source.includes('||')).should('equal', true).run('Combine the two booleans with `||`', 'Used the `||` operator');
+    ```
+
+3. Negating a comparison
+
+    ```{mcq}
+    The expression `!(5 > 3)` is evaluated. What is its value?
+    correct: Correct! `5 > 3` is `true`, and `!` flips it, so the whole expression is `false`.
+    wrong: Work the expression from the inside out: first decide what `5 > 3` is, then apply the `!`.
+    [x] `false`
+    [ ] `true`
+    [ ] `5`
+    [ ] It causes an error, because `!` only works on the literals `true` and `false`
+    ```
+
+## Resources
+
+- [MDN: Logical AND (&&)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_AND)
+- [MDN: Logical OR (||)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR)
+- [MDN: Logical NOT (!)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_NOT)
+- [MDN: String length](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length)

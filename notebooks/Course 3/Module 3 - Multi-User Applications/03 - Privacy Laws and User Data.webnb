@@ -1,0 +1,185 @@
+# Privacy Laws and User Data
+
+The last two readings were about how to store data about your users. This one is about the obligation that comes with it, which is partly ethical and, increasingly, legal.
+
+You have seen the result many times: the panel that appears on a site asking you to accept cookies, or to choose which ones you will allow. Those exist because of privacy law.
+
+## The Laws
+
+There are many. The ones most often named:
+
+- **GDPR**, the European Union's General Data Protection Regulation. One of the first and still the most influential.
+- **CCPA** and **CPRA**, California's Consumer Privacy Act and Privacy Rights Act.
+- **PIPEDA**, Canada's Personal Information Protection and Electronic Documents Act.
+
+And a good many more, with new ones arriving regularly.
+
+The obvious thought at this point is that none of these are where you live. It does not help as much as you would hope. **The GDPR applies to any organization that processes data about EU residents**, wherever that organization is. If people in the EU can reach your site, it applies to you. Most of the newer laws are written the same way, around whose data it is rather than where the company is.
+
+## What They Ask For
+
+The specifics differ, the implementation details are outside the scope of this course, and this is not legal advice. The shared shape is roughly three things.
+
+**Users have to be informed** about what data is being collected. There is a **notable exception**: data that is fundamentally necessary for the service to operate. A session cookie that keeps you logged in is part of the thing you asked for. An analytics cookie that reports your behavior to a third party is not.
+
+That exception is why consent panels distinguish between categories rather than asking about cookies as a whole, and it is why "users must *always* be informed" is not quite true.
+
+**Users often have to consent** before their data is stored, and consent has to be a real choice rather than a condition of entry.
+
+**Users often have the right to see and delete** what you hold about them. That is worth knowing before you design your storage, because "produce everything we know about this person, and then erase it" is much harder to add later than to plan for.
+
+None of this depends on **how** you store the data. `localStorage`, `sessionStorage`, cookies, a file, a database on your own server: the obligation follows the data, not the mechanism. It is a common and wrong assumption that client-side storage is somehow outside the rules.
+
+There are libraries and hosted services for collecting and recording consent, and they are worth using rather than writing your own, because the requirements change.
+
+## The Practical Habit
+
+The reliable way to reduce your obligations is to have less data. This is called **data minimization**: collect what the service actually needs, and nothing you merely find interesting.
+
+```{javascript autorun}
+// What the registration form sent us.
+const formInput = {
+  displayName: 'Ada',
+  email: 'ada@example.com',
+  birthday: '1815-12-10',
+  referrer: 'twitter'
+};
+
+// What our application genuinely needs in order to work.
+function registrationRecord(input) {
+  return {
+    displayName: input.displayName,
+    email: input.email
+  };
+}
+
+const record = registrationRecord(formInput);
+
+console.log(record);
+```
+
+Two fields stored instead of four. Nothing to disclose about the other two, nothing to delete on request, nothing to lose in a breach. Every field you do not keep is a field that cannot go wrong.
+
+## Exercises
+
+1. Keep only the fields the application needs.
+
+    ```{javascript}
+    const submittedProfile = {
+      displayName: 'Ada',
+      email: 'ada@example.com',
+      birthday: '1815-12-10',
+      phoneNumber: '555-0100'
+    };
+
+    function storedProfile(profile) {
+      // TODO: return an object with only displayName and email
+      return profile;
+    }
+
+    const saved = storedProfile(submittedProfile);
+
+    console.log(saved);
+    ```
+    ```+solution
+    const submittedProfile = {
+      displayName: 'Ada',
+      email: 'ada@example.com',
+      birthday: '1815-12-10',
+      phoneNumber: '555-0100'
+    };
+
+    function storedProfile(profile) {
+      return {
+        displayName: profile.displayName,
+        email: profile.email
+      };
+    }
+
+    const saved = storedProfile(submittedProfile);
+
+    console.log(saved);
+    ```
+    ```+test
+    wrap(saved).should('equal', { displayName: 'Ada', email: 'ada@example.com' }).run('Return a new object holding only `displayName` and `email`', 'Kept only the needed fields');
+    wrap('birthday' in saved).should('equal', false).run('The birthday is not needed, so it should not be stored', 'Dropped the birthday');
+    wrap('phoneNumber' in saved).should('equal', false).run('The phone number is not needed either', 'Dropped the phone number');
+    ```
+
+2. Write `needsConsent`, which decides whether a stored item requires asking the user first.
+
+    ```{javascript}
+    const items = [
+      { name: 'session', purpose: 'keeps the user logged in', strictlyNecessary: true },
+      { name: 'cart', purpose: 'remembers the shopping basket', strictlyNecessary: true },
+      { name: 'analytics', purpose: 'reports behavior to a third party', strictlyNecessary: false },
+      { name: 'adTracking', purpose: 'follows the user across sites', strictlyNecessary: false }
+    ];
+
+    function needsConsent(item) {
+      // TODO: return false for items that are fundamentally necessary
+      // for the service to work, and true for everything else
+    }
+
+    for (const item of items) {
+      if (needsConsent(item)) {
+        console.log(item.name + ' needs consent');
+      }
+    }
+    ```
+    ```+solution
+    const items = [
+      { name: 'session', purpose: 'keeps the user logged in', strictlyNecessary: true },
+      { name: 'cart', purpose: 'remembers the shopping basket', strictlyNecessary: true },
+      { name: 'analytics', purpose: 'reports behavior to a third party', strictlyNecessary: false },
+      { name: 'adTracking', purpose: 'follows the user across sites', strictlyNecessary: false }
+    ];
+
+    function needsConsent(item) {
+      return item.strictlyNecessary === false;
+    }
+
+    for (const item of items) {
+      if (needsConsent(item)) {
+        console.log(item.name + ' needs consent');
+      }
+    }
+    ```
+    ```+test
+    wrap(needsConsent(items[0])).should('equal', false).run('A session that keeps the user logged in is part of the service they asked for, so it falls under the exception', 'Recognized a necessary item');
+    wrap(needsConsent(items[2])).should('equal', true).run('Analytics is not necessary for the service to work, so it needs consent', 'Recognized an optional item');
+    wrap(needsConsent(items[3])).should('equal', true).run('Cross-site tracking certainly needs consent', 'Recognized tracking as optional');
+    check.consoleLogged('analytics needs consent').run('The loop should report `analytics` as needing consent', 'Reported the right items');
+    wrap(console.history().length).should('equal', 2).run('Exactly two of the four items need consent', 'Classified every item');
+    ```
+
+3. Which of these statements about privacy law is **false**?
+
+    ```{mcq}
+    Three of these are broadly true. Which one is not?
+    correct: Correct! There is an exception for data that is fundamentally necessary for the service to operate, such as a session that keeps someone logged in. That is why the word "always" makes the statement false.
+    wrong: Look for the statement that is too absolute. One of the three requirements has a notable exception attached to it.
+    [x] Users must always be informed about what data is collected
+    [ ] Developers have an obligation to protect the data they hold about users
+    [ ] Consent should generally be collected before storing a user's data
+    [ ] Libraries and services exist that make collecting consent easier
+    ```
+
+4. You run a small site from outside Europe. Does the GDPR apply to you?
+
+    ```{mcq}
+    What decides whether the GDPR applies?
+    correct: Correct! It follows the people rather than the company. If you process data about EU residents, it applies to you wherever you are.
+    wrong: Think about whose data the law is protecting.
+    [x] Yes, if you process data about EU residents
+    [ ] No, it only covers organizations physically located in Europe
+    [ ] Yes, but only if the site uses cookies
+    [ ] No, it only covers government websites
+    ```
+
+## Resources
+
+- [MDN: privacy on the web](https://developer.mozilla.org/en-US/docs/Web/Privacy)
+- [European Commission: data protection in the EU](https://commission.europa.eu/law/law-topic/data-protection/data-protection-eu_en)
+- [State of California: CCPA](https://oag.ca.gov/privacy/ccpa)
+- [Office of the Privacy Commissioner of Canada: PIPEDA](https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/)

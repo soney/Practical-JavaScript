@@ -1,0 +1,144 @@
+# Internationalization and Localization
+
+An important part of deploying an application is making sure it works for every user, not just in how different people interact with the web (that is accessibility, which we cover later in this module), but also in how content is presented across different languages and cultures. Two related concepts help us design applications that are usable for people around the world: internationalization and localization.
+
+**Localization** is how you adapt an application to a specific locale. A locale is a language and region pairing, such as English in the United States or Spanish in Mexico. Localization includes translating text, adjusting date and number formats, and more.
+
+**Internationalization** is designing software so that it *can* be localized. In other words, internationalization is the up-front work of building an app that is ready to hold multiple languages and regional conventions, and localization is filling in the details for one specific locale.
+
+You will often see these words abbreviated as numeronyms:
+
+- **i18n** for internationalization, where the `18` stands for the 18 letters between the `i` and the `n`.
+- **l10n** for localization, where the `10` stands for the 10 letters between the `l` and the `n`.
+
+A quick way to hold the two apart:
+
+- Internationalization: build the app so it can load translated labels and locale-specific formats.
+- Localization: provide the Spanish labels and Mexican formats for users in Mexico.
+
+## Beyond Translation
+
+Translating text is a key step in localization, but it is not the only step. Two locales can speak variants of the same language and still expect very different presentation. Here are cultural dimensions the same content might need to adapt to:
+
+- **Temperature.** The United States (and very few other countries) uses Fahrenheit, while most of the world expects Celsius.
+- **Measurement.** The United States uses feet, inches, and miles; most of the world expects the metric system.
+- **Date order.** The United States typically writes month, then day, then year. Much of the world writes day, then month, then year, and some regions write year, then month, then day.
+- **Decimal and grouping separators.** In the United States, `1,234` means one thousand two hundred thirty-four, because the comma groups thousands. In France, the comma is the decimal separator, so `1,234` reads as a number slightly over one.
+- **Text direction.** English reads left to right, so logos and outlines tend to sit on the left. Arabic and Hebrew read right to left, so those same elements are mirrored to the right and text is right-aligned.
+- **Color meaning.** In the United States, red can signal danger or anger. In China, red can signal prosperity or luck. The same color carries different meaning by culture.
+- **Icons and gestures.** A hand symbol that means "okay" in one context can mean zero in France, money in Japan, or a vulgar gesture in Brazil. The meaning depends on the audience.
+- **Information density.** Some cultures prefer dense, information-rich screens; others prefer minimal, spacious layouts.
+- **Color saturation.** Bright, saturated colors can read as exciting in one region and as too busy in another.
+- **Navigation depth.** Some audiences expect deep hierarchical menus; others expect broad, flat navigation.
+- **Connectivity.** Internet speed and reliability vary by region, which affects how much you can send to a user at once.
+
+The first two of those are stark on a map. Fahrenheit is used by the United States and a handful of small territories, and almost nowhere else:
+
+![A world map of the temperature scale each country uses. The United States and a scattering of small Caribbean and Pacific territories are green for Fahrenheit, a few more are shown as using both, and every other country is gray for Celsius.](images/temp-i18n.png =x320)
+
+Measurement units divide the world in much the same way, with the United States on its own customary system and a few countries mixing the two:
+
+![A world map of measurement systems. Almost every country is blue for metric or mainly metric. The United States is green for mostly United States customary units, Canada and the United Kingdom are purple for mixed metric and imperial, and Myanmar and Liberia are marked as unknown.](images/metric-i18n.png =x320)
+
+The takeaway is that localization is more than swapping words. Internationalizing an app means leaving room to adjust all of these dimensions, not only the strings.
+
+## Separating Text From Code
+
+A practical internationalization habit that makes later localization possible is keeping display text in a data structure instead of hard-coding it throughout the app. Later lessons in this module build this out with translation files and JavaScript's built-in formatting tools, but the core idea looks like this:
+
+```{javascript autorun}
+const messages = {
+  en: {
+    greeting: 'Hello'
+  },
+  es: {
+    greeting: 'Hola'
+  }
+};
+
+function translate(locale, key) {
+  if (messages[locale] && messages[locale][key]) {
+    return messages[locale][key];
+  }
+
+  // Fall back to English rather than showing nothing.
+  return messages.en[key];
+}
+
+console.log(translate('es', 'greeting'));
+console.log(translate('de', 'greeting'));
+```
+
+- `messages` holds one object per locale, keyed by a locale code such as `en` or `es`.
+- Each locale object maps a stable key like `greeting` to the text for that language.
+- `translate` looks up the right text for a given locale and key, so the rest of the app never hard-codes a language.
+- The **fallback** matters in practice. Translations are never finished: a new string is added in English on Monday and translated on Friday, and in between a Spanish reader should see English rather than `undefined`.
+
+Because the text lives in `messages` rather than being scattered through the code, adding a new language means adding one entry, not rewriting your application logic. This is a small version of what larger internationalization libraries do.
+
+## Exercises
+
+1. What is the difference between internationalization and localization?
+
+   ```{mcq}
+   Which one is the design work, and which is the adaptation?
+   correct: Correct. Internationalization is designing an app so it can be localized; localization adapts it to one specific locale.
+   wrong: Reread how each term is defined at the top of the lesson.
+   [x] Internationalization designs an app so it can be localized; localization adapts it to a specific locale.
+   [ ] Internationalization translates text; localization removes all text.
+   [ ] They are two names for the exact same task.
+   [ ] Internationalization only applies to CSS; localization only applies to HTML.
+   ```
+
+2. Add a French greeting so `translate('fr', 'greeting')` returns `Bonjour`.
+
+   ```{javascript}
+   const messages = {
+     en: {
+       greeting: 'Hello'
+     }
+   };
+
+   function translate(locale, key) {
+     return messages[locale][key];
+   }
+
+   const greeting = translate('fr', 'greeting');
+   ```
+   ```+solution
+   const messages = {
+     en: {
+       greeting: 'Hello'
+     },
+     fr: {
+       greeting: 'Bonjour'
+     }
+   };
+
+   function translate(locale, key) {
+     return messages[locale][key];
+   }
+
+   const greeting = translate('fr', 'greeting');
+   ```
+   ```+test
+   wrap(greeting).should('equal', 'Bonjour').run('Return the French greeting `Bonjour`', 'Added the French greeting');
+   ```
+
+3. A user in France sees the string `1,234`. Because of locale conventions, how should they read it?
+
+   ```{mcq}
+   How is that string read in France?
+   correct: Correct. In France the comma is a decimal separator, so `1,234` is a number slightly over one.
+   wrong: Recall which character France uses as the decimal separator versus the thousands separator.
+   [x] As a number slightly over one, because the comma is the decimal separator in France.
+   [ ] As one thousand two hundred thirty-four, exactly as in the United States.
+   [ ] As an error, because commas are never allowed in numbers.
+   [ ] As the year 1234, because France always writes years first.
+   ```
+
+## Resources
+
+- [MDN: Internationalization and localization](https://developer.mozilla.org/en-US/docs/Glossary/Internationalization_and_localization)
+- [MDN: Intl](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl)
+- [MDN: HTML lang attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/lang)

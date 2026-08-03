@@ -1,0 +1,183 @@
+# Hoisting
+
+JavaScript has a number of quirks. Some are small and inconsequential; some are not. **Hoisting** is one of the important ones, and unusually for a quirk, it is genuinely useful in practice.
+
+Hoisting is what it sounds like: the JavaScript engine **hoists**, or moves, certain declarations to the top of their scope before the code runs. Two kinds get hoisted: `var` declarations and **function declarations**. Since we do not use `var`, this lesson is mostly about functions.
+
+## Functions Before They Are Declared
+
+Normally we have to declare something before we use it. Last lesson we saw that reading a variable too early is a `ReferenceError`.
+
+Here is a function stored in a variable, used after it is declared. Perfectly ordinary:
+
+```{javascript autorun}
+const sayHello = () => {
+  console.log('hello');
+};
+
+sayHello();
+```
+
+Swap the two halves and it breaks:
+
+```{javascript autorun}
+sayHello();
+
+const sayHello = () => {
+  console.log('hello');
+};
+```
+
+`Cannot access 'sayHello' before initialization`. That is the behavior you would expect.
+
+Now declare the same function a different way, with the `function` keyword:
+
+```{javascript autorun}
+sayHello();
+
+function sayHello() {
+  console.log('hello');
+}
+```
+
+That works. The call is on the line *above* the declaration, and it runs anyway.
+
+The reason is hoisting. **Anything declared with the `function` keyword is moved to the top of its scope**, so as far as the engine is concerned that function was defined before the first line of the file.
+
+This applies only to function *declarations*. A function stored in a variable, whether as an arrow function or an anonymous `function` expression, is not hoisted, because what is being declared is a variable and the rules for `const` and `let` apply:
+
+```javascript
+myFunc();                                    // works
+function myFunc() { }
+
+myFunc();                                    // ReferenceError
+const myFunc = () => { };
+
+myFunc();                                    // ReferenceError
+const myFunc = function () { };
+```
+
+## Why This Is Useful
+
+Function hoisting is a quirk that is not only harmless but often welcome. It lets you write a file in the order a *reader* wants, with the main flow at the top and the long, detailed helper functions tucked away at the bottom:
+
+```{javascript autorun}
+const total = addTax(priceOf('coffee'));
+
+console.log(total);
+
+function priceOf(item) {
+  if (item === 'coffee') {
+    return 4;
+  }
+  return 0;
+}
+
+function addTax(amount) {
+  return amount * 1.06;
+}
+```
+
+The first three lines say what the program does. The details come after, and it all works because both helpers are hoisted.
+
+## Variable Hoisting, and Why `var` Is Worse
+
+`var` declarations are hoisted too, and here the behavior is genuinely confusing, because **only the declaration is hoisted, not the assignment.**
+
+```{javascript autorun}
+console.log(y);
+
+var y = 1;
+
+console.log(y);
+```
+
+The first log prints `undefined`, not an error, and the second prints `1`. The engine treated the code as though it read:
+
+```javascript
+var y;            // declaration hoisted to the top
+console.log(y);   // undefined: declared, but nothing assigned yet
+y = 1;            // the assignment stays where it was
+console.log(y);   // 1
+```
+
+Compare that with `let` or `const`:
+
+```{javascript autorun}
+console.log(y);
+
+let y = 1;
+```
+
+That is a `ReferenceError`: `Cannot access 'y' before initialization`. An error is much better than a silent `undefined`, because a silent `undefined` will travel some distance through your program before it causes a problem, and by then the line that caused it is nowhere in sight.
+
+This is one more reason to prefer `let` and `const`, on top of the block-scoping reasons from the last lesson.
+
+## Exercises
+
+1. Call `greet` before you declare it, and make it work. `greet` should return the string `Hello`.
+
+    ```{javascript}
+    const result = greet();
+
+    console.log(result);
+
+    // Write the declaration here
+    ```
+    ```+solution
+    const result = greet();
+
+    console.log(result);
+
+    function greet() {
+      return 'Hello';
+    }
+    ```
+    ```+test
+    wrap(result).should('equal', 'Hello').run('`greet()` should return `Hello`, and it has to work even though it is called first. Use a `function` declaration, which is hoisted', 'Called a hoisted function declaration');
+    wrap(/function\s+greet/.test(source)).should('equal', true).run('Declare it with the `function` keyword. An arrow function stored in a `const` is not hoisted', 'Used a function declaration');
+    ```
+
+2. This code fails because the arrow function is not hoisted. Fix it without moving the call.
+
+    ```{javascript}
+    const area = rectangleArea(3, 4);
+
+    console.log(area);
+
+    const rectangleArea = (width, height) => {
+      return width * height;
+    };
+    ```
+    ```+solution
+    const area = rectangleArea(3, 4);
+
+    console.log(area);
+
+    function rectangleArea(width, height) {
+      return width * height;
+    }
+    ```
+    ```+test
+    wrap(area).should('equal', 12).run('`area` should be `12`. Convert the arrow function into a `function` declaration so that it is hoisted', 'The hoisted declaration works');
+    wrap(source.indexOf('rectangleArea(3, 4)') < source.lastIndexOf('rectangleArea')).should('equal', true).run('Leave the call where it is, above the declaration', 'The call is still first');
+    ```
+
+3. What is the practical benefit of function hoisting?
+
+    ```{mcq}
+    Why is function hoisting often described as a useful quirk rather than only a confusing one?
+    correct: Correct! It frees you from ordering a file by dependency, so the important code can go at the top and the supporting details at the bottom.
+    wrong: Look back at "Why This Is Useful" and the shape of the file in that cell.
+    [x] You can put the main flow at the top of a file and long helper functions below it
+    [ ] It makes functions run faster
+    [ ] It lets a function see variables from outside its scope
+    [ ] It removes the need to call the function at all
+    ```
+
+## Resources
+
+- [MDN: Hoisting](https://developer.mozilla.org/en-US/docs/Glossary/Hoisting)
+- [MDN: Function declarations](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)
+- [MDN: let](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let)
+- [MDN: var](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var)

@@ -1,0 +1,180 @@
+# HTML Element Trees
+
+As we just learned, HTML elements can contain other elements (nesting). This nesting can go as deep as you want; one element can contain another, which can contain another, and so on. This creates a tree-like structure of elements.
+
+For example, given the following code:
+
+```html
+<p>This is a <strong>bolded</strong> word.</p>
+```
+
+The tree of elements looks like this:
+
+![A diagram showing a tree of elements with a p element as the root and a strong element as its child](images/element-tree.png)
+
+We can also represent this tree in text form:
+
+- `p`
+    - *#text: "This is a "*
+    - `strong`
+        - *#text: "bolded"*
+    - *#text: " word."*
+
+Here is another (larger) example:
+
+```html
+<html>
+    <head>
+        <title>My Page</title>
+    </head>
+    <body>
+        <h1>My Page</h1>
+        <p>This is a paragraph.</p>
+        <ul>
+            <li>Item 1</li>
+            <li>Item 2</li>
+            <li>Item 3</li>
+        </ul>
+    </body>
+</html>
+```
+
+Creates the following tree of elements:
+
+- `html`
+    - `head`
+        - `title`
+            - *#text: "My Page"*
+    - `body`
+        - `h1`
+            - *#text: "My Page"*
+        - `p`
+            - *#text: "This is a paragraph."*
+        - `ul`
+            - `li`
+                - *#text: "Item 1"*
+            - `li`
+                - *#text: "Item 2"*
+            - `li`
+                - *#text: "Item 3"*
+
+## Terminology
+
+The tree of elements has some important terminology, which we will use throughout:
+
+- The **root** of the tree is the top-level element that contains all other elements.
+    - In HTML, the root element is always the `<html>` element.
+- A **child** is an element that is contained within another element.
+    - For example, in the code above, the `<h1>` element is a child of the `<body>` element.
+- A **parent** is an element that contains other elements.
+    - For example, in the code above, the `<body>` element is the parent of the `<h1>` element.
+- **Siblings** are elements that share the same parent.
+    - For example, in the code above, the `<h1>` and `<p>` elements are siblings because they share the same parent (`<body>`).
+- An **ancestor** is any element that is higher up in the tree than the current element.
+    - For example, in the code above, the `<html>` element is an ancestor of the `<p>` element.
+- A **descendant** is any element that is lower down in the tree than the current element.
+    - For example, in the code above, the `<p>` element is a descendant of the `<html>` element.
+
+## The DOM (Document Object Model)
+
+When we write HTML code, the browser "parses" (reads) your code and creates a tree of elements called the **DOM** (Document Object Model). Normally, the DOM will be pretty much the same as the tree of HTML elements we write (except when we make mistakes like improperly nested elements, which the browser will correct).
+
+Although we can't see it directly, the DOM is arguably the most important part of web development, because it is what browsers actually render (display). So we *create* the DOM by writing HTML code (which the browser will parse and convert into a DOM). But more importantly, as we will learn more when we cover JavaScript, we can also create and manipulate the DOM using JavaScript.
+
+## Exercises
+
+1. Write HTML code that matches this tree:
+    - `html`
+        - `body`
+            - `h1`
+                - *#text: "Welcome"*
+            - `p`
+                - *#text: "This is my website."*
+
+   ```{html}
+   ```
+   ```+solution
+    <html>
+        <body>
+            <h1>Welcome</h1>
+            <p>This is my website.</p>
+        </body>
+    </html>
+   ```
+   ```+test
+   assert('h1').should('exist').run('Could not find an h1 element', 'Created an h1 element')
+   assert('p').should('exist').run('Could not find a p element', 'Created a p element')
+   assert('body h1').should('exist').run('The body element does not contain an h1 element', 'Created a body element with an h1 element')
+   assert('body p').should('exist').run('The body element does not contain a p element', 'Created a body element with a p element')
+   ```
+
+2. Match this tree:
+    - `html`
+        - `body`
+            - `ul`
+                - `li`
+                    - *#text: "Apples"*
+                - `li`
+                    - *#text: "Oranges"*
+                - `li`
+                    - *#text: "Bananas"*
+
+   Write HTML code to create an unordered list that matches this tree.
+
+   ```{html}
+   ```
+   ```+solution
+    <html>
+        <body>
+            <ul>
+                <li>Apples</li>
+                <li>Oranges</li>
+                <li>Bananas</li>
+            </ul>
+        </body>
+    </html>
+   ```
+   ```+test
+   assert('html').should('exist').run('Could not find an html element', 'Created an html element')
+   assert('body').should('exist').run('Could not find a body element', 'Created a body element')
+   assert('ul').should('exist').run('Could not find a ul element', 'Created a ul element')
+   assert('li').should('exist').run('Could not find an li element', 'Created an li element')
+   assert('li').should('have.length', 3).run('The ul element does not contain 3 li elements', 'Created a ul element with 3 li elements')
+   assert('li:nth-of-type(1)').should('have.text', 'Apples').run('The first li element does not have the text "Apples"', 'Created an li element with the text "Apples"')
+   assert('li:nth-of-type(2)').should('have.text', 'Oranges').run('The second li element does not have the text "Oranges"', 'Created an li element with the text "Oranges"')
+   assert('li:nth-of-type(3)').should('have.text', 'Bananas').run('The third li element does not have the text "Bananas"', 'Created an li element with the text "Bananas"')
+   assert('body ul').should('exist').run('The body element does not contain a ul element', 'Created a body element with a ul element')
+   ```
+
+3. Match this tree:
+    - `html`
+        - `body`
+            - `p`
+                - *#text: "This is "*
+                - `strong`
+                    - *#text: "important"*
+                - *#text: " information."*
+
+   ```{html}
+   ```
+   ```+solution
+    <html>
+        <body>
+            <p>This is <strong>important</strong> information.</p>
+        </body>
+    </html>
+   ```
+   ```+test
+   assert('html').should('exist').run('Could not find an html element', 'Created an html element')
+   assert('body').should('exist').run('Could not find a body element', 'Created a body element')
+   assert('p').should('exist').run('Could not find a p element', 'Created a p element')
+   assert('strong').should('exist').run('Could not find a strong element', 'Created a strong element')
+   assert('body p').should('exist').run('The body element does not contain a p element', 'Created a body element with a p element')
+   assert('p strong').should('exist').run('The p element does not contain a strong element', 'Created a p element with a strong element')
+   ```
+
+## Resources
+
+- [MDN: Introduction to the DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction)
+- [MDN: The html element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/html)
+- [MDN: The body element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/body)

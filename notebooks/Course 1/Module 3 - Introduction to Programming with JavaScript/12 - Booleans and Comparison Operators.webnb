@@ -1,0 +1,156 @@
+# Booleans and Comparison Operators
+
+So far we have met two types, numbers and strings. This lesson introduces a third: the **boolean**, which represents whether something is true or false.
+
+Booleans are a little different from the types we have seen. A number can be any of an enormous range of values, and a string can be any text at all, but a boolean has only two possible values: `true` and `false`, both written in lowercase. That means there are only two boolean literals:
+
+```{javascript autorun}
+const myBoolean = true;
+const myOtherBoolean = false;
+
+console.log(myBoolean);
+console.log(myOtherBoolean);
+```
+
+But the *vast* majority of the time, we do not write `true` or `false` literal expressions. Instead we produce booleans by asking questions about other values, using **comparison operators**.
+
+## Comparison Operators
+
+Suppose `a` and `b` are two expressions. They might be numbers, strings, or anything else; say `a` is `5` and `b` is `6`. Each of these operators takes an expression on the left and an expression on the right, and produces a boolean:
+
+- `a === b` is `true` when the value of `a` equals the value of `b`, and `false` otherwise.
+- `a !== b` is `true` when `a` and `b` are *not* equal.
+- `a < b` is `true` when `a` is less than `b`.
+- `a <= b` is `true` when `a` is less than or equal to `b`.
+- `a > b` is `true` when `a` is greater than `b`.
+- `a >= b` is `true` when `a` is greater than or equal to `b`.
+
+Run this cell and check each line against the list:
+
+```{javascript autorun}
+console.log(1 === 2);   // false: 1 is not equal to 2
+console.log(1 !== 2);   // true: they are indeed not equal
+console.log(1 < 2);     // true
+console.log(1 <= 2);    // true
+console.log(1 > 2);     // false
+console.log(1 >= 2);    // false
+```
+
+Try replacing the `2` on every line with `1` and running the cell again. Four of the six answers change.
+
+## Comparing Strings
+
+Comparison is not only for numbers. Two strings are equal when their text is identical:
+
+```{javascript autorun}
+console.log('hello' === "hello");
+console.log('hello' === 'HELLO');
+```
+
+The first is `true`. It does not matter that one string was written with single quotes and the other with double quotes, because the quote style is not part of the value; both expressions produce the same text.
+
+The second is `false`, because lowercase `hello` is not identical to uppercase `HELLO`. String comparison is case sensitive, just like variable names.
+
+## Comparing Anything, Not Just Literals
+
+Both sides of a comparison are ordinary expressions, so they can be arithmetic, variable references, or anything else that produces a value. What is compared is the resulting values.
+
+```{javascript autorun}
+const x = 5;
+const y = 10;
+
+console.log(x < 5);         // false
+console.log(x <= 5);        // true
+console.log(x <= y);        // true
+console.log(5 * x <= y);    // false: 25 is not less than or equal to 10
+console.log(1 + 2 === 3);   // true: both sides compute to 3
+```
+
+The fourth line is worth reading twice: the engine evaluates `5 * x` to `25` first, then compares. Comparison operators have lower priority than arithmetic, so the arithmetic happens first.
+
+### A Note on `==`
+
+You may run into `==` and `!=`, with one fewer character, in code you find elsewhere. Those are the original 1995 versions, and they compare more loosely: when the two sides are different types, `==` quietly converts one of them and then compares. The conversion rules are not the ones you would guess.
+
+```{javascript autorun}
+console.log('5' == 5);      // true: the string is converted to the number 5
+console.log('5' === 5);     // false: a string is not a number
+
+console.log(0 == false);    // true: false is converted to 0
+console.log(' ' == 0);      // true: a string holding one space converts to 0
+```
+
+The worst of it is that `==` is not even consistent with itself. Equality ought to be transitive: if the first thing equals the second, and the second equals the third, then the first ought to equal the third. Run this and read the three results together:
+
+```{javascript autorun}
+console.log('' == 0);       // true
+console.log('0' == 0);      // true
+console.log('' == '0');     // false
+```
+
+An empty string equals zero, and the string `'0'` equals zero, but the two strings do not equal each other. With `===` all three are `false`, which at least tells a consistent story: none of those pairs are the same value.
+
+We will always use `===` and `!==` in this course. If you see the shorter ones in older code, now you know what they are.
+
+## Exercises
+
+1. Write one comparison expression whose value is `true` and one whose value is `false`. Use comparison operators, not the literals `true` and `false`.
+
+    ```{javascript}
+    const isTrue = /* Your code here */;
+    const isFalse = /* Your code here */;
+
+    console.log(isTrue, isFalse);
+    ```
+    ```+solution
+    const isTrue = 10 > 5;
+    const isFalse = 10 < 5;
+
+    console.log(isTrue, isFalse);
+    ```
+    ```+test
+    wrap(isTrue).should('equal', true).run('`isTrue` should be a comparison whose value is `true`', 'isTrue is true');
+    wrap(isFalse).should('equal', false).run('`isFalse` should be a comparison whose value is `false`', 'isFalse is false');
+    wrap(/=\s*(true|false)\s*;/.test(source)).should('equal', false).run('Use a comparison operator rather than the literals `true` and `false`', 'Used comparison operators');
+    ```
+
+2. Using the variables below, write an expression for `roomHasSpace` that is `true` when the number of guests is less than or equal to the room's capacity.
+
+    ```{javascript}
+    const guests = 12;
+    const capacity = 20;
+
+    const roomHasSpace = /* Your code here */;
+
+    console.log(roomHasSpace);
+    ```
+    ```+solution
+    const guests = 12;
+    const capacity = 20;
+
+    const roomHasSpace = guests <= capacity;
+
+    console.log(roomHasSpace);
+    ```
+    ```+test
+    wrap(roomHasSpace).should('equal', true).run('`roomHasSpace` should compare `guests` to `capacity` with `<=`', 'Compared guests to capacity');
+    wrap(source.includes('<=')).should('equal', true).run('Use the `<=` operator so that a full room still counts as having space', 'Used the `<=` operator');
+    ```
+
+3. Comparing a number to a string
+
+    ```{mcq}
+    The number `1` is compared to the string `'1'` with `===`. What is the value of that expression?
+    correct: Correct! `===` compares both the value and the type, and a number is never equal to a string. This is the same distinction between `42` and `'42'` that we saw when we met strings and numbers.
+    wrong: Revisit the "Telling Numbers and Strings Apart" section of the Strings and Numbers lesson, and think about whether these two values have the same type.
+    [x] `false`
+    [ ] `true`
+    [ ] It causes an error
+    [ ] `'1'`
+    ```
+
+## Resources
+
+- [MDN: Boolean](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Boolean)
+- [MDN: Comparison operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators#comparison_operators)
+- [MDN: Strict equality (===)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality)

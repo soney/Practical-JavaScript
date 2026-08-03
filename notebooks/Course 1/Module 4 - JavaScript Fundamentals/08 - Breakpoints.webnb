@@ -1,0 +1,199 @@
+# Breakpoints
+
+In the last lesson we saw the call stack, but only after the fact: once an error had already happened. **Breakpoints** let us stop the program while it is still running and look around.
+
+A breakpoint temporarily pauses execution of your code at a specific line. It is like freezing the program so you can look inside and see exactly what it is doing: the values of variables, which functions are currently running, and where execution is about to go next. That is invaluable for debugging, especially in JavaScript, where so much runs dynamically in response to events.
+
+Breakpoints are set at the **line level**, meaning you choose the exact line to pause on. There are two ways to set one, and we will cover both:
+
+- Click a line number in the browser's JavaScript debugger panel.
+- Add a `debugger;` statement directly in your code.
+
+## Breakpoints in Notebooks
+
+**Breakpoints do not work in these notebook cells.** This is the one lesson in the course you cannot follow along with by running the cells. There is no line number to click for a cell, and a `debugger;` statement in one will not give you the paused source view, the call stack, and the scopes panel that the rest of this lesson is about.
+
+None of that is a problem with your code or your browser. It is simply that the debugger works on a page, and a notebook cell is not one.
+
+So to actually try any of this, work with a real page of your own:
+
+1. Put the JavaScript in a `.js` file, and load it from an `.html` file with a `<script>` tag, exactly as we did back in "Adding JavaScript Code".
+2. Open that `.html` file in your browser.
+3. Open the developer tools there, and set your breakpoints in that page's source.
+
+The cells further down are here so you can read and run the example code. Everything about pausing, stepping, and inspecting has to happen in the real page.
+
+## Setting a Breakpoint in Developer Tools
+
+Open developer tools (right-click the page and choose "Inspect"), then find the debugger panel. Different browsers name and place it slightly differently; in Chrome-based browsers it is the "Sources" tab, and in Firefox it is "Debugger".
+
+Inside it you will see a list of the code sources the page has loaded. Click the JavaScript file you want, and its source code opens. Then click the line number where you want to pause. A marker appears on that line, and the line also shows up in a "Breakpoints" list so you can keep track of every one you have set.
+
+Now reload the page. Everything runs as usual until execution reaches that line, and then it stops. The debugger icon turns green and the panel tells you it is paused on a breakpoint. Nothing after that line has run yet, and nothing will until you say so.
+
+## Setting a Breakpoint in Code
+
+The other way is the **`debugger`** statement. When the engine reaches it, it pauses exactly as if you had clicked that line in the panel.
+
+```javascript
+function doThing() {
+  const dtx = 5;
+  debugger;
+  innerFunction(dtx, 2);
+  console.log('next function thing');
+}
+```
+
+This is convenient because the pause point travels with the code, so you do not have to re-click a line every time you reload. Browsers have a "pause on debugger statements" option, which is on by default.
+
+### Caveat: Breakpoints Need the Console Open
+
+**Breakpoints and `debugger` statements only pause when the developer tools are open.** If someone visits your site without them open, a leftover `debugger` statement is ignored and the page runs normally. Breakpoints are a tool for you, not something your visitors will ever notice.
+
+## Stepping Through Code
+
+Suppose we have three functions where `parentCall` calls `doThing`, and `doThing` calls `innerFunction`, and we put a breakpoint on the line inside `doThing` that calls `innerFunction`. Execution runs down through `parentCall` into `doThing` and freezes right before that call.
+
+From there we have four ways to continue. The Chrome keyboard shortcuts are given, and other browsers are similar:
+
+- **Resume** (`F8` or `F5` depending on the browser) runs normally until the next breakpoint.
+- **Step Over** (`F10`) runs the current line as one step and pauses on the next line *in the same function*. Here that would be the `console.log` under the `innerFunction` call: `innerFunction` runs in full, but we do not pause inside it.
+- **Step Into** (`F11`) follows the call, pausing on the first line inside `innerFunction`.
+- **Step Out** (`Shift + F11`) finishes the current function and pops one level up the call stack, pausing back in `parentCall`.
+
+Whichever you choose, **the code in between still runs**. Stepping does not skip anything. If you step out of `doThing`, `innerFunction` is still called and its `console.log` still happens; the only thing that changes is where you next get to look.
+
+## Inspecting a Paused Program
+
+Pausing is only worth doing because of what you can inspect while paused.
+
+**The call stack.** The debugger shows the chain of calls that led to this line: `parentCall`, then `doThing`, then `innerFunction`. This is the same stack from the last lesson, except you are looking at it while the program is still alive. Click any frame to jump to that function's code and see where execution sits inside it.
+
+**Variable values.** Hover over a variable name in the source to see its current value, or read the "Scopes" panel. Scopes groups variables by where they were declared, so at one paused moment you can see the local `dtx` is `5`, the `parentVar` in the calling function is `'parent'`, and the `globalVar` at the top of the file is `100`.
+
+Together, the call stack and the scopes let you reconstruct exactly what state your program is in at that instant, which is usually the thing you were guessing at.
+
+## The Example Code
+
+Here is the call chain the debugger walks through. Running the cell shows you what it logs, and that is all it can show you: as noted at the top, setting a breakpoint on this cell will not work. Copy the code into a `.js` file on a page of your own, open it in your browser, and set a breakpoint on the `innerFunction` line there.
+
+```{javascript autorun}
+const globalVar = 100;
+
+function innerFunction(x, y) {
+  console.log(x, y);
+}
+
+function doThing() {
+  const dtx = 5;
+  innerFunction(dtx, 2);
+  console.log('next function thing');
+}
+
+function parentCall() {
+  const parentVar = 'parent';
+  doThing();
+  console.log('next parent thing');
+}
+
+parentCall();
+```
+
+When `parentCall` runs, the stack grows to `parentCall`, `doThing`, `innerFunction`. `innerFunction` logs `5 2`, control returns to `doThing`, which logs `next function thing`, and finally `parentCall` logs `next parent thing`.
+
+## Exercises
+
+1. Build a page you can actually pause. This is the exercise the notebook cannot do for you: create the files in your workspace, then open the page in a browser and step through it there.
+
+    ```{external}
+    title: Build a page you can pause
+    interval: 2s
+    - directory: workspace:breakpoints-example | Create a directory named `breakpoints-example`
+    - file: workspace:breakpoints-example/index.html | Inside it, create `index.html`
+    - file: workspace:breakpoints-example/debug.js | Inside it, create `debug.js`
+    - contains: workspace:breakpoints-example/index.html | debug.js | In `index.html`, load `debug.js` with a `script` element
+    - contains: workspace:breakpoints-example/debug.js | function innerFunction | In `debug.js`, copy the three functions from "The Example Code", starting with `innerFunction`
+    - matches: workspace:breakpoints-example/debug.js | /^\s*parentCall\(\);/m | Call `parentCall();` at the bottom of `debug.js`, so that something actually runs
+    - contains: workspace:breakpoints-example/debug.js | debugger | Add a `debugger;` statement inside `doThing`, just above the call to `innerFunction`
+    ```
+
+    Once every item passes, open `index.html` in your browser with the developer tools open, and the page will stop at your `debugger;` statement. From there, try the three things this lesson described:
+
+    - Read the call stack. You should see `doThing` sitting above `parentCall`.
+    - Hover over `dtx`, or find it in the Scopes panel, and confirm it is `5`.
+    - Press Step Into to land on the first line of `innerFunction`, then Step Out to come back.
+
+    The checklist above can confirm that you built the files. The pausing, stepping, and inspecting happen in your browser, and only you can see them.
+
+2. Complete the call chain. `doThing` is missing its call to `innerFunction`. Add a call passing `dtx` and `2`, so the program logs `7`, then `next function thing`, then `next parent thing`.
+
+    ```{javascript}
+    function innerFunction(x, y) {
+      console.log(x + y);
+    }
+
+    function doThing() {
+      const dtx = 5;
+      // Write your code here
+      console.log('next function thing');
+    }
+
+    function parentCall() {
+      doThing();
+      console.log('next parent thing');
+    }
+
+    parentCall();
+    ```
+    ```+solution
+    function innerFunction(x, y) {
+      console.log(x + y);
+    }
+
+    function doThing() {
+      const dtx = 5;
+      innerFunction(dtx, 2);
+      console.log('next function thing');
+    }
+
+    function parentCall() {
+      doThing();
+      console.log('next parent thing');
+    }
+
+    parentCall();
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', '7,next function thing,next parent thing').run('The output should be `7`, then `next function thing`, then `next parent thing`. Call `innerFunction(dtx, 2)` from inside `doThing`', 'The whole call chain runs in order');
+    ```
+
+3. You are paused on a line that calls a function, and you want to look at what happens inside that function. Which control do you use?
+
+    ```{mcq}
+    Paused on the line `innerFunction(dtx, 2);`, you want to pause again on the first line inside `innerFunction`. What do you press?
+    correct: Correct! Step Into follows the call and pauses on the first line inside the function. Step Over would run the whole call as a single step and pause on the next line of the current function instead.
+    wrong: Look back at the four controls in "Stepping Through Code", and at the difference between stepping over a call and stepping into it.
+    [x] Step Into (`F11`)
+    [ ] Step Over (`F10`)
+    [ ] Step Out (`Shift + F11`)
+    [ ] Resume
+    ```
+
+4. A leftover `debugger` statement
+
+    ```{mcq}
+    You accidentally leave a `debugger;` statement in your deployed site, and visitors report no problems at all. Why does it not freeze the page for an ordinary visitor?
+    correct: Correct! A `debugger` statement only pauses when the developer tools are open, and almost no visitor has them open. That said, it is still worth removing before you deploy.
+    wrong: Revisit "Caveat: Breakpoints Need the Console Open".
+    [x] `debugger` only pauses when the developer tools are open
+    [ ] Browsers strip `debugger` statements out of deployed sites
+    [ ] `debugger` only works on files loaded from your own computer
+    [ ] The statement pauses the page for one second and then continues
+    ```
+
+## Resources
+
+- [MDN: Debugging JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Debugging_JavaScript)
+- [MDN: debugger statement](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/debugger)
+- [Chrome DevTools: Pause your code with breakpoints](https://developer.chrome.com/docs/devtools/javascript/breakpoints)
+- [Firefox: Set a breakpoint](https://firefox-source-docs.mozilla.org/devtools-user/debugger/set_a_breakpoint/)

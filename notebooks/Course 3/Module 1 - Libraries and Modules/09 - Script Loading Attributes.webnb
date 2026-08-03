@@ -1,0 +1,236 @@
+# Script Loading Attributes
+
+HTML gives us some control over *how and when* scripts are downloaded and run. To see why that is worth having, start with what happens by default.
+
+## The Default Is Blocking
+
+When the browser reaches this tag, it stops, downloads `code.js`, runs it, and only then keeps reading the page:
+
+```html
+<script src="code.js"></script>
+```
+
+That pause is called **blocking**. Nothing after the tag happens while it is going on, including the rest of the HTML.
+
+Now put four scripts in a page, three libraries plus our own code that uses them:
+
+```html
+<script src="library1.js"></script>
+<script src="library2.js"></script>
+<script src="library3.js"></script>
+<script src="my-code.js"></script>
+
+<h1>Hello!</h1>
+<p>Some HTML content.</p>
+```
+
+The order of events is:
+
+```
+download library1.js, run it
+download library2.js, run it
+download library3.js, run it
+download my-code.js,  run it
+render the HTML content        <- the user finally sees something
+```
+
+Every download happens before any content appears. Unless one of those scripts writes to the page itself, the visitor is looking at a blank screen the whole time.
+
+Some browsers optimize this by starting several downloads at once, but the *behavior* stays as if it were strictly in order: nothing renders until every script has run.
+
+That is the problem both attributes below exist to solve.
+
+## `async`
+
+```html
+<script src="library1.js" async></script>
+```
+
+`async` makes the download **non-blocking**: it happens alongside the HTML parsing and the other downloads. Then the script runs **as soon as it has finished downloading**.
+
+Put `async` on all four tags from before and the HTML content appears almost immediately, while the downloads are still in flight. But the run order now depends entirely on which file arrives first:
+
+```
+render the HTML content
+run my-code.js       <- smallest, arrived first
+run library2.js
+run library3.js
+run library1.js      <- largest, arrived last
+```
+
+`my-code.js` ran before any of the libraries it needs. **`async` gives no ordering guarantee at all.**
+
+## `defer`
+
+```html
+<script src="library1.js" defer></script>
+```
+
+`defer` is also non-blocking, so the downloads overlap with parsing in the same way. The difference is when and in what order the scripts run:
+
+- they run **after the HTML has been parsed**, and
+- they run **in the order they appear in the document**.
+
+```
+start all four downloads, render the HTML content
+(wait for the slowest download to arrive)
+run library1.js
+run library2.js
+run library3.js
+run my-code.js
+```
+
+The content still appears early, and `my-code.js` still runs last. That combination is what you usually want, which makes `defer` the sensible default for a library plus your own code.
+
+Here is the ordering difference, simulated with timers. `library.js` is slow and `main.js` is fast, exactly as in the video's example:
+
+```{javascript autorun}
+function download(name, milliseconds, whenReady) {
+  setTimeout(function () {
+    whenReady(name);
+  }, milliseconds);
+}
+
+// async: run each script the moment it arrives
+download('library.js', 300, function (name) {
+  console.log('async runs ' + name);
+});
+
+download('main.js', 60, function (name) {
+  console.log('async runs ' + name);
+});
+```
+
+`main.js` is logged first, because it arrived first. Its dependency had not loaded yet. That is the failure `async` invites.
+
+## They Only Work on External Scripts
+
+Both attributes are about *downloading*, so they have no meaning for code written inside the tag:
+
+```html
+<!-- defer does nothing here; there is no file to download -->
+<script defer>
+  console.log('this runs immediately, right where it sits');
+</script>
+```
+
+This is a real trap, and it looks like this in practice. Suppose the page loads Lodash from a CDN and then sets a heading:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js" defer></script>
+<script defer>
+  const heading = document.querySelector('h1');
+
+  heading.innerText = _.shuffle([1, 2, 3, 4]);
+</script>
+
+<h1></h1>
+```
+
+That fails with something like `Cannot set properties of null`, because `heading` is `null`. The inline script ran where it sits, before the `<h1>` further down existed, and its `defer` attribute was ignored.
+
+There are two ways out. You can move the script *below* the `<h1>`, so the element exists by the time it runs. Or you can move the code into a real file:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js" defer></script>
+<script src="main.js" defer></script>
+
+<h1></h1>
+```
+
+Now both tags are external, so both defers apply. The scripts run after parsing, in document order, so `_` exists and so does the `<h1>`, even though both tags sit above it.
+
+Change those two `defer`s to `async` and it breaks again, this time with `_ is not defined`. `main.js` is a small local file and Lodash is a large file on another continent, so `main.js` wins the race and runs first. The same code, one attribute different.
+
+## Which to Use
+
+- **`defer`** when order matters, which is most of the time: a library and the code that uses it, or several of your own files.
+- **`async`** for a script that depends on nothing and that nothing depends on. Analytics is the usual example.
+- **Neither** only when you genuinely need the script to run at that exact point in the page.
+
+The shared advantage is worth restating: with either attribute, JavaScript downloads while the HTML renders, so the page feels faster to the person waiting for it.
+
+## Exercises
+
+1. This page loads a library, then your code which uses it, then an analytics script that is independent of both. Add the right attribute to each of the three tags.
+
+    ```{html}
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="main.js"></script>
+    <script src="analytics.js"></script>
+
+    <h1>My page</h1>
+    ```
+    ```+solution
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js" defer></script>
+    <script src="main.js" defer></script>
+    <script src="analytics.js" async></script>
+
+    <h1>My page</h1>
+    ```
+    ```+test
+    wrap(/lodash\.min\.js["'][^>]*\sdefer/.test(source)).should('equal', true).run('The library must run before your code, so it needs `defer`', 'Deferred the library');
+    wrap(/main\.js["'][^>]*\sdefer/.test(source)).should('equal', true).run('Your code has to run after the library, so it needs `defer` too', 'Deferred your own code');
+    wrap(/analytics\.js["'][^>]*\sasync/.test(source)).should('equal', true).run('Nothing depends on the analytics script, so `async` lets it run the moment it arrives', 'Made analytics async');
+    wrap(/analytics\.js["'][^>]*\sdefer/.test(source)).should('equal', false).run('The analytics script does not need to wait its turn in order, so use `async` rather than `defer`', 'Did not defer analytics');
+    ```
+
+2. Two of the three tags below will ignore the attribute they were given. Log the `src` of the only one where it actually does something.
+
+    ```{javascript}
+    const tags = [
+      { src: 'a.js', inline: false, attribute: 'defer' },
+      { src: '', inline: true, attribute: 'defer' },
+      { src: '', inline: true, attribute: 'async' }
+    ];
+
+    // Log the src of every tag whose attribute has an effect
+    ```
+    ```+solution
+    const tags = [
+      { src: 'a.js', inline: false, attribute: 'defer' },
+      { src: '', inline: true, attribute: 'defer' },
+      { src: '', inline: true, attribute: 'async' }
+    ];
+
+    for (const tag of tags) {
+      if (tag.inline === false) {
+        console.log(tag.src);
+      }
+    }
+    ```
+    ```+test
+    check.consoleLogged('a.js').run('`a.js` is the only external script, so it is the only one where the attribute applies', 'Found the external script');
+    wrap(console.history().length).should('equal', 1).run('Log exactly one line. `async` and `defer` do nothing on an inline script', 'Logged only the external script');
+    ```
+
+3. How does `defer` handle several scripts differently from `async`?
+
+    ```{mcq}
+    Four scripts, all with the same attribute. What does `defer` guarantee that `async` does not?
+    correct: Correct! Both download in parallel. The difference is that `defer` waits for parsing to finish and then runs the scripts in document order, while `async` runs each one the moment it arrives.
+    wrong: Compare the two timelines earlier in this reading.
+    [x] It downloads them in parallel but runs them in document order, after the page is parsed
+    [ ] It runs each script as soon as that script finishes downloading
+    [ ] It blocks the parser until each script has downloaded and run, one at a time
+    [ ] It works only on inline scripts, while `async` works only on external files
+    ```
+
+4. You load Lodash and a small `main.js` that uses it, and put `async` on both. Sometimes you get an `Uncaught ReferenceError`. Why?
+
+    ```{mcq}
+    Why does `async` produce that error here?
+    correct: Correct! `async` runs each script as soon as it arrives. The small local file arrives well before the large library, so it runs first and `_` does not exist yet. `defer` is the fix.
+    wrong: Think about which of the two files finishes downloading first, and when `async` decides to run a script.
+    [x] `main.js` is smaller, so it downloads and runs before the library is ready
+    [ ] `async` scripts are not allowed to use external libraries
+    [ ] `async` works only if the tags are at the bottom of the `<body>`
+    [ ] `async` stops different files from sharing variables
+    ```
+
+## Resources
+
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)
+- [MDN: script async](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script#async)
+- [MDN: script defer](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script#defer)
+- [MDN: Populating the page, how browsers work](https://developer.mozilla.org/en-US/docs/Web/Performance/Guides/How_browsers_work)

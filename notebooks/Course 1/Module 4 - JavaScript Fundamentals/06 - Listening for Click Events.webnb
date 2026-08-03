@@ -1,0 +1,157 @@
+# Listening for Click Events
+
+We have talked a lot about JavaScript making pages interactive and dynamic, and we have not actually made anything interactive yet. To do that, we need to respond to things the user does: when someone clicks, we run some code.
+
+**Event listeners** are how. An event listener runs a JavaScript function in response to an event, such as a user click or a system event like the page finishing loading.
+
+We will use this ear to stand for an event listener:
+
+![A blue panel with a large ear attached to its right side, standing for an event listener. Inside the panel, at the top, a button is being pressed by a hand cursor, with the word click written under it. A dashed line separates that from the bottom half, which holds a gray box labeled callback, drawn like the function boxes from earlier lessons.](images/event-listener.png =x300)
+
+An ear is always attached to one element, it is always listening for one kind of event, and it always holds one function to run when that event happens. Those three pieces are exactly the three pieces of the code we are about to write: the element being watched (the button), the event type (`click`), and the callback.
+
+The pattern is two steps: get a reference to the element you want to watch, then call `addEventListener` on it.
+
+## Adding a Listener
+
+`addEventListener` is a method available on any element we get back from `querySelector` or `querySelectorAll`. It takes two arguments:
+
+- The **event type**, as a string. For a click, that string is `'click'`.
+- The **function to call** when that event happens. This function is often called the **callback**.
+
+Run the cell below and then click the rendered button. Click it several times.
+
+```html id=page1
+<button id="demo-button">Click me</button>
+<p id="demo-output">Nothing has happened yet.</p>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#demo-button');
+const output = document.querySelector('#demo-output');
+
+function callback() {
+  console.log('clicked on the button');
+  output.innerText = 'You clicked the button!';
+}
+
+button.addEventListener('click', callback);
+```
+```+id=page1
+```
+
+Reading it line by line: `document.querySelector('#demo-button')` gives us an object representing the button element. `callback` is an ordinary function; it does not matter much what it does. And the important line is the last one, which says "this button should listen for click events, and when one happens, call `callback`."
+
+Notice that running the cell displays nothing new by itself. Calling `addEventListener` produces no visible change, because what it changes is not the page. The browser is more than what it draws: it also keeps a list of event listeners, and our call added an entry to that list saying "when this button is clicked, run this function." Every click runs the callback again, so three clicks means three runs.
+
+## Pass a Reference, Not a Call
+
+This is the most common mistake with event listeners, and it is worth slowing down for.
+
+In the cell above we passed `callback` with **no parentheses after it**. That is deliberate. We want to hand `addEventListener` the function object itself, so the browser can hold on to it and call it later.
+
+It is tempting to write `callback()` instead, because almost any other time we have a function name we are calling it. Here is what the difference actually means:
+
+```javascript
+// Correct: pass a reference to the function object.
+button.addEventListener('click', callback);
+
+// Wrong: this CALLS callback right now, and passes whatever it returns.
+button.addEventListener('click', callback());
+```
+
+Recall the Invoking Functions lesson: `callback` is the function itself, and `callback()` is its return value. So in the wrong version, `callback` runs immediately as the page loads, and its return value is what gets handed to `addEventListener`. Our callback has no `return` statement, so it returns `undefined`, which means we effectively wrote `button.addEventListener('click', undefined)`. No working listener is registered at all. So if you write `callback()` instead of `callback`, then:
+
+- The callback's code runs **once, as the page loads**, when you expected it to wait for a click.
+- Clicking the element afterwards does **nothing**.
+
+Try it in the cell above: change `callback` to `callback()`, run the cell, and watch the message appear immediately and then stop responding to clicks. Then change it back.
+
+In the vast majority of cases you want to omit the parentheses.
+
+## Exercises
+
+1. Add a `click` listener to the button so that clicking it sets the paragraph's text to `Hello!`. Define a named function for the callback, and remember to pass a reference rather than a call.
+
+    ```html id=page2
+    <button id="greet">Greet</button>
+    <p id="message"></p>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#greet');
+    const message = document.querySelector('#message');
+
+    // Define a callback, then add a click listener to `button`
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const button = document.querySelector('#greet');
+    const message = document.querySelector('#message');
+
+    function sayHello() {
+      message.innerText = 'Hello!';
+    }
+
+    button.addEventListener('click', sayHello);
+    ```
+    ```+test
+    assert('#message').should('have.text', '').run('Leave the paragraph empty until the button is clicked. If it already says `Hello!`, you may have passed `callback()` instead of `callback`', 'The message starts out empty');
+    assert('#greet').should('exist').click().run('Could not find the `#greet` button', 'Found and clicked the button');
+    assert('#message').should('have.text', 'Hello!').run('Clicking the button should set the message text to `Hello!`', 'The button updates the message');
+    ```
+
+2. Build a click counter. Each click of the button should increase `count` by one and show the new number in the paragraph.
+
+    ```html id=page3
+    <button id="counter-button">Add one</button>
+    <p id="count-display">0</p>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#counter-button');
+    const display = document.querySelector('#count-display');
+
+    let count = 0;
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const button = document.querySelector('#counter-button');
+    const display = document.querySelector('#count-display');
+
+    let count = 0;
+
+    function addOne() {
+      count = count + 1;
+      display.innerText = count;
+    }
+
+    button.addEventListener('click', addOne);
+    ```
+    ```+test
+    assert('#count-display').should('have.text', '0').run('The display should still read `0` before any click', 'The counter starts at 0');
+    assert('#counter-button').click().click().click().run('Could not find the `#counter-button`', 'Clicked the button three times');
+    assert('#count-display').should('have.text', '3').run('After three clicks the display should read `3`', 'The counter counts clicks');
+    ```
+
+3. A page loads and immediately logs the callback's message, and after that the button does nothing when clicked. What is wrong?
+
+    ```{mcq}
+    Those are the two symptoms. What is the most likely cause?
+    correct: Correct! Writing `addEventListener('click', callback())` calls the function as the page loads and passes its return value, usually `undefined`, so no listener is ever registered.
+    wrong: Look back at "Pass a Reference, Not a Call", and at the two symptoms listed there.
+    [x] The callback was passed with parentheses, as `callback()`
+    [ ] The event type was misspelled as `'clik'`
+    [ ] `querySelector` returned `null`
+    [ ] The listener was added twice
+    ```
+
+## Resources
+
+- [MDN: EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
+- [MDN: Element click event](https://developer.mozilla.org/en-US/docs/Web/API/Element/click_event)
+- [MDN: Introduction to events](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Events)

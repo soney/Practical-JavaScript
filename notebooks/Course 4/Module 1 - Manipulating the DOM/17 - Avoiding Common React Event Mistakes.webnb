@@ -1,0 +1,169 @@
+# Avoiding Common React Event Mistakes
+
+Now that we know how to attach event handlers in React with `on` attributes like `onClick`, let's look at three mistakes that cause confusing bugs. Each one comes from treating React elements like the DOM elements we worked with in plain JavaScript. The fix is always the same idea: do things the React way.
+
+## Mistake 1: Calling `addEventListener` on a React Element
+
+In plain JavaScript we attach a listener by calling `element.addEventListener(type, callback)` on a DOM node. It is tempting to reach for the same call in React:
+
+```jsx
+function ClickMe() {
+  const myButton = <button>Click me</button>;
+  myButton.addEventListener('click', () => console.log('clicked'));
+  return myButton;
+}
+```
+
+This throws `myButton.addEventListener is not a function`. The reason is that `myButton` is a React element, not a DOM element. Remember that Babel translates `<button>Click me</button>` into a `React.createElement(...)` call, and that call returns a plain object that *describes* a button React might create later. Because it is a description object and not a real button, it has no `addEventListener` method.
+
+The React way is to set the `onClick` attribute instead. Most of the time we do not create a variable at all and write the handler directly in the returned JSX:
+
+```{react}
+function ClickMe() {
+  return <button onClick={() => console.log('clicked')}>Click me</button>;
+}
+
+renderReact(<ClickMe />);
+```
+
+- `onClick` takes the function React should call when the button is clicked.
+- We never touch `addEventListener` for elements our component renders. Any DOM event you know (`click`, `mousedown`, `keydown`) has a matching `on` attribute (`onClick`, `onMouseDown`, `onKeyDown`).
+
+## Mistake 2: Calling the Handler During Render
+
+The second mistake is adding the parentheses that would call the function. This looks almost right:
+
+```jsx
+<button onClick={setCount(count + 1)}>Add</button>
+```
+
+The parentheses run `setCount(count + 1)` immediately, while React is rendering, and hand its return value (`undefined`) to `onClick`. So the click never has a handler, and calling the setter during render can trigger extra renders. Removing the parentheses turns the call back into a function React can hold onto and call later:
+
+```jsx
+<button onClick={() => setCount(count + 1)}>Add</button>
+```
+
+You can also pull the logic into a named handler, which reads better as the logic grows:
+
+```{react}
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  function handleClick() {
+    setCount(count + 1);
+  }
+
+  return <button onClick={handleClick}>Count: {count}</button>;
+}
+
+renderReact(<Counter />);
+```
+
+- Pass a function *reference* (`handleClick`) or a function *expression* (`() => setCount(count + 1)`).
+- Adding `()` after the name calls the function now instead of on the event.
+
+## Mistake 3: Registering Listeners on Every Re-render
+
+The third mistake shows up when you want to listen to something outside your component, like the browser window. Putting `window.addEventListener` in the component body seems to work:
+
+```jsx
+function WindowListener() {
+  const [count, setCount] = React.useState(0);
+
+  // Runs on EVERY render, so a new listener piles up each time
+  window.addEventListener('click', () => setCount(count + 1));
+
+  return <p>Clicks: {count}</p>;
+}
+```
+
+The component body runs on every render. So each render adds another click listener, and none of the old ones are removed. After a handful of renders you have dozens, then hundreds of duplicate listeners firing for a single click. This is a memory leak.
+
+We fix this in a [later lesson](<../Module 2 - React Hooks/08 - useEffect Cleanup.webnb>) with an *effect hook*, which lets us control when the listener code runs (for example, only once) and gives us a place to clean the listener up. For now, the takeaway is to be mindful of *where* your logic runs: code written directly in the component body re-runs on every render, so it is the wrong place to register a listener.
+
+## Exercises
+
+1. This component tries to attach a click handler with `addEventListener`, which crashes because a React element is not a DOM node. Rewrite it to use the `onClick` attribute so clicking the button changes the greeting to `Hi there`.
+
+   ```{react}
+   function Greeter() {
+     const [greeting, setGreeting] = React.useState('Hello');
+     const button = <button>Wave</button>;
+     button.addEventListener('click', () => setGreeting('Hi there'));
+     return <div>{greeting} {button}</div>;
+   }
+
+   renderReact(<Greeter />);
+   ```
+   ```+solution
+   function Greeter() {
+     const [greeting, setGreeting] = React.useState('Hello');
+     return <div>{greeting} <button onClick={() => setGreeting('Hi there')}>Wave</button></div>;
+   }
+
+   renderReact(<Greeter />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('addEventListener')).should('equal', false).run('Use the onClick attribute instead of addEventListener', 'Removed addEventListener');
+     assert('button').click().run('Click the button', 'Clicked the button');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('div').should('have.text', 'Hi there Wave').run('The greeting should change to "Hi there"', 'Updated the greeting');
+     }, 50);
+   }, 50);
+   ```
+
+2. Fix the button so a single click increments the count once. Remove the parentheses that call the setter during render.
+
+   ```{react}
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     return <button onClick={setCount(count + 1)}>Count: {count}</button>;
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+solution
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('onClick={() => setCount(count + 1)}') || source.includes('onClick={() => setCount(count+1)}')).should('equal', true).run('Pass a function to onClick', 'Passed a function to onClick');
+     assert('button').click().run('Click the counter', 'Clicked the counter');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('button').should('have.text', 'Count: 1').run('The count should increase to 1', 'Updated the count');
+     }, 50);
+   }, 50);
+   ```
+
+3. Why is calling `window.addEventListener` directly in a component body a mistake?
+
+   ```{mcq}
+   Why is calling `window.addEventListener` directly in a component body a mistake?
+   correct: Correct. The body runs on every render, so a new listener is added each time and the old ones are never removed.
+   wrong: Think about how often the component body runs.
+   [x] It adds a new listener on every render, piling up duplicate listeners.
+   [ ] The `window` object does not support `addEventListener`.
+   [ ] React elements cannot listen for `click` events at all.
+   [ ] It removes all other listeners on the page.
+   ```
+
+## Resources
+
+- [React Docs: Responding to events](https://react.dev/learn/responding-to-events)
+- [React Docs: Render and commit](https://react.dev/learn/render-and-commit)
+- [MDN: EventTarget.addEventListener](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
+- [React Docs: Synchronizing with effects](https://react.dev/learn/synchronizing-with-effects)

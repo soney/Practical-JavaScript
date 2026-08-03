@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chat</title>
+    <style>
+      body { font-family: sans-serif; max-width: 30em; margin: 2em auto; }
+      input { width: 60%; }
+    </style>
+  </head>
+  <body>
+    <h1>Chat</h1>
+
+    <!-- #region markup -->
+    <ul id="messages"></ul>
+
+    <form id="form">
+      <input id="input" placeholder="Send a message">
+      <button type="submit">Send</button>
+    </form>
+    <!-- #endregion -->
+
+    <script>
+      // #region references
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(wsProtocol + '//' + location.host + location.pathname);
+
+      ws.binaryType = 'arraybuffer';
+
+      const messageEl = document.querySelector('#input');
+      const messages = document.querySelector('#messages');
+      const form = document.querySelector('#form');
+      // #endregion
+
+      // #region outgoing
+      form.addEventListener('submit', (submitEvent) => {
+        submitEvent.preventDefault();
+
+        ws.send(messageEl.value);
+
+        messageEl.value = '';
+      });
+      // #endregion
+
+      // #region incoming
+      ws.addEventListener('message', (messageEvent) => {
+        const data = typeof messageEvent.data === 'string'
+          ? messageEvent.data
+          : new TextDecoder().decode(messageEvent.data);
+
+        const li = document.createElement('li');
+
+        li.innerText = data;
+
+        messages.append(li);
+      });
+      // #endregion
+    </script>
+  </body>
+</html>

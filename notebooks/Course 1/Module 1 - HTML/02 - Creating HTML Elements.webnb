@@ -1,0 +1,135 @@
+# Creating HTML Elements
+
+**Elements** are the building blocks of HTML. Each element is part of the content or structure, like a heading, paragraph, or image.
+
+## Element Syntax
+
+The "standard" way to create HTML elements is with two **tags**: an **opening tag** and a **closing tag**:
+
+- The **opening tag** is the name of the elements in angle brackets (`<tag>`) where `tag` is the type of element being created.
+  - For example, the opening tag of a `p` (paragraph) element is `<p>`.
+- The **closing tag** is the same as the opening tag but with a forward slash (`/`) before the tag name (`</tag>`).
+  - For example, the closing tag of a `p` (paragraph) element is `</p>`.
+- The **content** of the element is placed between the opening and closing tags.
+  - The content can be any text, HTML, or other elements.
+
+![A diagram showing the opening, content, and closing tags of an HTML element](images/element_illustration.png)
+
+For example, to create a `p` element with the text content "Hello, World!", you would write:
+```html
+<p>Hello, World!</p>
+```
+
+Here are a few examples of HTML elements:
+
+[A `p` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/p) represents a paragraph of text:
+
+```{html autorun}
+<p>This is a paragraph.</p>
+```
+
+[An `h1` element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/Heading_Elements) represents a level-1 heading (usually the main heading of a page):
+
+```{html autorun}
+<h1>This is a level-1 heading.</h1>
+```
+
+### Anatomy of an Element
+
+So an element consists of three parts: the opening tag, the content, and the closing tag.
+
+Try creating a `strong` element with the text `"hello"` in the code cell below:
+
+```{html}
+
+```
+
+```+solution
+<strong>hello</strong>
+```
+
+```+test
+assert('strong').should('exist').run('Could not find a strong element', 'Created a strong element')
+assert('strong').should('have.text', 'hello').run('The strong element does not have the text "hello"', 'Created a strong element with the text "hello"')
+```
+
+### Capitalization
+
+Elements can have any case (capitalization) but the convention is to use lowercase. For example, `<P>` and `<p>` are equivalent but `<p>` is preferred. The same applies to the closing tag: `</P>` and `</p>` are equivalent but `</p>` is preferred.
+
+## Self-Closing Tags
+
+Some elements do not have any content and are "self-closing" (the HTML specification calls them "void" elements). These elements do not require a closing tag. For example, the `<br>` element represents a line break and does not have any content. It is a self-closing tag:
+
+```html
+<br>
+```
+
+You will also see self-closing tags written with a trailing slash, like `<br />`. This style comes from an older standard called XHTML, which required the slash. In modern HTML, the slash is allowed but has no effect. `<br>` and `<br />` mean exactly the same thing, so you can use whichever style you prefer, as long as you are consistent.
+
+In the code cell below, create an `<hr>` (horizontal rule) element. This element is a self-closing tag that creates a horizontal line on the page. You can use it to separate content or create a visual break in the page.
+
+```{html}
+
+```
+
+```+solution
+<hr>
+```
+
+```+test
+assert('hr').should('exist').run('Could not find an hr element', 'Created an hr element')
+```
+
+## Exercises
+
+1. Create a paragraph element (`p`) with the text "Hello, World!" and run the cell to see the result.
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <p>Hello, World!</p>
+   ```
+
+   ```+test
+   assert('p').should('exist').run('Could not find a p element', 'Created a p element')
+   assert('p').should('have.text', 'Hello, World!').run('The p element does not have the text "Hello, World!"', 'Created a p element with the text "Hello, World!"')
+   ```
+
+2. Create a level-1 heading element (`h1`) with the text "My First Heading" and run the cell to see the result.
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <h1>My First Heading</h1>
+   ```
+
+   ```+test
+   assert('h1').should('exist').run('Could not find an h1 element', 'Created an h1 element')
+   assert('h1').should('have.text', 'My First Heading').run('The h1 element does not have the text "My First Heading"', 'Created an h1 element with the text "My First Heading"')
+   ```
+
+3. Create a level-2 heading element (`h2`) with the text "My Second Heading" and run the cell to see the result.
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <h2>My Second Heading</h2>
+   ```
+
+   ```+test
+   assert('h2').should('exist').run('Could not find an h2 element', 'Created an h2 element')
+   assert('h2').should('have.text', 'My Second Heading').run('The h2 element does not have the text "My Second Heading"', 'Created an h2 element with the text "My Second Heading"')
+   ```
+
+## Resources
+
+- [MDN: HTML elements reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements)
+- [MDN: The p element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/p)
+- [MDN: Heading elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/Heading_Elements)

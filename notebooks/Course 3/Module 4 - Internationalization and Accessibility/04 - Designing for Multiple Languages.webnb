@@ -1,0 +1,254 @@
+# Designing for Multiple Languages
+
+Localization is more than translation, but translation is a central part of it. Supporting multiple languages affects layout, forms, navigation, and testing, not just the words on the page.
+
+Translated text can be longer or shorter than the original. Some languages read right-to-left. Dates, numbers, and names are formatted differently from region to region. In this lesson we look at two sides of the problem: swapping the actual text based on the user's language, and building layouts that survive that swap.
+
+## Translation Files
+
+A common strategy is to write down the text for each part of the UI, once per language, in separate files. Each file holds the same set of keys, with the values translated.
+
+```json
+// en.json
+{
+  "submit": "Submit",
+  "welcome": "Welcome, {{name}}!"
+}
+```
+
+```json
+// es.json
+{
+  "submit": "Enviar",
+  "welcome": "Bienvenido, {{name}}!"
+}
+```
+
+Every file uses the same keys (`submit`, `welcome`). Only the values change. The `{{name}}` inside the welcome message is a placeholder, sometimes called a wildcard, that we fill in with a real value at runtime.
+
+## Loading a Language and Looking Up Text
+
+Once the translation files exist, we load one of them and look up text by key instead of hard-coding strings. Two functions carry the pattern: `setLanguage`, which chooses the active language, and `t`, which translates a key.
+
+```{javascript autorun}
+// In a real app these come from fetching en.json, es.json, and so on.
+const translations = {
+  en: { submit: 'Submit', welcome: 'Welcome, {{name}}!' },
+  es: { submit: 'Enviar', welcome: 'Bienvenido, {{name}}!' }
+};
+
+let messages = translations.en;
+
+function setLanguage(lang) {
+  messages = translations[lang];
+}
+
+function t(key, vars) {
+  let text = messages[key];
+
+  // `for...in` loops over an object's keys, the way `for...of` loops
+  // over an array's values.
+  for (const name in vars) {
+    text = text.replace('{{' + name + '}}', vars[name]);
+  }
+
+  return text;
+}
+
+setLanguage('es');
+console.log(t('submit'));
+console.log(t('welcome', { name: 'Ana' }));
+```
+
+- `setLanguage('es')` points `messages` at the Spanish translations. In a real app it would `fetch` the matching JSON file first.
+- `t('submit')` looks up `messages['submit']` and returns the translated string.
+- `t('welcome', { name: 'Ana' })` looks up the welcome message and replaces `{{name}}` with `Ana`, producing `Bienvenido, Ana!`.
+
+Instead of setting an element's text directly, we set it from `t`. For example, `button.textContent = t('submit')` shows the right label for whichever language is active. The same idea works for more than text: you could look up which image to load for a given locale.
+
+## Using a Library: i18next
+
+The `t` function above is the core idea, and real-world libraries implement a fuller version of it. A widely used one is [i18next](https://www.i18next.com/). We initialize it with our translation resources, and it gives us the same `t` function, plus a way to change languages and an event to react when the language changes.
+
+Because i18next is a third-party library, the code below is a display example to read, not an editable cell. It loads i18next from a CDN.
+
+```html
+<script src="https://unpkg.com/i18next/dist/umd/i18next.js"></script>
+
+<header>
+  <button id="en">English</button>
+  <button id="de">German</button>
+</header>
+<div id="output"></div>
+
+<script>
+  const enButton = document.querySelector('#en');
+  const deButton = document.querySelector('#de');
+  const output = document.querySelector('#output');
+
+  i18next.init({
+    lng: 'en',
+    resources: {
+      en: { translation: { key: 'hello world' } },
+      de: { translation: { key: 'Hallo Welt' } }
+    }
+  }, (err, t) => {
+    updateContent();
+  });
+
+  function updateContent() {
+    output.textContent = i18next.t('key');
+  }
+
+  function changeLanguage(lng) {
+    i18next.changeLanguage(lng);
+  }
+
+  // Fires whenever the active language changes; re-render the page here.
+  i18next.on('languageChanged', () => {
+    updateContent();
+  });
+
+  enButton.addEventListener('click', () => changeLanguage('en'));
+  deButton.addEventListener('click', () => changeLanguage('de'));
+</script>
+```
+
+- `i18next.init` sets the default language (`lng`) and supplies the `resources` for each language under a `translation` object.
+- `i18next.t('key')` returns the translation of `key` for the active language, exactly like our `t`.
+- `i18next.changeLanguage('de')` switches the active language.
+- The `languageChanged` event lets us re-render the page (here, call `updateContent`) whenever the language switches.
+
+In practice you would have many key/value pairs and many elements to update, but the principle stays the same.
+
+One practical aside from the video: producing the *first* two translation files is the hard part, and generative AI is genuinely good at extending them. Give it your English file and a few translations and it will produce plausible files for other languages. Treat the output as a draft for a speaker of the language to check, particularly for anything a user has to act on.
+
+## Translating Outside of JavaScript
+
+The approach above changes languages on the client with JavaScript. Sometimes we want a separate page per language so users load the version for their locale directly. Build tools can do this: given one source HTML file and the translation files, they output one HTML file per language, substituting the translated text for each marked element. This produces, for example, `index.en.html` and `index.es.html` ahead of time instead of translating in the browser.
+
+## Flexible Labels
+
+Whichever approach you use, translated text rarely matches the original length. Avoid layouts that only work for one exact string.
+
+```{html}
+<button class="action-button">Create account</button>
+```
+```+css
+.action-button {
+  padding: 0.5rem 1rem;
+  min-width: 12ch;
+}
+```
+
+The `min-width` gives the button room for a longer label, and the label itself stays real, translatable text. A German or Finnish translation of "Create account" can be noticeably longer, so the layout has to stretch rather than clip or overflow.
+
+## Direction
+
+Some languages, such as Arabic and Hebrew, read right-to-left. HTML has a `dir` attribute for text direction, which pairs with `lang`:
+
+```html
+<html lang="ar" dir="rtl">
+```
+
+Setting `dir="rtl"` flips the flow of text and inline layout. When you test direction and layout, use real translated strings rather than placeholder text, so you catch length and direction problems before users do.
+
+## Exercises
+
+1. Finish the `t` function so it fills in the `{{name}}` placeholder. `greeting` should end up as `Welcome, Sam!`.
+
+   ```{javascript}
+   const messages = { welcome: 'Welcome, {{name}}!' };
+
+   function t(key, vars) {
+     let text = messages[key];
+
+     // TODO: replace each {{ name }} placeholder with the matching value
+     // in vars. `for (const name in vars)` loops over the keys.
+
+     return text;
+   }
+
+   const greeting = t('welcome', { name: 'Sam' });
+   ```
+   ```+solution
+   const messages = { welcome: 'Welcome, {{name}}!' };
+
+   function t(key, vars) {
+     let text = messages[key];
+
+     for (const name in vars) {
+       text = text.replace('{{' + name + '}}', vars[name]);
+     }
+
+     return text;
+   }
+
+   const greeting = t('welcome', { name: 'Sam' });
+   ```
+   ```+test
+   wrap(greeting).should('equal', 'Welcome, Sam!').run('Replace `{{name}}` so `greeting` is `Welcome, Sam!`', 'The placeholder was filled in');
+   ```
+
+2. What is the `t` function for?
+
+   ```{mcq}
+   What does `t('submit')` actually do?
+   correct: Correct! It looks up a key in the active language's messages and returns the translated value, which is why the rest of the application never contains a language.
+   wrong: Look at the body of `t`. What does it take, and where does it look?
+   [x] It looks up a key and returns the translated text for the currently selected language
+   [ ] It translates any string by calling a cloud service
+   [ ] It works out the user's location from their address
+   [ ] It converts JSON files into HTML during the build
+   ```
+
+3. In i18next, which method switches the active language, and which event lets you re-render afterward?
+
+   ```{mcq}
+   In i18next, which method switches the active language, and which event lets you re-render afterward?
+   correct: Correct. `changeLanguage` switches the language, and the `languageChanged` event tells you to update the page.
+   wrong: Think about the method that changes the language and the event that fires when it changes.
+   [x] `i18next.changeLanguage(lng)` and the `languageChanged` event.
+   [ ] `i18next.setText(lng)` and the `click` event.
+   [ ] `i18next.reload(lng)` and the `load` event.
+   [ ] `i18next.translate(lng)` and the `submit` event.
+   ```
+
+4. Add `lang="es"` to the HTML element so the page is marked as Spanish.
+
+   ```{html}
+   <html>
+     <body>
+       <h1>Hola</h1>
+     </body>
+   </html>
+   ```
+   ```+solution
+   <html lang="es">
+     <body>
+       <h1>Hola</h1>
+     </body>
+   </html>
+   ```
+   ```+test
+   wrap(source.includes('lang="es"') || source.includes("lang='es'")).should('equal', true).run('Add `lang=\"es\"` to the html element', 'Added the language attribute');
+   ```
+
+5. Which attribute marks right-to-left text direction?
+
+   ```{mcq}
+   Which attribute marks right-to-left text direction?
+   correct: Correct. `dir="rtl"` marks right-to-left direction.
+   wrong: Think about the HTML attribute for direction.
+   [x] `dir="rtl"`
+   [ ] `href="rtl"`
+   [ ] `src="rtl"`
+   [ ] `type="rtl"`
+   ```
+
+## Resources
+
+- [i18next documentation](https://www.i18next.com/)
+- [MDN: The HTML lang attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/lang)
+- [MDN: The HTML dir attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/dir)
+- [MDN: String.prototype.replace](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/replace)

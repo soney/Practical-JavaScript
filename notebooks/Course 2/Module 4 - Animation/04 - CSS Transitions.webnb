@@ -1,0 +1,279 @@
+# CSS Transitions
+
+Most of this specialization is about JavaScript, and since we are on animation it is worth a couple of lessons on CSS, because CSS is where most animation belongs.
+
+Everything we built in the last three lessons ran through the JavaScript engine on every single frame. **CSS transitions** hand the whole job to the browser: we say what should change and how long it should take, and the browser does the rest.
+
+## The `transition` Property
+
+A **CSS transition** smoothly renders a change from one CSS value to another. You declare it with the `transition` property, and it takes up to four parts:
+
+```text
+transition: <property> <duration> <timing-function> <delay>
+```
+
+- The **property** to animate, such as `color`, or the special value `all` for every property.
+- The **duration**. Note that unlike almost everything in JavaScript, CSS durations are in **seconds**, so `0.5s`, not `500`.
+- Optionally a **timing function**, which is CSS's word for an easing function.
+- Optionally a **delay** before it starts.
+
+Most of the time you write two or three of those.
+
+```{html autorun}
+<a href="#">Hover over this link</a>
+```
+```+css
+a {
+  color: blue;
+  font-size: 1.4em;
+  transition: color 0.5s;
+}
+a:hover {
+  color: red;
+}
+```
+
+Hover on and off. The color eases between blue and red in both directions, and there is no JavaScript on the page at all.
+
+## Put the Transition on the Permanent Selector
+
+Here is the mistake that is easy to make and confusing to debug. Compare these two cells.
+
+```{html autorun}
+<a href="#" class="wrong">Wrong: transition on the hover rule</a>
+```
+```+css
+.wrong {
+  color: blue;
+  font-size: 1.4em;
+}
+.wrong:hover {
+  color: red;
+  transition: color 1s;
+}
+```
+
+Hover on: it fades in nicely. Hover off: it snaps back instantly.
+
+The reason is that `.wrong:hover` only applies **while** the pointer is over the element. The moment you leave, that rule stops applying, the transition declaration goes with it, and there is nothing left to animate the change back.
+
+**Put the `transition` on the selector that always applies:**
+
+```{html autorun}
+<a href="#" class="right">Right: transition on the base rule</a>
+```
+```+css
+.right {
+  color: blue;
+  font-size: 1.4em;
+  transition: color 1s;
+}
+.right:hover {
+  color: red;
+}
+```
+
+Now it fades both ways, because `.right` applies the whole time.
+
+## Timing Functions
+
+CSS has several easing functions built in, using the vocabulary from the last lesson:
+
+- **`ease`** starts quickly and eases out at the end. **This is the default** if you do not name one. It is a slightly odd curve, and the reason for it is that starting fast makes an interface feel snappy while easing out still gives a sense of inertia.
+- **`linear`** is constant speed, no easing.
+- **`ease-in`** starts slowly and ends abruptly.
+- **`ease-out`** starts abruptly and ends slowly.
+- **`ease-in-out`** is slow at both ends, the slow-in-slow-out principle.
+
+Hover across all five and compare:
+
+```{html autorun}
+<div class="bar t-ease">ease (default)</div>
+<div class="bar t-linear">linear</div>
+<div class="bar t-in">ease-in</div>
+<div class="bar t-out">ease-out</div>
+<div class="bar t-inout">ease-in-out</div>
+```
+```+css
+.bar {
+  width: 120px;
+  padding: 6px;
+  margin: 4px 0;
+  background-color: #00274c;
+  color: white;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+.bar:hover { width: 340px; }
+.t-ease   { transition: width 1.5s ease; }
+.t-linear { transition: width 1.5s linear; }
+.t-in     { transition: width 1.5s ease-in; }
+.t-out    { transition: width 1.5s ease-out; }
+.t-inout  { transition: width 1.5s ease-in-out; }
+```
+
+You can also define your own curve with `cubic-bezier(...)`. Writing those numbers by hand is unpleasant, so use a visual tool: [cubic-bezier.com](https://cubic-bezier.com/), built by Lea Verou, lets you drag the curve and copy out the CSS.
+
+## Transitioning Several Properties
+
+Separate them with commas:
+
+```{html autorun}
+<div class="multi">Hover me</div>
+```
+```+css
+.multi {
+  width: 120px;
+  padding: 12px;
+  background-color: white;
+  color: #00274c;
+  border: 2px solid #00274c;
+  transition: background-color 0.6s ease-in-out,
+              color 0.6s ease-in-out,
+              width 1.2s ease-in-out;
+}
+.multi:hover {
+  width: 260px;
+  background-color: #00274c;
+  color: #ffcb05;
+}
+```
+
+Three properties, and the width takes twice as long as the colors, which you can watch happen.
+
+## Not Everything Can Be Transitioned
+
+Most CSS properties are **animatable**: anything with a smooth range of values in between, such as `color`, `opacity`, `width`, `left`, `transform`.
+
+Some are not. There is no meaningful halfway point between one `background-image` and another, or between `visibility: hidden` and `visible`. Those properties change instantly, and a `transition` on them does nothing.
+
+```{html autorun}
+<div class="animatable">opacity: animatable</div>
+<div class="not-animatable">visibility: not animatable</div>
+```
+```+css
+.animatable, .not-animatable {
+  width: 220px; padding: 8px; margin: 4px 0;
+  background-color: #00274c; color: white;
+}
+.animatable { opacity: 1; transition: opacity 1s; }
+.animatable:hover { opacity: 0.15; }
+.not-animatable { transition: visibility 1s; }
+.not-animatable:hover { visibility: hidden; }
+```
+
+The first fades. The second vanishes, immediately, however long a duration you give it. If you want something to fade out and then be gone, `opacity` is the property to animate.
+
+## Exercises
+
+1. Add a transition to `.box` so that `background-color` changes over `0.3s`, and make sure it animates in **both** directions.
+
+    ```html id=page1
+    <div class="box"></div>
+    ```
+
+    ```{css}
+    .box {
+      width: 120px;
+      height: 60px;
+      background-color: steelblue;
+      /* Write your transition here */
+    }
+
+    .box:hover {
+      background-color: orange;
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    .box {
+      width: 120px;
+      height: 60px;
+      background-color: steelblue;
+      transition: background-color 0.3s;
+    }
+
+    .box:hover {
+      background-color: orange;
+    }
+    ```
+    ```+test
+    assertRule('.box').should('have.css', 'transition-duration: 0.3s').run('Add a `transition` to `.box` lasting `0.3s`', 'Added a transition');
+    assertRule('.box').should('have.css', 'transition-property: background-color').run('The transition should name `background-color`', 'Transitioned the background color');
+    wrap(/\.box:hover\s*\{[^}]*transition/.test(source)).should('equal', false).run('Keep the `transition` out of the `:hover` rule, or it will not animate on the way back', 'Put the transition on the permanent selector');
+    ```
+
+2. Transition **two** properties on `.card`: `opacity` over `0.4s` and `width` over `0.8s`.
+
+    ```html id=page2
+    <div class="card">Hover me</div>
+    ```
+
+    ```{css}
+    .card {
+      width: 100px;
+      padding: 10px;
+      background-color: #00274c;
+      color: white;
+      opacity: 0.5;
+      /* Write your transition here */
+    }
+
+    .card:hover {
+      width: 250px;
+      opacity: 1;
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    .card {
+      width: 100px;
+      padding: 10px;
+      background-color: #00274c;
+      color: white;
+      opacity: 0.5;
+      transition: opacity 0.4s, width 0.8s;
+    }
+
+    .card:hover {
+      width: 250px;
+      opacity: 1;
+    }
+    ```
+    ```+test
+    assertRule('.card').should('have.css', 'transition-property: opacity, width').run('Transition both `opacity` and `width`, separated by a comma', 'Named both properties');
+    assertRule('.card').should('have.css', 'transition-duration: 0.4s, 0.8s').run('`opacity` should take `0.4s` and `width` should take `0.8s`', 'Gave each its own duration');
+    ```
+
+3. A transition works when hovering onto an element but snaps back instantly when the pointer leaves. What is wrong?
+
+    ```{mcq}
+    Fading in works; fading out does not. What is the cause?
+    correct: Correct! The `transition` declaration is inside the `:hover` rule, which stops applying the instant the pointer leaves, so there is nothing to animate the change back. It belongs on the rule that always applies.
+    wrong: Revisit "Put the Transition on the Permanent Selector".
+    [x] The `transition` was declared inside the `:hover` rule instead of the base rule
+    [ ] The duration is too short to see on the way out
+    [ ] `:hover` cannot be transitioned at all
+    [ ] The timing function needs to be `ease-in-out`
+    ```
+
+4. Which timing function does CSS use if you do not name one?
+
+    ```{mcq}
+    `transition: color 0.5s;` names no timing function. Which one is used?
+    correct: Correct! The default is `ease`, which starts quickly and eases out. It is not `linear`, which is a common assumption.
+    wrong: Look back at the list of timing functions and which one is marked as the default.
+    [x] `ease`
+    [ ] `linear`
+    [ ] `ease-in-out`
+    [ ] None; the change happens instantly
+    ```
+
+## Resources
+
+- [MDN: transition](https://developer.mozilla.org/en-US/docs/Web/CSS/transition)
+- [MDN: transition-timing-function](https://developer.mozilla.org/en-US/docs/Web/CSS/transition-timing-function)
+- [MDN: CSS animatable properties](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_animated_properties)
+- [cubic-bezier.com: build a custom timing function](https://cubic-bezier.com/)

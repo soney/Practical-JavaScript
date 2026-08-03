@@ -1,0 +1,119 @@
+# How JavaScript Runs Code
+
+We can now get JavaScript onto a page and see what it produces. The next question is the order in which the engine does things. By default, the JavaScript engine runs our code **from top to bottom**, one statement after another. This is called **sequential execution**, and it is the rule that everything else in this module builds on.
+
+## Top to Bottom
+
+If we write three `console.log` statements, the engine runs the first, then the second, then the third:
+
+```{javascript autorun}
+console.log('A');
+console.log('B');
+console.log('C');
+```
+
+The output is `A`, then `B`, then `C`, in that order. Try swapping two of the lines and running the cell again: the output order follows the order of the code, always.
+
+## Several Pieces of JavaScript in One Page
+
+The same rule applies across a whole HTML file. If a page has more than one piece of JavaScript in it, the engine works through them in the order they appear in the document. Suppose the first `<script>` element logs `A` and a later one logs `B`; the overall output is `A` and then `B`.
+
+Here is a concrete version of that:
+
+```html
+<html>
+  <head>
+    <script>
+      console.log("first");
+      console.log("second");
+    </script>
+    <script>
+      console.log("third");
+    </script>
+  </head>
+</html>
+```
+
+The output is `first`, then `second`, then `third`. The JavaScript engine effectively "glues" the code from all script elements together and runs it in the order it appears in the document.
+
+## Exceptions Are Coming
+
+Top to bottom execution is the default but later in this module we will see some exceptions to this rule, including:
+
+- **Comments**, which are ignored by the engine and can be used to disable code.
+- **Conditional execution**, where a block of statements runs only when something is true.
+- **Loops**, where a block of statements runs over and over.
+- **Function calls**, where the engine jumps into a chunk of code defined somewhere else, runs it, and then comes back.
+
+None of those break the rule so much as bend it: inside each piece, execution is still top to bottom. For now, whenever you are trying to work out what a script does, start by reading it the way the engine does, from the first line downward.
+
+## Exercises
+
+1. Reorder the three lines below so that the output reads `Ann`, then `Arbor`, then `Michigan`.
+
+    ```{javascript}
+    console.log('Michigan');
+    console.log('Ann');
+    console.log('Arbor');
+    ```
+    ```+solution
+    console.log('Ann');
+    console.log('Arbor');
+    console.log('Michigan');
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'Ann,Arbor,Michigan').run('The three lines should log `Ann`, then `Arbor`, then `Michigan`', 'Logged the three values in order');
+    ```
+
+2. Without changing or moving the two lines that are already there, add one line so that the output reads `start`, `middle`, `end`.
+
+    ```{javascript}
+    console.log('start');
+    console.log('end');
+    ```
+    ```+solution
+    console.log('start');
+    console.log('middle');
+    console.log('end');
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'start,middle,end').run('Add a line logging `middle` between the two existing lines', 'Put the new line in the right place');
+    ```
+
+3. A page has more than one `<script>` element. In what order does the code run?
+
+    ```{mcq}
+    An HTML page contains these three script elements, in this order in the document:
+
+    ~~~html
+    <script>
+      console.log('one');
+    </script>
+    <script>
+      console.log('two');
+      console.log('three');
+    </script>
+    <script>
+      console.log('four');
+    </script>
+    ~~~
+
+    What does the page log?
+    correct: Correct! The engine works through the script elements in document order, and runs the statements inside each one from top to bottom, exactly as if the three elements were a single program.
+    wrong: The engine effectively glues the script elements together in the order they appear in the document. Look back at "Several Pieces of JavaScript in One Page".
+    [x] `one`, `two`, `three`, `four`
+      correct: Right: document order across the elements, and top to bottom within each one.
+      wrong: The engine takes the elements in the order they appear and runs each one from top to bottom, which produces exactly this order.
+    [ ] `one`, `four`, `two`, `three`
+      wrong: The engine does not skip ahead to a later script element. It finishes one before starting the next.
+    [ ] `four`, `three`, `two`, `one`
+      wrong: Nothing runs in reverse. The engine starts at the first script element and works downward.
+    [ ] The order is not predictable, because each script element runs on its own
+      wrong: Script elements are not separate programs running independently. The engine runs them in document order, one after another.
+    ```
+
+## Resources
+
+- [MDN: Expressions and operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators)
+- [MDN: Control flow and error handling](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Control_flow_and_error_handling)
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)

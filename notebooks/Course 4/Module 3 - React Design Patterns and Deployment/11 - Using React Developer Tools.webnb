@@ -1,0 +1,159 @@
+# Using React Developer Tools
+
+When we want to understand what a React app is doing, we usually read the code, add `console.log` statements, or open the regular browser developer tools. Those are all useful, but the browser only shows us the DOM: the raw HTML elements on the page. React apps are built from a different structure that the browser cannot see directly: components, props, state, and hooks.
+
+React Developer Tools is a browser extension that adds a React-specific view of a running app. It exists for every major browser (Chrome, Firefox, and Edge). Once you install it and refresh a page that uses React, your browser developer tools gain two new panels:
+
+- **Components** shows what your app contains right now: the component tree, and for each component its props, state, and hooks.
+- **Profiler** shows when components render: you record a session of interactions and then see which components re-rendered and how many times.
+
+## The Components Panel
+
+The Components panel gives an overview of the components currently mounted in your app. Selecting a component shows:
+
+- its **props** (the values passed in from its parent),
+- its **state** and **hooks**,
+- where it is rendered in the tree, and where it is defined in your source code.
+
+For example, imagine a shopping cart app. At the top is an `App` component. Underneath it is a `CartSummary` component with props `items` and `onClearCart`, and next to that are three `Product` components, each with its own props. The Components panel lets you expand this tree and read every prop and piece of state, instead of guessing from `console.log`.
+
+You can also **edit props and state directly** in the Components panel. If you change a component's props by hand and it updates on screen, you have learned that the component itself renders correctly, so the problem is somewhere upstream in how the data reaches it.
+
+We can model this kind of tree as plain data:
+
+```{javascript}
+const componentTree = {
+  name: 'App',
+  children: [
+    { name: 'CartSummary', children: [] },
+    { name: 'Product', children: [] },
+    { name: 'Product', children: [] },
+    { name: 'Product', children: [] }
+  ]
+};
+
+console.log(componentTree.name);
+console.log(componentTree.children.length);
+```
+
+React Developer Tools lets you inspect this same structure in a real running app, with live props and state attached to each node.
+
+## The Profiler Panel
+
+Where the Components panel tells you what your app **has** right now, the Profiler tells you **when** things render. You click **Start profiling** (the blue dot), interact with your app for a while, and then click **Stop profiling**. The Profiler then shows you each render that happened, which components were involved, and how many times each one rendered.
+
+This is exactly the tool you reach for when a component is not updating when you expect it to. If a click should trigger a re-render but the Profiler shows the component never re-rendered, you have narrowed the bug down to a state or prop that is not changing the way you think it is.
+
+## A Concrete Debugging Story: The Cart That Will Not Update
+
+Suppose our shopping cart is broken. When we click **Add to cart**, nothing shows up in the cart summary. Here is how the two panels lead us to the bug.
+
+1. **Open Components.** We select `CartSummary` and read its `items` prop. Interestingly, if we navigate away to a product and come back, the `items` array actually does contain items. So the data is arriving eventually, but the view is stale.
+2. **Open Profiler.** We start profiling, click **Add to cart** several times, and stop. The Profiler shows that `App` rendered only once, when it should have re-rendered on every click. `CartSummary` never re-rendered at all.
+3. **Confirm in Components.** Back in Components, we manually edit `CartSummary`'s props. When we edit the props by hand, it re-renders correctly. So the component is fine; the problem is that clicking **Add to cart** is not producing a state change that React notices.
+4. **Find the bug.** We look at how the state updater is called and find the mistake: the code **mutates** the existing state array instead of returning a **new** array. React compares the old and new state by reference. If we hand back the same array object, React sees no change and skips the re-render.
+
+The fix is to return a brand new array that starts with the current items and adds the new one at the end:
+
+```jsx
+// Broken: mutates the existing array, so React sees the same reference.
+function addToCart(item) {
+  setItems((currentItems) => {
+    currentItems.push(item); // mutation!
+    return currentItems;      // same array back -> no re-render
+  });
+}
+
+// Fixed: returns a new array, so React detects the change and re-renders.
+function addToCart(item) {
+  setItems((currentItems) => [...currentItems, item]);
+}
+```
+
+After the fix, the Profiler confirms the repair: starting a new profiling session and clicking **Add to cart** a few times now shows `CartSummary` re-rendering once for every click.
+
+The lesson: React Developer Tools give us a React-specific view of an app. The regular browser developer tools show the DOM; the Components and Profiler panels show the components, props, state, hooks, and renders that the DOM alone hides.
+
+## Exercises
+
+1. Which panel of React Developer Tools would you use to find out how many times a component re-rendered while you clicked a button?
+
+   ```{mcq}
+   Which React Developer Tools panel shows how many times components re-rendered during a set of interactions?
+   correct: Correct. The Profiler records a session and reports which components rendered and how often.
+   wrong: One panel shows what the app currently contains; the other records when renders happen. You want render counts over time.
+   [x] The Profiler panel.
+   [ ] The Components panel.
+   [ ] The browser's Network panel.
+   [ ] The browser's Elements panel.
+   ```
+
+2. This is the exact bug from the cart story: the state updater must return a **new** array instead of mutating the old one. Complete `addItem` so it returns a new array with `item` appended and leaves the original array unchanged.
+
+   ```{javascript}
+   function addItem(items, item) {
+     // Return a NEW array containing all of `items` plus `item` at the end.
+     // Do not modify `items`.
+   }
+
+   const original = ['apple'];
+   const updated = addItem(original, 'banana');
+   ```
+   ```+default
+   function addItem(items, item) {
+     // Return a NEW array containing all of `items` plus `item` at the end.
+     // Do not modify `items`.
+   }
+
+   const original = ['apple'];
+   const updated = addItem(original, 'banana');
+   ```
+   ```+solution
+   function addItem(items, item) {
+     return [...items, item];
+   }
+
+   const original = ['apple'];
+   const updated = addItem(original, 'banana');
+   ```
+   ```+test
+   wrap(original.length).should('equal', 1).run('addItem should not modify the original array', 'Original array left unchanged');
+   wrap(updated.length).should('equal', 2).run('addItem should return an array with the new item added', 'New item added');
+   wrap(updated[1]).should('equal', 'banana').run('The added item should be at the end of the new array', 'Item appended at the end');
+   wrap(updated === original).should('equal', false).run('Return a NEW array instead of mutating and returning the same one', 'Returned a new array reference, so React would detect the change');
+   ```
+
+3. The Components panel models the app as a tree. Complete the tree so the first child is named `CartSummary`.
+
+   ```{javascript}
+   const componentTree = {
+     name: 'App',
+     children: [
+       { name: '' },
+       { name: 'Product' }
+     ]
+   };
+
+   const firstChild = componentTree.children[0].name;
+   ```
+   ```+solution
+   const componentTree = {
+     name: 'App',
+     children: [
+       { name: 'CartSummary' },
+       { name: 'Product' }
+     ]
+   };
+
+   const firstChild = componentTree.children[0].name;
+   ```
+   ```+test
+   wrap(firstChild).should('equal', 'CartSummary').run('Name the first child `CartSummary`', 'Set the first child component name');
+   ```
+
+## Resources
+
+- [React Docs: React Developer Tools](https://react.dev/learn/react-developer-tools)
+- [React Docs: Updating Arrays in State](https://react.dev/learn/updating-arrays-in-state)
+- [Chrome Web Store: React Developer Tools](https://chromewebstore.google.com/detail/react-developer-tools/fmkadmapgofadopljbjfkapdkoienihi)
+- [Firefox Add-ons: React Developer Tools](https://addons.mozilla.org/en-US/firefox/addon/react-devtools/)

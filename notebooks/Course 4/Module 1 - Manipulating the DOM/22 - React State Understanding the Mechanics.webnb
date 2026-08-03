@@ -1,0 +1,268 @@
+# React State: Understanding the Mechanics
+
+`useState` is the strangest thing in React so far. A plain function call, with no argument identifying which component or which variable, somehow remembers a value across renders. In the video, we built it into freact, and once you have read that code, the rules around hooks stop being arbitrary.
+
+The updated project is in `freact/04-state/` next to this notebook. To watch it run, right-click `index.html` in that folder and choose "Show Preview", then click the button and watch the count go up. This reading walks through what changed since `freact/03-events/`: rendering got split in two, and a `useState` function appeared, backed by an array.
+
+## Where the Value Actually Lives
+
+Not in your component. Your component function is called fresh on every render; nothing inside it survives.
+
+freact keeps **an array of hooks**, outside every component. Each `useState` call in a component owns one slot in that array. The slot holds the current value, and `useState` hands back that value plus a function for changing it.
+
+Which slot? The one at the current position. freact keeps a counter, `hookIndex`, that starts at zero for each render and moves up by one on every hook call.
+
+```{walkthrough}
+title: The hooks machinery
+step: The array and the counter
+file: freact/04-state/freact.js
+region: hooks
+Two module-level variables are the entire storage system.
+@"let hooks": Every state variable on the page lives in here, identified by nothing but its position.
+
+step: useState
+file: freact/04-state/freact.js
+region: use-state
+Read it in three parts: claim a slot and fill it on the first render, define a setter for later, and hand both back.
+@"hooks[idx] === undefined": First render only. On every later render the slot is already occupied, so the initial value is ignored -- which you have seen: `useState(0)` does not reset your count on re-renders.
+@"typeof initialVal === 'function'": React also accepts a function as the initial value, called once to compute it. freact supports the same.
+@"typeof newVal === 'function'": The updater form, `setClickCount((c) => c + 1)`. The function is called with the value currently in the slot, so it reads the freshest value there is, not the one captured when the handler was created.
+@"hooks[idx] !== newVal": The setter compares before it acts. Setting state to the value it already has changes nothing and schedules nothing -- true in freact and in React.
+@"setTimeout(_performRender, 0)": The re-render happens on a later tick, so the rest of the handler finishes first. Keep this line in mind; it explains the most common React surprise, below.
+@"hookIndex++": Claiming slots by call order. The first `useState` in a render reads slot 0, the second slot 1, and so on.
+@"return [hooks[idx], setState]": A two-element array, which is why the call site destructures: `const [clickCount, setClickCount] = useState(0)`.
+```
+
+That position-is-identity design is the whole trick, and it is why the rules of hooks exist:
+
+- **Hooks are called in the same order every render**, because the order is the identity. The first `useState` call gets slot 0 every time.
+- **Hooks are not called inside conditionals or loops**, because skipping one call shifts every later hook into the wrong slot, and a component would silently read some other variable's value.
+
+## Rendering Had to Split in Two
+
+Until now, rendering happened once, when `main` called `render`. A state change has to re-render **without** anyone calling `render` again, so the video split the job.
+
+```{walkthrough}
+title: render, split in two
+step: Remembering what and where
+file: freact/04-state/freact.js
+region: render-root
+Two variables record the arguments `render` used to consume directly.
+@"rootComponent": What to render and where to put it, saved so a state change can do the same job again later.
+
+step: render just records and delegates
+file: freact/04-state/freact.js
+region: render
+The public entry point now only stores the root component and container, then calls the function that does the work.
+@"_performRender();": main code calls `render` once; freact itself calls `_performRender` again on every state change. The underscore is the same convention as `_createDomNode`: internal machinery.
+
+step: _performRender does one full render
+file: freact/04-state/freact.js
+region: perform-render
+Reset the counter, wipe the container, rebuild the DOM from the stored description.
+@"hookIndex = 0": Every render starts at slot 0. Delete this line and the second render would start claiming slots where the first left off -- every state variable would silently read some other slot. This reset is what keeps "same order, same slot" true.
+
+step: One character in the text branch
+file: freact/04-state/freact.js
+region: text-node
+The video ends with a tiny bug fix on this line: it used to read `nodeValue || ''`.
+@"nodeValue ?? ''": A count of `0` is falsy, so `||` replaced it with an empty string and the button read "You clicked  time(s)". The **nullish coalescing operator** `??` only substitutes for `null` and `undefined`, so `0` renders as `0`.
+```
+
+## The Component
+
+```{walkthrough}
+title: A click counter on freact
+file: freact/04-state/App.jsx
+The component from the video, and it is exactly the shape you write in real React.
+@"useState(0)": Runs during every render, but only the first one stores the `0`. Each render's `clickCount` is whatever is in slot 0 at that moment.
+@"setClickCount(clickCount + 1)": The handler calls the setter from *its* render. The setter writes the slot and schedules `_performRender`; the next render calls `App` again and gets the new value back from `useState`.
+@"{clickCount}": This lands in the description as a text child, which is why the `??` fix mattered: on the very first render its value is the falsy `0`.
+```
+
+Preview it and click. Every click is: setter writes the array, a re-render is scheduled, `App` runs again, `useState` returns the new value, and the whole DOM is rebuilt with the new text. Nothing about the component "remembers" anything; the array outside it does.
+
+## Why the Old Value Lingers
+
+The `setTimeout` line has a visible consequence: the state variable **still holds the old value** on the line after you call the setter, because the re-render has not happened yet. This is the single most common surprise in React, so see it in the real thing:
+
+```{react autorun}
+function Surprising() {
+  const [count, setCount] = React.useState(0);
+
+  function handleClick() {
+    setCount(count + 1);
+
+    console.log('right after setCount, count is still ' + count);
+  }
+
+  return <button onClick={handleClick}>Count is {count}</button>;
+}
+
+renderReact(<Surprising />);
+```
+
+Click it and read the log. `count` in that handler is the value from the render that created the handler. It does not change; a *new* render produces a new `count`. When the next value depends on the current one, the updater form `setCount((c) => c + 1)` is the reliable way to say so -- you read the line in `useState` that makes it work.
+
+## Exercises
+
+1. Complete `useState` so it claims a slot, stores the initial value the first time, and returns the value with a setter.
+
+    ```{javascript}
+    const hooks = [];
+    let hookIndex = 0;
+    let renders = 0;
+
+    function _performRender() {
+      hookIndex = 0;
+      renders = renders + 1;
+    }
+
+    function useState(initialVal) {
+      // TODO: take the current index, move hookIndex on by one,
+      // store initialVal in the slot if the slot is still undefined,
+      // and return [current value, setState]
+    }
+
+    _performRender();
+
+    const [count, setCount] = useState(5);
+
+    // Captured before the setter runs, because a re-render resets the counter.
+    const indexAfterFirstHook = hookIndex;
+
+    setCount(6);
+
+    console.log(count, hooks[0], indexAfterFirstHook, renders);
+    ```
+    ```+solution
+    const hooks = [];
+    let hookIndex = 0;
+    let renders = 0;
+
+    function _performRender() {
+      hookIndex = 0;
+      renders = renders + 1;
+    }
+
+    function useState(initialVal) {
+      const idx = hookIndex;
+
+      hookIndex = hookIndex + 1;
+
+      if (hooks[idx] === undefined) {
+        hooks[idx] = initialVal;
+      }
+
+      function setState(newVal) {
+        if (hooks[idx] !== newVal) {
+          hooks[idx] = newVal;
+
+          _performRender();
+        }
+      }
+
+      return [hooks[idx], setState];
+    }
+
+    _performRender();
+
+    const [count, setCount] = useState(5);
+
+    // Captured before the setter runs, because a re-render resets the counter.
+    const indexAfterFirstHook = hookIndex;
+
+    setCount(6);
+
+    console.log(count, hooks[0], indexAfterFirstHook, renders);
+    ```
+    ```+test
+    wrap(count).should('equal', 5).run('The first render should see the initial value, `5`', 'Returned the initial value');
+    wrap(hooks[0]).should('equal', 6).run('Calling the setter should write the new value into the hook slot', 'The setter updated the slot');
+    wrap(indexAfterFirstHook).should('equal', 1).run('Each `useState` call should move `hookIndex` on by one, so it claims the next slot', 'Advanced the hook index');
+    wrap(renders).should('equal', 2).run('Changing the value should trigger a render, so `_performRender` runs a second time', 'Triggered a re-render');
+    ```
+
+2. Add the two refinements from the reading: a setter that ignores an unchanged value, and one that accepts an updater function.
+
+    ```{javascript}
+    const hooks = [10];
+    let renderCount = 0;
+
+    function _performRender() {
+      renderCount = renderCount + 1;
+    }
+
+    function setState(newVal) {
+      // TODO: if newVal is a function, call it with the current value hooks[0]
+      // to get the real new value. Then, only if the value actually changed,
+      // store it and call _performRender().
+    }
+
+    setState(10);                    // same value: nothing should happen
+    setState(11);                    // changed
+    setState(function (v) { return v + 1; });   // updater form
+
+    console.log(hooks[0], renderCount);
+    ```
+    ```+solution
+    const hooks = [10];
+    let renderCount = 0;
+
+    function _performRender() {
+      renderCount = renderCount + 1;
+    }
+
+    function setState(newVal) {
+      if (typeof newVal === 'function') {
+        newVal = newVal(hooks[0]);
+      }
+
+      if (hooks[0] !== newVal) {
+        hooks[0] = newVal;
+
+        _performRender();
+      }
+    }
+
+    setState(10);
+    setState(11);
+    setState(function (v) { return v + 1; });
+
+    console.log(hooks[0], renderCount);
+    ```
+    ```+test
+    wrap(hooks[0]).should('equal', 12).run('After 10, then 11, then an updater adding one, the value should be `12`', 'Handled both forms');
+    wrap(renderCount).should('equal', 2).run('Setting the value it already had should render nothing, so only two renders should happen', 'Skipped the no-op update');
+    ```
+
+3. Why hook order matters
+
+    ```{mcq}
+    What identifies which state variable a `useState` call is talking about?
+    correct: Correct! Its position in the hooks array, tracked by a counter that resets each render. Skipping a call inside an `if` shifts every later hook into the wrong slot, and a component starts reading another variable's value.
+    wrong: Look at what `useState` does with `hookIndex` before it does anything else. Nothing about the variable's name is ever recorded.
+    [x] Its position in the hooks array, so a skipped call would shift all the later ones
+    [ ] The name of the variable it was assigned to
+    [ ] The component's name plus the initial value
+    [ ] Nothing; React matches them by comparing values
+    ```
+
+4. The value right after the setter
+
+    ```{mcq}
+    You call `setCount(count + 1)` and then log `count` on the next line. Why is it unchanged?
+    correct: Correct! The setter writes to the hooks array and schedules a render for later. `count` is a value captured when this render produced the handler, and only a new render produces a new one.
+    wrong: Look at what `setState` does after storing the value, and when the component function next runs. Revisit the `setTimeout` note in the walkthrough.
+    [x] The setter schedules a re-render for later, and `count` belongs to the render that created the handler
+    [ ] The setter failed, because the value did not change
+    [ ] `console.log` reads a cached copy of the variable
+    [ ] State updates only take effect after a full page reload
+    ```
+
+## Resources
+
+- [React Docs: State as a snapshot](https://react.dev/learn/state-as-a-snapshot)
+- [React Docs: Rules of hooks](https://react.dev/reference/rules/rules-of-hooks)
+- [React Docs: useState](https://react.dev/reference/react/useState)
+- [MDN: Nullish coalescing operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing)

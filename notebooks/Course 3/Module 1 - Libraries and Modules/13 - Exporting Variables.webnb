@@ -1,0 +1,197 @@
+# Exporting Variables
+
+A module keeps everything to itself unless told otherwise. To make a value visible to other files, you **export** it. A module can export as many values as it likes, of any kind: functions, constants, objects, numbers.
+
+There are two ways to write it, and they mean the same thing.
+
+## Form One: `export` Before the Declaration
+
+Put the keyword in front of the declaration:
+
+```javascript
+export function fahrenheitToCelsius(temp) {
+  return (temp - 32) * 5 / 9;
+}
+
+export const freezingPointF = 32;
+
+export let readingCount = 0;
+```
+
+It works with `function`, `const`, and `let` alike.
+
+Here is the video's `weather-utils.js`, exporting two conversion functions. The cell runs, so you can check the conversions yourself:
+
+```{javascript autorun}
+// weather-utils.js
+
+export function fahrenheitToCelsius(temp) {
+  return (temp - 32) * 5 / 9;
+}
+
+export function celsiusToFahrenheit(temp) {
+  return temp * 9 / 5 + 32;
+}
+
+console.log('0C is ' + celsiusToFahrenheit(0) + 'F');
+console.log('100C is ' + celsiusToFahrenheit(100) + 'F');
+console.log('212F is ' + fahrenheitToCelsius(212) + 'C');
+```
+
+In a real project the calls at the bottom would live in another file, `main.js`, which imports what it needs:
+
+```javascript
+// main.js
+import { celsiusToFahrenheit } from './weather-utils.js';
+
+console.log(celsiusToFahrenheit(0));
+```
+
+```html
+<script type="module" src="main.js"></script>
+```
+
+Note what happens if you write that import and forget the `export`: it does not work. There is nothing to import, because a module shares nothing by default.
+
+## Form Two: One `export` at the End
+
+You can also declare everything normally and list the exports in a single statement, conventionally at the bottom of the file, with the names inside curly braces:
+
+```{javascript autorun}
+// simple-math.js
+
+function add(a, b) {
+  return a + b;
+}
+
+function subtract(a, b) {
+  return a - b;
+}
+
+const PI = 3.14;
+
+export { add, subtract, PI };
+
+console.log(add(2, 3));
+```
+
+That is exactly equivalent to writing `export` in front of all three declarations. Which form to use is a matter of taste: the keyword-in-front version keeps the information next to the thing it describes, and the list-at-the-end version gives you one place to see a module's whole public surface.
+
+Watch the punctuation, because it is a common slip. The names go in **curly braces**, separated by commas:
+
+```javascript
+export { add, subtract };     // correct
+```
+
+Not brackets, not parentheses, and not a bare list.
+
+## Anything Unexported Stays Private
+
+This is the part that matters most. Exporting is opt-in, one value at a time.
+
+```{javascript autorun}
+// temperature-report.js
+
+function roundTo1(value) {
+  return Math.round(value * 10) / 10;
+}
+
+export function report(tempC) {
+  return roundTo1(tempC * 9 / 5 + 32) + 'F';
+}
+
+console.log(report(21.6666));
+```
+
+`report` is exported and `roundTo1` is not, so another file can call `report` and cannot see `roundTo1` at all. That is a feature: it means you can rename or rewrite `roundTo1` freely, knowing nothing outside this file could have depended on it.
+
+If a file has ten functions and you export two, the other eight are private. Not hidden-but-reachable, not global, simply not available.
+
+## Exercises
+
+1. Export both of these, using the keyword in front of each declaration.
+
+    ```{javascript}
+    const apiBaseUrl = '/api';
+
+    function buildUrl(path) {
+      return apiBaseUrl + path;
+    }
+    ```
+    ```+solution
+    export const apiBaseUrl = '/api';
+
+    export function buildUrl(path) {
+      return apiBaseUrl + path;
+    }
+    ```
+    ```+test
+    wrap(typeof exports !== 'undefined' && exports.apiBaseUrl === '/api').should('equal', true).run('Put `export` in front of the `const` declaration', 'Exported the constant');
+    wrap(typeof exports !== 'undefined' && typeof exports.buildUrl === 'function').should('equal', true).run('Put `export` in front of the function declaration too', 'Exported the function');
+    wrap(typeof exports !== 'undefined' && typeof exports.buildUrl === 'function' && exports.buildUrl('/users') === '/api/users').should('equal', true).run('The exported function should still work, returning `/api/users` for `/users`', 'The exported function works');
+    ```
+
+2. Export `makeLabel` and `separator` with a single statement at the end of the file. Leave `trim` private.
+
+    ```{javascript}
+    const separator = ': ';
+
+    function trim(text) {
+      return text.trim();
+    }
+
+    function makeLabel(name) {
+      return 'Label' + separator + trim(name);
+    }
+
+    // Write your export statement here
+    ```
+    ```+solution
+    const separator = ': ';
+
+    function trim(text) {
+      return text.trim();
+    }
+
+    function makeLabel(name) {
+      return 'Label' + separator + trim(name);
+    }
+
+    export { makeLabel, separator };
+    ```
+    ```+test
+    wrap(/export\s*\{[\s\S]*\}/.test(source)).should('equal', true).run('Use the list form: `export { ... };` with the names in curly braces', 'Used the end-of-file form');
+    wrap(typeof exports !== 'undefined' && typeof exports.makeLabel === 'function').should('equal', true).run('`makeLabel` should be one of the exported names', 'Exported makeLabel');
+    wrap(typeof exports !== 'undefined' && exports.separator === ': ').should('equal', true).run('`separator` should be exported as well', 'Exported separator');
+    wrap(typeof exports !== 'undefined' && typeof exports.trim === 'undefined').should('equal', true).run('Leave `trim` out of the export list so it stays private to this file', 'Kept trim private');
+    ```
+
+3. You want to export `add` and `subtract` in one statement at the end of the file. Which line is correct?
+
+    ```{mcq}
+    Pick the correct end-of-file export syntax.
+    correct: Correct! The names go inside curly braces, separated by commas.
+    wrong: Look again at the punctuation in the `simple-math.js` cell.
+    [x] `export { add, subtract };`
+    [ ] `export add, subtract;`
+    [ ] `export [add, subtract];`
+    [ ] `export (add, subtract);`
+    ```
+
+4. `mathUtils.js` has ten helper functions, and you put `export` in front of two of them. What about the other eight?
+
+    ```{mcq}
+    What happens to the functions you did not export?
+    correct: Correct! They stay private to `mathUtils.js`. No other file can reach them, which is exactly why you are free to change them later.
+    wrong: Remember that a module shares nothing unless you say so.
+    [x] They remain private to `mathUtils.js` and no other file can use them
+    [ ] They are exported automatically, just without names
+    [ ] The code fails, because a module has to export everything it declares
+    [ ] They become global variables usable anywhere without importing
+    ```
+
+## Resources
+
+- [MDN: export](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export)
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+- [MDN: Math.round()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round)

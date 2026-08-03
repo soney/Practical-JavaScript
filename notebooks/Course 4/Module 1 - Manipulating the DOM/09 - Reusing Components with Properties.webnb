@@ -1,0 +1,262 @@
+# Reusing Components with Properties
+
+Curly braces let a component show a value it computed for itself. That is still a component that always renders the same thing. To make one component serve several purposes, the caller has to be able to pass data **in**.
+
+That is what **properties**, universally shortened to **props**, are for. They are inputs to a component, in the same way arguments are inputs to a function, and they are what makes a component reusable.
+
+## Passing and Receiving
+
+Props are written like HTML attributes where the component is used:
+
+```jsx
+<Greeting name="Steve" department="UMSI" />
+```
+
+Those attributes are collected into a single **JavaScript object**:
+
+```javascript
+{ name: 'Steve', department: 'UMSI' }
+```
+
+and that object is passed to your function as its one argument. The parameter is conventionally called `props`:
+
+```{react autorun}
+function Greeting(props) {
+  return <div>Hello, {props.name} from {props.department}</div>;
+}
+
+function App() {
+  return (
+    <div>
+      <Greeting name="Steve" department="UMSI" />
+      <Greeting name="Ada" department="Analytical Engines" />
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+One component, two different outputs, because each use passed a different object. `props.name` is an ordinary property access on an ordinary object.
+
+## Destructuring the Props
+
+Writing `props.` in front of everything gets tiring. Destructuring, from Course 3, pulls the properties out into their own variables:
+
+```javascript
+const { name, department } = props;
+```
+
+That declares `name` and `department` and assigns them `props.name` and `props.department`. So the component can be written:
+
+```jsx
+function Greeting(props) {
+  const { name, department } = props;
+
+  return <div>Hello, {name} from {department}</div>;
+}
+```
+
+And because the destructuring can happen in the parameter list itself, the `props` variable often never appears at all:
+
+```{react autorun}
+function Greeting({ name, department }) {
+  return <div>Hello, {name} from {department}</div>;
+}
+
+renderReact(<Greeting name="Grace" department="Compilers" />);
+```
+
+The braces in that parameter list are destructuring, not an object being passed. This is the form you will see most often in React code, and all three versions above do exactly the same thing.
+
+## Optional Props with a Default
+
+A prop that is not passed arrives as `undefined`, and a default handles that:
+
+```{react autorun}
+function Greeting({ greet, name }) {
+  if (!greet) {
+    greet = 'Hello';
+  }
+
+  return <div>{greet}, {name}</div>;
+}
+
+function App() {
+  return (
+    <div>
+      <Greeting greet="Bonjour" name="Alice" />
+      <Greeting name="Bob" />
+      <Greeting name="Carol" />
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+Alice gets the greeting that was passed; Bob and Carol fall back to `Hello`. Add a `greet` to one of them and run it again.
+
+## Props Are Read-Only
+
+A component must **never modify its props**. Reassigning a local variable that came from destructuring, as in the default above, is fine, because that changes only the local copy. Writing to the props object itself is not:
+
+```jsx
+function Greeting(props) {
+  props.name = 'somebody else';   // never do this
+
+  return <div>Hello, {props.name}</div>;
+}
+```
+
+The reason is that props belong to whoever passed them. A component that edits its own inputs makes the parent's data change underneath it, and then what appears on screen no longer follows from what the parent asked for. Data flows **down** in React: a parent passes props to a child, and the child reads them. Getting information back up to the parent has its own mechanism, and it is coming in Module 3.
+
+## Exercises
+
+1. Update `NameTag` so it renders the `name` prop instead of the literal word.
+
+   ```{react}
+   function NameTag({ name }) {
+     return <p>Name</p>;
+   }
+
+   renderReact(<NameTag name="Ada" />);
+   ```
+   ```+solution
+   function NameTag({ name }) {
+     return <p>{name}</p>;
+   }
+
+   renderReact(<NameTag name="Ada" />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('p').should('have.text', 'Ada').run('Render the `name` prop by putting it in curly braces', 'Rendered the prop');
+   }, 50);
+   ```
+
+2. Write a `Product` component that takes `name` and `price` props and renders `<li>` text of the form `Notebook: $4`. Then render it twice with different values.
+
+   ```{react}
+   // TODO: define Product so it accepts name and price props
+
+   function Catalog() {
+     return (
+       <ul>
+         {/* TODO: a Product named Notebook priced 4 */}
+         {/* TODO: a Product named Pencil priced 2 */}
+       </ul>
+     );
+   }
+
+   renderReact(<Catalog />);
+   ```
+   ```+solution
+   function Product({ name, price }) {
+     return <li>{name}: ${price}</li>;
+   }
+
+   function Catalog() {
+     return (
+       <ul>
+         <Product name="Notebook" price={4} />
+         <Product name="Pencil" price={2} />
+       </ul>
+     );
+   }
+
+   renderReact(<Catalog />);
+   ```
+   ```+test
+   setTimeout(function () {
+     // The starter renders no products at all, so read each item through a
+     // fallback. Indexing straight into the list would throw before the
+     // checks below could explain what is missing.
+     const items = document.querySelectorAll('li');
+     const textOf = (index) => (items[index] || {}).textContent;
+
+     assert('li').should('have.length', 2).run('Render two `<Product />` components inside the list', 'Rendered both products');
+     wrap(textOf(0)).should('equal', 'Notebook: $4').run('The first product should read `Notebook: $4`', 'The first product is right');
+     wrap(textOf(1)).should('equal', 'Pencil: $2').run('The second should read `Pencil: $2`, from different props on the same component', 'The second product is right');
+   }, 50);
+   ```
+
+3. Give `Label` a default so that leaving `text` off renders `Untitled`.
+
+   ```{react}
+   function Label({ text }) {
+     // TODO: when text was not passed, use 'Untitled' instead
+
+     return <span>{text}</span>;
+   }
+
+   function App() {
+     return (
+       <div>
+         <Label text="Chapter one" />
+         <Label />
+       </div>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function Label({ text }) {
+     if (!text) {
+       text = 'Untitled';
+     }
+
+     return <span>{text}</span>;
+   }
+
+   function App() {
+     return (
+       <div>
+         <Label text="Chapter one" />
+         <Label />
+       </div>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('span').should('have.length', 2).run('Both labels should render', 'Both labels render');
+     wrap(document.querySelectorAll('span')[0].textContent).should('equal', 'Chapter one').run('A label given `text` should still show that text', 'The passed text is used');
+     wrap(document.querySelectorAll('span')[1].textContent).should('equal', 'Untitled').run('A label with no `text` prop should show `Untitled`. A missing prop arrives as `undefined`', 'The default is used');
+   }, 50);
+   ```
+
+4. How do the attributes you write reach the component?
+
+   ```{mcq}
+   You write `<Greeting name="Ada" department="UMSI" />`. What does `Greeting` receive?
+   correct: Correct! The attributes are collected into one object, `{ name: 'Ada', department: 'UMSI' }`, and that object is the function's single argument.
+   wrong: Count the parameters a component function has. Look back at "Passing and Receiving".
+   [x] One object argument holding both attributes as properties
+   [ ] Two separate arguments, in the order written
+   [ ] Nothing; the component reads them from the DOM
+   [ ] A string containing the whole tag
+   ```
+
+5. Why should a component never modify its props?
+
+   ```{mcq}
+   What goes wrong when a component assigns to `props.name`?
+   correct: Correct! Props belong to the parent that passed them. Editing them changes the parent's data from underneath, so what appears on screen no longer follows from what the parent asked for. Data flows down: children read props, they do not rewrite them.
+   wrong: Ask who owns the object a component receives, and what happens to them if the child changes it.
+   [x] It changes data the parent owns, so the output no longer matches what the parent asked for
+   [ ] Props are frozen, so the assignment throws an error and stops the app
+   [ ] It works, but only for string props
+   [ ] It renames the component
+   ```
+
+## Resources
+
+- [React Docs: Passing props to a component](https://react.dev/learn/passing-props-to-a-component)
+- [React Docs: Keeping components pure](https://react.dev/learn/keeping-components-pure)
+- [MDN: Destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring)

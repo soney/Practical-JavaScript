@@ -1,0 +1,187 @@
+# Locale Codes
+
+To adapt content for someone, you first have to name who they are, and a **locale** is that name. At a minimum it identifies a **language** and usually a **region**.
+
+## The Shape of a Code
+
+A locale code can be just a language:
+
+```
+en      English
+ar      Arabic
+es      Spanish
+fr      French
+hi      Hindi
+zh      Chinese
+```
+
+Or a language and a region, joined with a hyphen:
+
+```
+en-US   English as used in the United States
+en-CA   English as used in Canada
+es-ES   Spanish as used in Spain
+es-MX   Spanish as used in Mexico
+pt-BR   Portuguese as used in Brazil
+pt-PT   Portuguese as used in Portugal
+```
+
+Those pairs matter. `es-ES` and `es-MX` are the same language and differ in vocabulary, currency, and number formatting; `pt-BR` and `pt-PT` differ enough that translators treat them separately.
+
+There is also an optional **script** subtag, for a language written in more than one script:
+
+```
+fr-Brai   French written in Braille
+zh-Hans   Chinese written in simplified characters
+zh-Hant   Chinese written in traditional characters
+```
+
+## The Standards Behind the Codes
+
+The codes are not invented per project.
+
+- **Language codes** come from **ISO 639**, a long list in which French is `fr`, German is `de`, and English is `en`.
+- **Region codes** come from the ISO country list, in which the United States is `US`.
+
+By convention the language is lowercase and the region uppercase, `en-US` rather than `EN-us`, and code that compares locale codes should not assume the case is right.
+
+## Declaring the Document's Locale
+
+In HTML, the locale goes on the `<html>` element, in the **`lang`** attribute:
+
+```html
+<html lang="en">
+```
+
+```html
+<html lang="es-MX">
+```
+
+That one attribute does a surprising amount of work:
+
+- If the visitor's own locale differs, the **browser can offer to translate** the page.
+- **Screen readers** use it to choose a pronunciation. The same letters are read very differently in English and Spanish, and getting this wrong makes a page unusable rather than merely awkward, which the accessibility lesson will come back to.
+- Search engines use it to decide who to show the page to.
+
+It is one attribute, it is easy to leave out, and leaving it out is one of the more common accessibility faults on the web.
+
+## Reading the User's Locale
+
+The browser knows what the user asked for:
+
+```{javascript autorun}
+console.log('preferred locale: ' + navigator.language);
+console.log('all preferences:  ' + navigator.languages);
+```
+
+**`navigator.language`** is a single locale code, the user's first preference. **`navigator.languages`** is an **array** of their preferences in order, because people who read several languages can say so. `navigator.language` is normally just the first item of that list.
+
+Preferring the list is the better habit: if you have no translation for someone's first choice, their second may still be better than your default.
+
+## Why the Region Half Matters
+
+Language alone is often not enough, and dates are the clearest case:
+
+```{javascript autorun}
+const date = new Date('2026-05-21T12:00:00Z');
+
+console.log('en-US: ' + new Intl.DateTimeFormat('en-US').format(date));
+console.log('en-GB: ' + new Intl.DateTimeFormat('en-GB').format(date));
+console.log('ja-JP: ' + new Intl.DateTimeFormat('ja-JP').format(date));
+```
+
+`en-US` and `en-GB` are the same language, and one writes the month first while the other writes the day first. `5/21/2026` and `21/05/2026` are each unambiguous, and `5/6/2026` is not, which is how a delivery date becomes a support ticket.
+
+`Intl.DateTimeFormat` is a later reading's subject. What matters here is that it takes a **locale code**, which is why getting the code right comes first.
+
+## Exercises
+
+1. Write `parseLocale`, which splits a locale code into its parts.
+
+    ```{javascript}
+    function parseLocale(code) {
+      // TODO: return an object with a language and a region.
+      // 'es-MX' gives { language: 'es', region: 'MX' }.
+      // A code with no region gives a region of null.
+    }
+
+    console.log(parseLocale('es-MX'));
+    console.log(parseLocale('en'));
+    ```
+    ```+solution
+    function parseLocale(code) {
+      const parts = code.split('-');
+
+      if (parts.length > 1) {
+        return { language: parts[0], region: parts[1] };
+      }
+
+      return { language: parts[0], region: null };
+    }
+
+    console.log(parseLocale('es-MX'));
+    console.log(parseLocale('en'));
+    ```
+    ```+test
+    wrap(parseLocale('es-MX')).should('equal', { language: 'es', region: 'MX' }).run('Split the code at the hyphen: the language comes first, the region second', 'Split a language and region');
+    wrap(parseLocale('pt-BR').region).should('equal', 'BR').run('It should work for any code, so `pt-BR` gives a region of `BR`', 'Works for other codes');
+    wrap(parseLocale('en')).should('equal', { language: 'en', region: null }).run('A code with no region should give a `region` of `null`', 'Handled a language-only code');
+    ```
+
+2. Declare this document's locale as Spanish as used in Mexico.
+
+    ```{html}
+    <html>
+      <head>
+        <title>Mi sitio</title>
+      </head>
+      <body>
+        <h1>Hola</h1>
+      </body>
+    </html>
+    ```
+    ```+solution
+    <html lang="es-MX">
+      <head>
+        <title>Mi sitio</title>
+      </head>
+      <body>
+        <h1>Hola</h1>
+      </body>
+    </html>
+    ```
+    ```+test
+    wrap(/<html[^>]*\slang\s*=\s*["']es-MX["']/.test(source)).should('equal', true).run('Add `lang="es-MX"` to the `html` element', 'Declared the locale');
+    wrap(/lang\s*=\s*["']es["']/.test(source)).should('equal', false).run('Include the region as well as the language, since `es` alone does not say Mexico', 'Included the region');
+    ```
+
+3. You are building a site for Spanish-speaking users in Mexico. What is the most precise way to declare that?
+
+    ```{mcq}
+    Which line identifies the document's locale?
+    correct: Correct! The `lang` attribute on the `html` element is where a document's locale goes, and `es-MX` names both the language and the region.
+    wrong: One of these is on the right element, with the right attribute, and the right code.
+    [x] `<html lang="es-MX">`
+    [ ] `<meta charset="es-MX">`
+    [ ] `<body locale="spanish-mexico">`
+    [ ] `<html lang="en-ES">`
+    ```
+
+4. Which statement about the `navigator` object is right?
+
+    ```{mcq}
+    How do the two properties relate?
+    correct: Correct! `navigator.languages` is the ordered array of preferences, and `navigator.language` is normally the first entry in it.
+    wrong: One is singular and one is plural, and that is the whole difference.
+    [x] `navigator.languages` is an array of preferred locales; `navigator.language` is typically its first item
+    [ ] `navigator.language` lists every language the user has ever used
+    [ ] A meta tag is needed before `navigator.language` works
+    [ ] `navigator.language` gives only the country code, never the language
+    ```
+
+## Resources
+
+- [MDN: the lang attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/lang)
+- [MDN: Navigator.languages](https://developer.mozilla.org/en-US/docs/Web/API/Navigator/languages)
+- [MDN: Intl.Locale](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/Locale)
+- [W3C: language tags in HTML and XML](https://www.w3.org/International/articles/language-tags/)

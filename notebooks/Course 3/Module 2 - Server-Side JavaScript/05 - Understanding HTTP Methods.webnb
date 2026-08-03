@@ -1,0 +1,300 @@
+# Understanding HTTP Methods
+
+The web runs on **HTTP**, the Hypertext Transfer Protocol. Part of what HTTP standardizes is a set of **methods**: a word attached to every request saying what the client wants done. The same set applies to every application on the web, whatever it does.
+
+The servers we built in [Lesson 1](<01 - Creating a Simple Web Server.webnb>) ignored the method entirely. Every request was treated as a request to fetch something, which was fine, because that is all a browser does when it loads a page.
+
+## The Two You Will Use
+
+**`GET`** asks for a resource. It only retrieves; it is not supposed to change anything. Every HTML file, stylesheet, script, and image your browser loads arrives through a `GET`.
+
+```
+GET /users/42        retrieve the user with id 42
+```
+
+**`POST`** sends data to the server, and by convention means "create something new".
+
+```
+POST /users          create a new user
+```
+
+## Two More Worth Recognizing
+
+**`PUT`** also sends data, and means "replace what is there".
+
+```
+PUT /users/42        replace user 42 with what I am sending
+```
+
+**`DELETE`** asks for something to be removed.
+
+```
+DELETE /users/42     remove user 42
+```
+
+There are several more methods beyond these four, and they come up rarely enough that MDN's list is the right place to meet them.
+
+Notice the pattern in those examples: the **URL** names the thing, and the **method** says what to do to it. `/users/42` is the same user in all three; `GET`, `PUT`, and `DELETE` are three different intentions about them.
+
+These meanings are conventions, not rules the protocol enforces. Nothing stops you writing a server where `GET /delete-everything` wipes the database. Following the conventions is what makes an interface predictable to anyone else, and browsers and caches assume `GET` is safe to repeat. We will catch the conventions being *merely* conventions, live, in a moment.
+
+## Seeing the Method on the Server
+
+The method arrives on the same `request` object as the URL, as **`request.method`**. This reading's demo is `demo-server/methods-server.js`, sitting next to this notebook, and the first thing it does with every request is log exactly that:
+
+```{walkthrough}
+title: demo-server/methods-server.js
+file: demo-server/methods-server.js
+region: log
+@"request.method": One line, and the server can see the client's intention next to its URL. `routing-server.js` has been logging this since Lesson 1, back when every method it printed was `GET`.
+
+step: The file-serving branch
+file: demo-server/methods-server.js
+region: files
+The handler ends the way Lesson 1's static server did, treating the URL as a file name.
+@"path.join": The URL becomes a path inside `methods-page/`, the folder holding this reading's demo page.
+```
+
+The comment in that second step is the thing to notice: nothing in the file-serving code asks what the method was. Hold that thought.
+
+Run the server (stopping any other server on port 3000 first, with `Ctrl+C` in its terminal):
+
+```
+$ cd "demo-server"
+$ node methods-server.js
+Listening on port 3000
+```
+
+Open `http://localhost:3000` and look at the terminal:
+
+```
+GET /
+GET /styles.css
+GET /script.js
+```
+
+One page load, three requests, every one a `GET`, which is what to expect: a browser loading a page only ever gets. First the page, then each file the page asks for.
+
+## Choosing the Method in `fetch`
+
+So how does anything other than a `GET` ever get sent? One way is [`fetch`](<../../Course 2/Module 3 - Asynchronous Data and Fetching/06 - fetch.webnb>), which we met in Course 2. On its own, `fetch` sends a `GET`:
+
+```javascript
+fetch('/something.txt');            // a GET
+```
+
+The optional second argument is an options object, and `method` is one of its properties:
+
+```javascript
+fetch('/something.txt', { method: 'POST' });
+```
+
+The same works for `'PUT'`, `'DELETE'`, or any other valid method. This is how a page does anything other than read: the browser never sends a `POST` on its own, your JavaScript asks for it.
+
+The page you just loaded has a button for each method, wired up in `demo-server/methods-page/script.js`:
+
+```{walkthrough}
+title: demo-server/methods-page/script.js
+file: demo-server/methods-page/script.js
+region: send
+This file is client-side code: the server sends it to the browser like any other file, and the browser runs it. `send` fetches a URL and puts the response's status and text on the page.
+@"fetch(url, options)": Whatever options object a button passes lands here, as the second argument to `fetch`.
+
+step: One button per method
+file: demo-server/methods-page/script.js
+region: method-clicks
+@"send('/something.txt');": No options at all, so this request is a `GET`.
+@"{ method: 'POST' }": The same URL with the method changed. The next two buttons do the same with `PUT` and `DELETE`.
+```
+
+With the server running, click the four buttons in the page's top row and watch two places:
+
+1. The terminal logs one line per click: `GET /something.txt`, `POST /something.txt`, `PUT /something.txt`, `DELETE /something.txt`.
+2. The Network tab shows the same requests, with the method in its own column.
+
+Then notice what the page itself shows: all four buttons got `200` and the contents of `something.txt`. Sending `DELETE` deleted nothing, because the file-serving code never checks `request.method`, so no code anywhere acted on the intention. That is the "conventions, not rules" caveat on screen. A method is a request, in both senses of the word.
+
+## Answering a POST
+
+Acting on the method is the server's job, and `methods-server.js` does act on it for one URL. Two `if` conditions check the method and the URL *together*:
+
+```{walkthrough}
+title: The /users route
+file: demo-server/methods-server.js
+region: users
+The same URL, `/users`, answered two different ways depending on the method. That is the shape of nearly every web API you will use.
+@"request.method === 'GET' && request.url === '/users'": Both conditions together: this branch is for reading the list of users, and only for reading it.
+@"writeHead(201": One status code worth adding to Lesson 1's list. A `GET` that succeeds answers `200 OK`; a `POST` that succeeds *by creating something* conventionally answers `201 Created`, which tells the client not just that it worked but that a new resource now exists.
+```
+
+The bottom row of buttons on the page sends `GET /users` and `POST /users`. Click them and the page shows the difference: `200 Here is the list of users` for one, `201 User created` for the other. (Nothing is truly created here; a real server would save the new user before claiming `201`.)
+
+## Routing on Method and URL Together
+
+A notebook cell cannot run a real server, but the routing logic is plain JavaScript, so here it is against a stand-in response object:
+
+```{node autorun}
+function makeFakeResponse() {
+  const sent = { statusCode: null, headers: null, body: '' };
+
+  sent.writeHead = function (code, headers) {
+    sent.statusCode = code;
+    sent.headers = headers;
+  };
+
+  sent.end = function (text) {
+    sent.body = text;
+  };
+
+  return sent;
+}
+
+function handleRequest(request, response) {
+  if (request.method === 'GET' && request.url === '/users') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end('here is the list of users');
+  } else if (request.method === 'POST' && request.url === '/users') {
+    response.writeHead(201, { 'Content-Type': 'text/plain' });
+    response.end('user created');
+  } else {
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end('not found');
+  }
+}
+
+const requests = [
+  { method: 'GET', url: '/users' },
+  { method: 'POST', url: '/users' },
+  { method: 'GET', url: '/nowhere' }
+];
+
+for (const request of requests) {
+  const response = makeFakeResponse();
+
+  handleRequest(request, response);
+
+  console.log(request.method + ' ' + request.url + ' -> ' + response.statusCode + ' ' + response.body);
+}
+```
+
+Try adding `{ method: 'DELETE', url: '/users' }` to the list of requests and rerunning the cell: it falls through to the `404`, because the handler checks the method as well as the URL.
+
+From here on we will concentrate on `GET` and `POST`, which is the subject of the next reading.
+
+## Exercises
+
+1. Complete the handler so that reading the list of notes succeeds, creating a note reports that something was created, and anything else is not found.
+
+    ```{node}
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      // TODO:
+      //   GET  /notes -> 200, body 'note list'
+      //   POST /notes -> 201, body 'note created'
+      //   anything else -> 404, body 'not found'
+      //   Send Content-Type text/plain every time.
+    }
+
+    const listed = makeFakeResponse();
+    handleRequest({ method: 'GET', url: '/notes' }, listed);
+
+    console.log(listed.statusCode + ' ' + listed.body);
+    ```
+    ```+solution
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      if (request.method === 'GET' && request.url === '/notes') {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end('note list');
+      } else if (request.method === 'POST' && request.url === '/notes') {
+        response.writeHead(201, { 'Content-Type': 'text/plain' });
+        response.end('note created');
+      } else {
+        response.writeHead(404, { 'Content-Type': 'text/plain' });
+        response.end('not found');
+      }
+    }
+
+    const listed = makeFakeResponse();
+    handleRequest({ method: 'GET', url: '/notes' }, listed);
+
+    console.log(listed.statusCode + ' ' + listed.body);
+    ```
+    ```+test
+    wrap(listed.statusCode + '|' + listed.body).should('equal', '200|note list').run('`GET /notes` should answer `200` with the body `note list`', 'Handled the GET');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ method: 'POST', url: '/notes' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '201|note created').run('`POST /notes` should answer `201`, the code for something having been created, with the body `note created`', 'Handled the POST');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ method: 'GET', url: '/nowhere' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '404|not found').run('Any other request should answer `404` with the body `not found`', 'Handled the unknown URL');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ method: 'DELETE', url: '/notes' }, r); return r.statusCode; })()).should('equal', 404).run('`DELETE /notes` is not one of the two routes, so it should be a `404` too. Check the method as well as the URL', 'Checked the method, not just the URL');
+    ```
+
+2. Write the `fetch` call that asks the server to delete the photo at `/photos/42`.
+
+    ```{javascript}
+    // Write your fetch call here
+    ```
+    ```+solution
+    fetch('/photos/42', { method: 'DELETE' });
+    ```
+    ```+test
+    wrap(/fetch\s*\(\s*['"]\/photos\/42['"]/.test(source)).should('equal', true).run('Call `fetch` with the URL `/photos/42`', 'Called fetch with the right URL');
+    wrap(/\{[^}]*method\s*:\s*['"]DELETE['"][^}]*\}/.test(source)).should('equal', true).run('Pass `{ method: \'DELETE\' }` as the second argument, since `fetch` sends a `GET` otherwise', 'Set the method');
+    ```
+
+3. Picking the method for a removal.
+
+    ```{mcq}
+    A music app lets the user remove one of their saved playlists. The client sends the request to `/playlists/8`. Which method says "remove this resource"?
+    correct: Correct! `DELETE` is the method whose meaning is removal, and the URL names which playlist. The server still needs code that acts on that intention.
+    wrong: The URL already names which playlist. The method has to say what should happen to it.
+    [x] `DELETE`
+    [ ] `GET`
+    [ ] `POST`
+    [ ] `PUT`
+    ```
+
+4. Reporting that something new exists.
+
+    ```{mcq}
+    A recipe site's Save button sends `POST /recipes` carrying a new recipe, and the server stores it successfully. Which status code fits the response?
+    correct: Correct! `201 Created` is the conventional answer to a `POST` that creates a resource. `200` would also mean success, and `201` says more.
+    wrong: The request succeeded, so it is a 2xx code. Which one is specifically about something having been created?
+    [x] `201`
+    [ ] `301`
+    [ ] `404`
+    [ ] `500`
+    ```
+
+## Resources
+
+- [MDN: HTTP request methods](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Methods)
+- [MDN: 201 Created](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/201)
+- [MDN: using fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
+- [Node.js: message.method](https://nodejs.org/api/http.html#messagemethod)

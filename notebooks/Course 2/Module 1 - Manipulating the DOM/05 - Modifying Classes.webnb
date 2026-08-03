@@ -1,0 +1,281 @@
+# Modifying Classes
+
+Classes are how we tell the browser that some elements should be displayed differently from others. By adding and removing them from JavaScript, we can make a page respond visually to what the user does.
+
+Here is the setup for this lesson: a list with a single item, which has the class `item`. We will add more items to it later on.
+
+```html id=oneitem
+<ul>
+  <li class="item">Item 1</li>
+</ul>
+```
+
+```css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+The CSS gives every `.item` a gray border, and gives any item that is *also* `.selected` a yellow background. Nothing has the `selected` class yet, so nothing is yellow. Putting that class on and taking it off again is the whole job of the JavaScript in this lesson.
+
+Our goal: let the user click the item to select it, and click again to unselect it.
+
+## The `classList` Property
+
+Every element object has a **`classList`** property for managing its classes. It has three methods we need:
+
+- **`classList.add('name')`** adds a class.
+- **`classList.remove('name')`** removes a class.
+- **`classList.contains('name')`** returns a boolean: `true` if the element has the class, `false` if not.
+
+Here they are on our one item:
+
+```{javascript autorun}
+const item = document.querySelector('.item');
+
+console.log(item.classList.contains('selected'));
+
+item.classList.add('selected');
+
+console.log(item.classList.contains('selected'));
+```
+```+id=oneitem
+```
+```+css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+The item turns yellow, and the two logs read `false` and then `true`. We did not touch its text, its style attribute, or anything else; we added one class, and the CSS that was already there did the rest.
+
+## Doing It On Click
+
+Adding the class as soon as the code runs is not what we want. We want it to happen when the user clicks. So we take that line, put it in a function, and hand the function to `addEventListener`:
+
+```{javascript autorun}
+const item = document.querySelector('.item');
+
+function onClick() {
+  item.classList.add('selected');
+}
+
+item.addEventListener('click', onClick);
+```
+```+id=oneitem
+```
+```+css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+Click the item and it turns yellow. Click it again and nothing happens, because adding a class that is already there does nothing.
+
+## Unselecting Too
+
+To make the click work both ways, we ask whether the item is already selected, and do the opposite:
+
+```{javascript autorun}
+const item = document.querySelector('.item');
+
+function onClick() {
+  if (item.classList.contains('selected')) {
+    item.classList.remove('selected');
+  } else {
+    item.classList.add('selected');
+  }
+}
+
+item.addEventListener('click', onClick);
+```
+```+id=oneitem
+```
+```+css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+Now clicking the item turns it yellow, and clicking again turns it back. Open the developer tools inspector while you click and you can watch the class appear and disappear on the element.
+
+## Working with Multiple Items
+
+One item is not much of a list. Here is the same markup with three of them, and this time the second one starts out with the `selected` class already on it:
+
+```html id=selectlist
+<ul>
+  <li class="item">Item 1</li>
+  <li class="item selected">Item 2</li>
+  <li class="item">Item 3</li>
+</ul>
+```
+
+`querySelector` only ever hands back the first match, so the code we just wrote would wire up Item 1 and leave the other two dead. To reach all of them we use `querySelectorAll` and a `for...of` loop, adding a listener to each:
+
+```{javascript autorun}
+const items = document.querySelectorAll('.item');
+
+for (const item of items) {
+  function onClick() {
+    if (item.classList.contains('selected')) {
+      item.classList.remove('selected');
+    } else {
+      item.classList.add('selected');
+    }
+  }
+
+  item.addEventListener('click', onClick);
+}
+```
+```+id=selectlist
+```
+```+css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+Every item is now clickable and toggles independently. Each pass of the loop has its own `item`, and the function it creates remembers which one it belongs to.
+
+## The Shortcut: `classList.toggle`
+
+There is a fourth method that does exactly the "remove it if present, add it if not" dance in one call:
+
+```{javascript autorun}
+const items = document.querySelectorAll('.item');
+
+for (const item of items) {
+  function onClick() {
+    item.classList.toggle('selected');
+  }
+
+  item.addEventListener('click', onClick);
+}
+```
+```+id=selectlist
+```
+```+css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+Identical behavior, four lines shorter. `toggle` is what you would normally write.
+
+I showed the long version first on purpose, because `contains`, `add`, and `remove` are the pieces you will reach for whenever the logic is not a clean toggle, and because writing it out makes it obvious what `toggle` is doing for you.
+
+### The Optional Second Argument
+
+`toggle` takes an optional second argument that decides the outcome instead of flipping it. Pass `true` and the class is added; pass `false` and it is removed:
+
+```javascript
+item.classList.toggle('selected', true);    // same as classList.add('selected')
+item.classList.toggle('selected', false);   // same as classList.remove('selected')
+```
+
+Writing `true` or `false` there is just a longer way of saying `add` or `remove`. The second argument becomes useful when you pass a condition instead: the class is added whenever the condition is true and removed whenever it is false. Here is a list where only one item can be selected at a time:
+
+```{javascript autorun}
+const items = document.querySelectorAll('.item');
+
+for (const item of items) {
+  function onClick() {
+    for (const other of items) {
+      other.classList.toggle('selected', other === item);
+    }
+  }
+
+  item.addEventListener('click', onClick);
+}
+```
+```+id=selectlist
+```
+```+css
+.item { border: 1px solid gray; padding: 6px; margin: 4px 0; list-style: none; }
+.item.selected { background-color: yellow; }
+```
+
+Clicking an item selects it and unselects every other one. Each pass of the inner loop asks the same question of every item, "are you the one that was clicked?", and the answer becomes the class. There is no `if` and no separate `remove` call.
+
+Put together, `classList` plus CSS is the main way we make a page visually dynamic: the CSS says what each class looks like, and the JavaScript decides which elements have which classes at any moment.
+
+## Exercises
+
+1. Add the class `highlight` to the paragraph.
+
+    ```html id=page1
+    <p id="message" class="info">This message matters.</p>
+    ```
+
+    ```{javascript}
+    const message = document.querySelector('#message');
+
+    // Write your code here
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const message = document.querySelector('#message');
+
+    message.classList.add('highlight');
+    ```
+    ```+test
+    assert('#message').should('have.class', 'highlight').run('Add the `highlight` class with `classList.add`', 'Added the highlight class');
+    assert('#message').should('have.class', 'info').run('Leave the `info` class in place; adding a class does not remove the others', 'Kept the existing class');
+    ```
+
+2. Remove the `hidden` class from the panel, leaving its other class alone.
+
+    ```html id=page2
+    <section id="panel" class="card hidden">Panel content</section>
+    ```
+
+    ```{javascript}
+    const panel = document.querySelector('#panel');
+
+    // Write your code here
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const panel = document.querySelector('#panel');
+
+    panel.classList.remove('hidden');
+    ```
+    ```+test
+    wrap(panel.classList.contains('hidden')).should('equal', false).run('Remove the `hidden` class with `classList.remove`', 'Removed the hidden class');
+    assert('#panel').should('have.class', 'card').run('Leave the `card` class in place', 'Kept the card class');
+    ```
+
+3. Make every button toggle its own `pressed` class when clicked.
+
+    ```html id=page3
+    <button>One</button>
+    <button class="pressed">Two</button>
+    <button>Three</button>
+    ```
+
+    ```{javascript}
+    const buttons = document.querySelectorAll('button');
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const buttons = document.querySelectorAll('button');
+
+    for (const button of buttons) {
+      function onClick() {
+        button.classList.toggle('pressed');
+      }
+
+      button.addEventListener('click', onClick);
+    }
+    ```
+    ```+test
+    wrap(document.querySelectorAll('.pressed').length).should('equal', 1).run('Only the second button should start out pressed', 'The starting state is right');
+    assert('button').click().run('Could not find the buttons', 'Clicked every button once');
+    wrap(document.querySelectorAll('.pressed').length).should('equal', 2).run('After one click each, the first and third buttons should be pressed and the second should not. Every button needs its own listener', 'Each button toggles its own class');
+    ```
+
+## Resources
+
+- [MDN: Element.classList](https://developer.mozilla.org/en-US/docs/Web/API/Element/classList)
+- [MDN: DOMTokenList.toggle()](https://developer.mozilla.org/en-US/docs/Web/API/DOMTokenList/toggle)
+- [MDN: DOMTokenList.contains()](https://developer.mozilla.org/en-US/docs/Web/API/DOMTokenList/contains)

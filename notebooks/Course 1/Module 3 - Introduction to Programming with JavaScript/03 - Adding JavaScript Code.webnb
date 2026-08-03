@@ -1,0 +1,162 @@
+# Adding JavaScript Code
+
+We have learned a little about where JavaScript came from. Now the practical question: how do we actually add JavaScript to our HTML? There are three options, and they line up almost exactly with the three ways we added CSS earlier.
+
+## Option 1: Inline JavaScript (we will **not** use this)
+
+With **inline JavaScript** we set special attributes on an element, such as `onclick`, and give them a little bit of JavaScript code as their value. That code runs when the matching event happens - for `onclick`, when the user clicks the element.
+
+```{html autorun}
+<button onclick="console.log('Hello!')">Click me!</button>
+```
+
+Run the cell, then click the button and look at the output. The value of the `onclick` attribute, `console.log('Hello!')`, is JavaScript, and clicking the button is what makes it run.
+
+There is an attribute like this for a long list of events, not only clicks. But we are going to **avoid this in this class**, so you can put it in your mind, know that it exists, and then let it fall out of your mind again. The reason is that it does not lead to scalable or complex JavaScript: the code lives inside an HTML attribute, so it has to be short, it cannot be reused, and it is mixed into the structure of the page. This is the same maintainability argument we made against inline CSS earlier. You will not see me writing inline JavaScript anywhere in this specialization.
+
+Instead, we will include JavaScript with the `<script>` element, and there are two ways to do that.
+
+## Option 2: Internal JavaScript
+
+Recall the `<style>` element from Module 2: everything written inside it is CSS, with a completely different syntax from the HTML surrounding it. The `<script>` element is the same idea for JavaScript. Everything inside a `<script>` element is JavaScript code, with its own syntax, sitting inside an HTML file.
+
+```html
+<script>
+  console.log("Hello! This is JavaScript code!");
+</script>
+```
+
+Writing the code directly inside the element like this is called **internal JavaScript**. Whatever is in there runs when the browser reaches it, which means it runs at the point in the HTML where the `<script>` element appears. That detail will matter later, when the script needs the rest of the page to already exist.
+
+Here is that same JavaScript, in a cell that actually runs it:
+
+```{javascript autorun}
+console.log('Hello! This is JavaScript code!');
+```
+
+All of this lives in the context of one file. If the `<script>` element above is inside `index.html`, then that JavaScript belongs to `index.html` and to nothing else.
+
+### More Than One Script Element
+
+A page can have as many `<script>` elements as it likes, and their code runs in the order the elements appear in the HTML.
+
+```html
+<script>
+  console.log("Hello! This is JavaScript code!");
+  console.log("...and more");
+</script>
+<script>
+  console.log("Hello again! This is more JavaScript code!");
+</script>
+```
+
+## Option 3: External JavaScript
+
+We can also keep the JavaScript in its own file and point at it, exactly the way `<link>` points at a stylesheet. To do that, we add the `src` attribute to the `<script>` element:
+
+```html
+<script src="script.js"></script>
+```
+
+The `src` attribute says where to find the file. Here it is a bare file name, so the browser looks for `script.js` in the same directory as the HTML file. The browser loads that file and runs its contents right there, as though the code had been typed between the tags.
+
+Notice that the `<script>` element still needs a closing tag even though there is nothing between the tags. `<script src="script.js">` on its own is not enough.
+
+So what goes in `script.js`? Only JavaScript. No `<script>` element, because everything in a `.js` file is already JavaScript, in the same way that everything in a `.css` file is already CSS.
+
+```{javascript autorun}
+console.log('Hello! This is JavaScript code!');
+console.log('...and more');
+```
+
+And as with internal scripts, several external files run in the order their elements appear:
+
+```html
+<script src="script1.js"></script>
+<script src="script2.js"></script>
+```
+
+## A Real Page and Its Script
+
+Three real files sit next to this notebook: `first-script.html`, which uses an internal script, and `external-script.html` with `script.js`, which is the same page with the JavaScript moved out. Click a file name or a line number below to open the real file beside the notebook.
+
+```{walkthrough}
+title: Internal and external JavaScript, side by side
+step: Internal JavaScript
+file: first-script.html
+The whole page is one file. The `<script>` element sits at the end of the `<body>`, so by the time its code runs, the heading and the paragraph above it already exist.
+@"<script>": Everything between this line and the closing tag is JavaScript, not HTML.
+@"Hello, world": These two lines run in the order they are written, top to bottom.
+
+step: The same page, externally
+file: external-script.html
+This page has the same heading and paragraph, but no JavaScript in it at all.
+@"script.js": The `src` attribute is the only connection between this file and the JavaScript. The closing `</script>` tag is still required, with nothing between the tags.
+
+step: The script file
+file: script.js
+A `.js` file holds only JavaScript. There is no `<script>` element here, and this file never mentions `external-script.html`, so any page that wants these two lines can point at it.
+```
+
+Both pages behave identically. Open either one in a preview and then open the developer console, and you will see the same two messages. We will look at that console properly in a couple of lessons.
+
+Those are the three ways of getting JavaScript into a page. Ignore option one; we will use the `<script>` element, sometimes with its code inside and sometimes with an `src` attribute pointing at a separate file. Now that we can get JavaScript onto a page, it is finally time to write some.
+
+## Exercises
+
+1. Add a `<script>` element to the `<head>` of the page below that loads a file named `script.js` (set the `src` attribute).
+
+    ```{html}
+    <html>
+      <head>
+      </head>
+      <body>
+        <p>Hello</p>
+      </body>
+    </html>
+    ```
+    ```+solution
+    <html>
+      <head>
+        <script src="script.js"></script>
+      </head>
+      <body>
+        <p>Hello</p>
+      </body>
+    </html>
+    ```
+    ```+test
+    assert('script').should('exist').should('have.attr', 'src', 'script.js').run('Could not find a `script` element with `src` set to `script.js`', 'Added a script element loading `script.js`');
+    ```
+
+2. The cell below is the JavaScript that would live inside `script.js`. Add a second line so the cell logs `Goodbye` after the greeting.
+
+    ```{javascript}
+    console.log('Hello from script.js');
+    ```
+    ```+solution
+    console.log('Hello from script.js');
+    console.log('Goodbye');
+    ```
+    ```+test
+    check.consoleLogged('Hello from script.js').run('Keep the first message', 'Logged the greeting');
+    check.consoleLogged('Goodbye').run('Add a line that logs `Goodbye`', 'Logged `Goodbye`');
+    ```
+
+3. What does putting code inside a `<script>` element change?
+
+    ```{mcq}
+    An HTML file contains a `<script>` element. What is true of the text inside it?
+    correct: Correct! A `<script>` element switches languages, the same way a `<style>` element does: everything inside it is read as JavaScript rather than as HTML.
+    wrong: Look back at the comparison with the `<style>` element at the start of "Option 2: Internal JavaScript".
+    [x] It is read as JavaScript, which has a different syntax from the HTML around it.
+    [ ] It is read as HTML, like the rest of the file.
+    [ ] It is treated as a comment and ignored.
+    [ ] It is read as CSS.
+    ```
+
+## Resources
+
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)
+- [MDN: What is JavaScript?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_is_JavaScript)
+- [MDN: Introduction to events](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Events)

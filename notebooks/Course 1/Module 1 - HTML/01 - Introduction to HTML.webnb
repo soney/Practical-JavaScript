@@ -1,0 +1,165 @@
+# Introduction to HTML
+
+Before we dive into JavaScript, we need to learn some foundational HTML. We will cover _just enough_ HTML (and CSS) to get us started with JavaScript.
+
+## What is HTML?
+
+**HTML** (HyperText Markup Language) is the standard language for creating web pages. It is a "markup language"---a language for adding **structure** and **formatting** to text. More specifically, it is a markup language for creating "hypertext" documents that can contain links to other documents (which is the foundation of the World Wide Web).
+
+## The Three Web Languages
+
+Web development involves three primary languages:
+
+- **HTML** for defining the structure and content
+- **CSS** for specifying how browsers should render/display this content
+- **JavaScript** for defining the **behavior** of the page---how it reacts to things like clicks and keypresses
+
+If we use the analogy of a person, **HTML** is like the skeleton (giving structure and shape), **CSS** is like the skin and clothes (giving appearance and style), and **JavaScript** is like the muscles (giving movement and interactivity).
+
+## Using These Notebooks
+
+These notebooks are designed to be interactive. You can run the code cells, edit them, and see the results.
+For example, try editing the text in the following cell:
+
+```{html}
+<p>Hello! Try "running" this by clicking me and then clicking the "play" button to my left.</p>
+```
+
+Some cells will also have tests that you can run by clicking the "play" button to the left of the cell. For example, try editing the cell below to say:
+
+```html
+<p>Hello World!</p>
+```
+
+```{html}
+<p></p>
+```
+```+solution
+<p>Hello World!</p>
+```
+```+test
+assert('p').should('have.text', 'Hello World!').run('Missing or incorrect text', 'Correct text');
+```
+
+_Note that punctuation (`!`), capitalization, and spacing matter._
+
+
+## Creating "Real" HTML Files
+
+These notebooks are meant for learning and experimentation. Your practice exercises will ask you to work with "real" HTML files. To get a sense of how this works, let's create a file manually (for most exercises, you won't need to *create* these from scratch but instead will modify existing ones).
+
+
+### Create a Directory
+First, let's create a folder named `intro-html` inside of the `Module 1 - HTML` folder in the workspace (in VS Code, right-click on the "Module 1 - HTML" folder and select "New Folder").
+
+![VS Code file explorer showing how to create a new folder](images/new_folder.png)
+
+```{external}
+title: Create a folder
+interval: 2s
+- directory: intro-html | Create a folder named `intro-html`
+```
+
+Make sure that your directory is in the same directory as this notebook (`Module 1 - HTML`). You can drag and drop it if not.
+
+![VS Code file explorer showing the new folder in the correct location](images/created_intro_html.png)
+
+### Create a File
+Next, create a file named `index.html` inside `intro-html`.
+
+The `.html` at the end of that name is the file's **extension**: the part of a file name after the final dot. The extension tells the computer what kind of file it is (in our case, an HTML file is treated as a web page). HTML files are almost always given the `.html` extension (you may occasionally run across the older `.htm`, which means the same thing).
+
+The part before the dot (`index`) is up to you. `index` is typically the default name for the "main" page of a website.
+
+Be careful, though: some computers are set to hide extensions in their file listings, so a file that appears as `index` might really be named `index.html.txt`, which a browser will not treat as a web page. VS Code always shows the full name, so trust the name you see there.
+
+In VS Code, right-click the `intro-html` folder and select "New File", then name the file `index.html`.
+
+```{external}
+title: Create an HTML file
+interval: 2s
+- file: intro-html/index.html | Create a file named `index.html` inside `intro-html`
+```
+
+### Add Some HTML
+*Note 1: you will want to probably view this page side-by-side with the notebook. In VS Code, you can right-click on the `index.html` file and select "Open to the Side".*
+
+*Note 2: make sure to save your changes by clicking File->Save.*
+
+Open `index.html` and paste the following code into it:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My First Page</title>
+  </head>
+  <body>
+    <h1>Hello World!</h1>
+  </body>
+</html>
+```
+
+```{external}
+title: Build your first HTML file
+interval: 2s
+- file: intro-html/index.html | Create a file named `index.html` inside `intro-html`
+- contains: intro-html/index.html | <!DOCTYPE html> | Add the HTML doctype to `index.html`
+- contains: intro-html/index.html | <title> | Add a `title` element
+- contains: intro-html/index.html | <h1>Hello World!</h1> | Add an `h1` heading with the text `Hello World!`
+```
+
+
+### Preview Your Page
+
+To see your page, right-click on `index.html` and select "Show Preview". This will open your page in the browser. You should see your heading displayed.
+![A browser window showing the heading "Hello World!"](images/show-preview.png)
+
+Great job! You have created your first HTML page. You can edit the `index.html` file and see your changes reflected in the preview.
+
+### Editing Notebooks vs. "Real" HTML Files
+
+These notebooks are designed to help you learn and experiment with HTML in a "sandbox" environment. Your practice exercises and graded assignments will involve working with "real" HTML files, which you will edit and run in a browser. The skills you learn here will transfer directly to those exercises.
+
+## Exercises
+
+Most of these readings will conclude with a set of short questions. I strongly recommend trying these questions to test and improve your understanding of the material. You can try them as many times as you like and you will *not* be graded on your answers.
+
+Test your understanding of this lesson with the following questions.
+
+```{mcq}
+What does HTML stand for?
+correct: Correct! HTML stands for HyperText Markup Language, the standard language for creating web pages.
+wrong: Not quite. Look back at the first sentence of "What is HTML?" where the full name is spelled out.
+[x] HyperText Markup Language
+[ ] HyperText Machine Language
+[ ] HighText Markdown Language
+[ ] HomeText Making Language
+```
+
+```{mcq}
+What is the main purpose of a "markup language" like HTML?
+correct: Exactly! A markup language adds structure and formatting to text. HTML is the skeleton that gives a page its structure and shape.
+wrong: Think about the analogy in the lesson: HTML is described as the "skeleton." What does a skeleton provide?
+[x] Adding structure and formatting to text
+[ ] Styling the colors and fonts a browser displays
+[ ] Defining how the page reacts to clicks and keypresses
+[ ] Storing data in a database
+```
+
+```{mcq}
+Based on the lesson's body analogies, select ALL of the matches that are correct.
+correct: Correct! HTML is the skeleton (structure), CSS is the skin and clothes (appearance), and JavaScript is the muscles (behavior).
+wrong: Not quite. Revisit "The Three Web Languages" section, where each language is compared to a part of the body or its covering.
+[x] HTML is the skeleton, providing structure
+[x] CSS is the skin and clothes, providing appearance and style
+[x] JavaScript is the muscles, providing movement and interactivity
+[ ] CSS is the skeleton that defines the page's content
+[ ] HTML is the muscles that react to clicks
+```
+
+## Resources
+
+- [MDN: HTML basics](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Basic_HTML_syntax)
+- [MDN: HTML elements reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements)
+- [MDN: What is JavaScript?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_is_JavaScript)

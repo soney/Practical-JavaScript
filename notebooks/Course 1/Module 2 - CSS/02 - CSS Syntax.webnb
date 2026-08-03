@@ -1,0 +1,124 @@
+# CSS Syntax
+
+In the last lesson we saw the three places CSS can live: in a `style` attribute, in a `<style>` element, or in a separate `.css` file. CSS is essentially a different language from HTML, and it has its own syntax. In this lesson we'll go over the syntax of CSS.
+
+## CSS Rules
+
+In CSS, we declare **rules** that tell the browser how to style HTML elements. We wrote one in the last lesson: `p { color: green; }`, which turned every paragraph on the page green. Every rule has the same two parts, a **selector** and a **declaration block**:
+
+- The **selector** specifies which HTML element(s) the rule applies to
+  - The selector can be an HTML tag (e.g., `p`, `h1`, etc.), a class (e.g., `.class-name`), an ID (e.g., `#id-name`), or a combination of these (which we'll cover later)
+- The **declaration block** specifies what styles to apply to the selected element(s), via **declarations**.
+
+```css
+p {
+  color: blue;
+  font-size: 16px;
+}
+```
+
+In this example:
+
+- The selector is `p`, which means this rule applies to all `<p>` elements
+- The declaration block contains two declarations:
+  - `color: blue;` sets the text color to blue
+  - `font-size: 16px;` sets the font size to 16 pixels
+- Each declaration ends with a semicolon
+
+![Diagram of a CSS rule: an outer box labeled Rule contains the selector p in a box labeled Selector, followed by curly braces holding two boxed declarations labeled Declarations, color: blue; and font-size: 16pt;](images/css-rules.png)
+
+Each declaration has a **property** and a **value**. The property is the style we want to change (like `color` or `font-size`), and the value is what we want to change it to (like `blue` or `16px`). The property and value are separated by a colon (`:`), and each declaration ends with a semicolon (`;`).
+
+![Diagram showing the properties of a CSS declaration (color and font-size)](images/css-properties.png)
+
+![Diagram showing the values of a CSS declaration (blue and 16px)](images/css-values.png)
+
+Here is that rule in action, put in a `<style>` element in the `<head>` of an HTML document the same way we wrote internal CSS in the last lesson:
+
+```{html autorun}
+<head>
+  <style>
+    p {
+      color: blue;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+  <p>This is blue text.</p>
+  <p>This is also blue text.</p>
+</body>
+```
+
+## CSS Comments
+
+We can add comments by starting with `/*` and ending with `*/`. Just like the HTML comments we saw in Module 1, CSS comments are ignored by the browser and are useful for explaining your code, leaving notes for yourself or others, or temporarily disabling code.
+
+```css
+/* This is a comment */
+p {
+  color: blue; /* This sets the text color to blue */
+  font-size: 16px; /* This sets the font size to 16 pixels */
+  /* background-color: black; */
+}
+```
+
+The last line is a declaration that has been **commented out**: it is still in the file, but the browser skips it, so the background stays unchanged. Deleting the `/*` and `*/` would turn it back on. This is a common way to try a declaration without losing it.
+
+One thing to watch: CSS comments do not nest. A comment ends at the **first** `*/` the browser reaches, so wrapping `/* ... */` around a chunk of CSS that already contains a comment leaves the tail end of it uncommented.
+
+## Exercises
+
+1. Parts of a declaration
+
+   ```{mcq}
+   What does a CSS declaration typically consist of?
+   correct: Correct! A declaration pairs a property with a specific value.
+   wrong: Think about what comes after the selector in the curly braces.
+   [x] A property and a value.
+   [ ] A selector and a class.
+   [ ] An HTML tag and an attribute.
+   [ ] A comment and a style.
+   ```
+
+2. Write a complete CSS rule with a **selector** and a **declaration block**. Your rule styles the HTML below, which you cannot edit:
+
+    ```html id=style-me
+    <p>Style me! I am a p element.</p>
+    ```
+
+    Select every `<p>` element and give it two declarations: set `color` to `blue` and set `font-size` to `16px`. Remember that a property and its value are separated by a colon (`:`), and each declaration ends with a semicolon (`;`).
+
+    ```{css}
+    /* Write your CSS rule here. */
+    /* Write only the rule: no <style> element and no <head> are needed. */
+    ```
+    ```+id=style-me
+    ```
+    ```+solution
+    p {
+      color: blue;
+      font-size: 16px;
+    }
+    ```
+    ```+test
+    assert('p').should('exist').should('have.css', 'color: blue').should('have.css', 'font-size: 16px').run('Make sure your p rule sets color to blue and font-size to 16px', 'Your CSS rule styles the paragraph correctly');
+    ```
+
+3. What is the correct syntax for adding a comment in a CSS file?
+
+   ```{mcq}
+   What is the correct way to write a comment in CSS?
+   correct: Correct! CSS uses `/* comment */` for comments.
+   wrong: CSS comment syntax is the same as multi-line comments in many programming languages.
+   [x] `/* This is a comment */`
+   [ ] `// This is a comment`
+   [ ] `<!-- This is a comment -->`
+   [ ] `' This is a comment`
+   ```
+
+## Resources
+
+- [MDN: CSS syntax](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Syntax/Introduction)
+- [MDN: CSS selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors)
+- [MDN: CSS comments](https://developer.mozilla.org/en-US/docs/Web/CSS/Guides/Syntax/Comments)

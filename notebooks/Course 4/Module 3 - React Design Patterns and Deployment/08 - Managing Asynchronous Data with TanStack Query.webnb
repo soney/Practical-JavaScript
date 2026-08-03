@@ -1,0 +1,329 @@
+# Managing Asynchronous Data with TanStack Query
+
+So far, whenever a component needed data from a third-party API, we called `fetch` inside an effect and wrote the bookkeeping ourselves: a state variable for the result, another for whether we are still loading, another for whether something went wrong. In the video, we took a word finder app built exactly that way and rewrote it with **TanStack Query**, a library that manages query state in React for us.
+
+The finished code from that video is in your workspace, in the `library-demos/react-tanstack-query/` folder next to this notebook, and this reading walks through it.
+
+One difference from the other projects staged for these readings: this one is for *reading*, not previewing. Libraries like React and i18next ship single-file browser builds that a `<script>` tag can load, so their demos run straight from "Show Preview". TanStack Query is published only as npm packages, so this project keeps the build step from the video (webpack and Babel, configured by its `.babelrc` and `webpack.config.js`). To actually run it, copy the whole folder somewhere outside this workspace, open a terminal inside the copy, and run `npm install`, then `npm run dev`. It also fetches live data over the network, so running it needs an internet connection. Nothing below requires running it: the walkthroughs retrace what the video did.
+
+## The Word Finder and Its Fetch Function
+
+The app is a word finder built on the **Datamuse API**, an API for information about words. You type a search term, and the app lists words with a *similar meaning*: searching for `state` brings back words like `state of matter`, `land`, and `country`, and searching for `ocean` brings back `sea`, `oceanic`, and `seabed`.
+
+The fetching itself is a plain async function, and it is the one piece the video never had to change:
+
+```{walkthrough}
+title: The function that knows how to fetch
+file: library-demos/react-tanstack-query/src/App.jsx
+region: fetch-words
+This is ordinary promise code of the kind we wrote in earlier courses. Nothing about it is specific to TanStack Query, and that is the point: the library will not fetch anything for us. We keep writing the fetch; it manages everything around the fetch.
+@"URLSearchParams": Builds the query string for the URL. Setting `ml` (meaning-like) to the search term asks Datamuse for words with a meaning like that term.
+@"!response.ok": A response can come back as an error page rather than data. Throwing here is what will eventually count as the query failing.
+@"response.json()": The function returns a promise for the parsed data. Whoever calls this function has to deal with that promise, and tracking a promise's progress is exactly the chore this reading is about.
+```
+
+## The Hard Way: Tracking a Request by Hand
+
+Here is the version the video starts from. This file is not in your workspace, because the video deletes most of it; it is worth reading once to see what we are escaping:
+
+```jsx
+export default function App() {
+  const [searchTerm, setSearchTerm] = useState("state");
+  const [words, setWords] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function loadWords() {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchWords(searchTerm);
+        setWords(data);
+      } catch (err) {
+        setError(err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    loadWords();
+  }, [searchTerm]);
+
+  return (
+    <main>
+      <h1>Word Finder</h1>
+
+      <input value={searchTerm}
+        onChange={(event) => setSearchTerm(event.target.value)} />
+
+      {isLoading && <p>Loading...</p>}
+      {error && <p>Something went wrong.</p>}
+
+      <ul>
+        {words.map((word) => (
+          <li key={word.word}>{word.word}</li>
+        ))}
+      </ul>
+    </main>
+  );
+}
+```
+
+Read the effect from top to bottom: it runs when the component first loads and again whenever `searchTerm` changes; `loadWords` marks loading as started, clears any old error, tries the fetch inside a `try` block, records the error in `catch` if one happens, and the `finally` block turns loading off no matter how things went. That is four state variables and a block of ceremony, all to answer three questions about one request: is it still going, did it fail, and what came back.
+
+Every request walks through those same moments, and this cell acts them out with a fake fetch so you can watch the bookkeeping happen. The `query` object here has the same three fields we keep re-implementing:
+
+```{javascript autorun}
+function fakeFetchWords(searchTerm) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve([searchTerm + ' of matter', 'land', 'country']);
+    }, 600);
+  });
+}
+
+const query = { status: 'pending', data: undefined, error: null };
+console.log('status:', query.status, '| data:', query.data);
+
+fakeFetchWords('state')
+  .then((result) => {
+    query.status = 'success';
+    query.data = result;
+    console.log('status:', query.status, '| data:', query.data.join(', '));
+  })
+  .catch((err) => {
+    query.status = 'error';
+    query.error = err;
+    console.log('status:', query.status, '| error:', String(err));
+  });
+```
+
+Try changing `resolve([...])` to `reject(new Error('network down'))` and running the cell again to travel the error path instead. Notice that `data` stays `undefined` until the promise succeeds; keep that in mind for later.
+
+Doing this by hand has a second problem the video points out: **no memory**. Search for `state`, then `ocean`, then `state` again, and the third search re-runs the whole request even though we fetched those exact words a moment ago. We could try to remember old results ourselves with a memo hook (a React hook for remembering computed values), but that piles on even more complexity.
+
+## Setting Up: a QueryClient and Its Provider
+
+In the video we install the library with `npm install @tanstack/react-query`, a command taken straight from the TanStack Query documentation, and restart the dev server. In the staged copy, the install shows up as a line in `package.json`:
+
+```{walkthrough}
+title: The library in the project
+step: The dependency
+file: library-demos/react-tanstack-query/package.json
+This is why the project needs `npm install` before it can run: the libraries it imports, including TanStack Query, have to be downloaded into the project first. The `dev` script under `scripts` is what `npm run dev` starts.
+@"@tanstack/react-query": The library the video adds. Everything else was already there for React and the build step.
+
+step: The entry point, wrapped in a provider
+file: library-demos/react-tanstack-query/src/main.jsx
+Two new imports, one new object, and one new element around `<App />`. This is all the setup the library asks for.
+@"from '@tanstack/react-query'": `QueryClient` and `QueryClientProvider` come from the library we installed.
+@"new QueryClient()": The **QueryClient** is the object that runs our asynchronous queries and remembers the ones it has already run. There is one for the whole app.
+@"client={queryClient}": To make that client available to every React component, we wrap the app in a **QueryClientProvider** and hand it the client through the `client` prop. This works like the [context providers](<04 - useContext - Sharing State Across Components.webnb>) we met earlier in this module: anything rendered inside can reach what the provider shares.
+```
+
+## `useQuery` Replaces the Bookkeeping
+
+With the provider in place, any component can call the `useQuery` hook. Here is the component after the video's rewrite; every state variable except the search term is gone, and so is the entire effect:
+
+```{walkthrough}
+title: Describing the query instead of managing it
+step: The useQuery call
+file: library-demos/react-tanstack-query/src/App.jsx
+region: use-query
+We pass `useQuery` an object describing our query, and it hands back an object that knows everything about the request's progress.
+@"const [searchTerm": The one state variable that survives. What the user typed is genuinely UI state; everything about the request itself moves into the library.
+@"useQuery({": `wordsQuery` is an object with the request's whole story on it: whether it is loading, whether it failed, what came back, and more.
+@"queryFn:": The most important key. Its value is a function that knows how to run our asynchronous query - here, calling the `fetchWords` we already had. TanStack Query calls it for us when it decides a fetch is needed.
+@"queryKey:": The query's identity, which the next section is about.
+@"enabled:": An on/off switch for the query, covered below.
+
+step: Rendering from the query object
+file: library-demos/react-tanstack-query/src/App.jsx
+region: render
+The three questions we used to track in state variables are now read straight off `wordsQuery`.
+@"isPending && searchTerm": `isPending` replaces the `isLoading` state variable: true while the request has not produced data yet. (The extra `&& searchTerm` is part of the `enabled` story below.)
+@"isError": Replaces the `error` state variable. If `fetchWords` throws - remember the `!response.ok` check - this becomes true and we show the apology instead.
+@"isSuccess && wordsQuery.data": `isSuccess` is true once the data has arrived, and only then do we read `wordsQuery.data`, which replaces the `words` state variable. Before success, `data` is still `undefined` - the same thing you saw in the fake-fetch cell - so checking first is not optional.
+```
+
+The component reads better than the manual version and does strictly more. But the first version of this rewrite in the video had a bug worth understanding.
+
+## The `queryKey`: One Entry Per Search
+
+When the video first switched to `useQuery`, typing a new search term did not update the results. The reason: `useQuery` had no way to know that a search for `ocean` is a *different query* from a search for `state`, so it saw no reason to call `fetchWords` again.
+
+The fix is the `queryKey`. Every distinct query should have a distinct key, and the key is an array:
+
+```{walkthrough}
+title: The key names the query
+file: library-demos/react-tanstack-query/src/App.jsx
+region: use-query
+@"queryKey:": Because `searchTerm` is part of the key, a new search term makes a new key, and a new key tells TanStack Query this is a query it has not run yet - so it refetches automatically. That is the whole trigger: change a value in the key, get a fresh query.
+```
+
+The key has two parts, and both earn their place:
+
+- `searchTerm` is the changing part. With it in the key, typing `ocean` refetches; without it, the query never updates.
+- `"ml"` names *which kind* of Datamuse search this is. The API can do more than meaning-like searches - `sp`, for example, finds words *spelled* like the term, and some other component might run that search with the same term. With the kind in the key, an `ml` search for `state` and an `sp` search for `state` are two different queries instead of one colliding entry.
+
+The key is also what powers **caching**. The QueryClient files every result under its key, so when a key it has seen comes back - you search `state`, then `ocean`, then `state` again - the cached words for `["ml", "state"]` are on screen immediately instead of re-running the request from scratch. This cell models that idea with a plain object as the cache:
+
+```{javascript autorun}
+const cache = {};
+
+function search(endpoint, term) {
+  const key = JSON.stringify([endpoint, term]);
+
+  if (cache[key] !== undefined) {
+    console.log('cache hit: ', key);
+    return cache[key];
+  }
+
+  console.log('cache miss:', key, '-> fetching');
+  cache[key] = '(words related to ' + term + ')';
+  return cache[key];
+}
+
+search('ml', 'state');
+search('ml', 'ocean');
+search('ml', 'state');
+search('sp', 'state');
+```
+
+Four searches, but only three fetches: the repeated `["ml","state"]` is served from the cache, while `["sp","state"]` misses because the endpoint part of its key differs. Try adding a repeat of the `ocean` search and predict the output before you run it.
+
+## Only Searching When It Makes Sense
+
+One more refinement from the video. If the search box is empty, there is nothing worth asking the API, but `useQuery` would happily run the query anyway. The `enabled` option is the switch for that:
+
+```{walkthrough}
+title: Turning the query off for empty input
+step: The enabled option
+file: library-demos/react-tanstack-query/src/App.jsx
+region: use-query
+@"enabled:": `enabled` takes a boolean. While it is false - here, while the search box is empty - TanStack Query does not run the query at all, so clearing the input no longer fires a pointless request.
+
+step: One knock-on effect in the rendering
+file: library-demos/react-tanstack-query/src/App.jsx
+region: render
+@"isPending && searchTerm": A disabled query never finishes, so it sits in its pending state forever. Without the `&& searchTerm`, an empty search box would show `Loading...` for something that will never load; with it, the message only appears when a real search is underway.
+```
+
+And that is the shape of the library: we *describe* the query - the function that fetches it, the key that identifies it, and when it should run - and TanStack Query handles the request state, the refetching, and the caching that we used to wire up by hand.
+
+## Exercises
+
+1. Branching on the query state. Complete `describeQuery` so a pending query returns `Loading...` and a failed query returns `Something went wrong.` - the same three-way branch the word finder renders from. Note the order: both checks happen before anyone touches `query.data`.
+
+    ```{javascript}
+    function describeQuery(query) {
+      if (query.isPending) {
+        // TODO: return the string 'Loading...'
+        return '';
+      }
+
+      if (query.isError) {
+        // TODO: return the string 'Something went wrong.'
+        return '';
+      }
+
+      return 'Found ' + query.data.length + ' words';
+    }
+
+    const whileLoading = describeQuery({ isPending: true, isError: false, isSuccess: false, data: undefined });
+    const afterError = describeQuery({ isPending: false, isError: true, isSuccess: false, data: undefined });
+    const afterSuccess = describeQuery({ isPending: false, isError: false, isSuccess: true, data: ['sea', 'oceanic', 'seabed'] });
+
+    console.log(whileLoading);
+    console.log(afterError);
+    console.log(afterSuccess);
+    ```
+    ```+solution
+    function describeQuery(query) {
+      if (query.isPending) {
+        return 'Loading...';
+      }
+
+      if (query.isError) {
+        return 'Something went wrong.';
+      }
+
+      return 'Found ' + query.data.length + ' words';
+    }
+
+    const whileLoading = describeQuery({ isPending: true, isError: false, isSuccess: false, data: undefined });
+    const afterError = describeQuery({ isPending: false, isError: true, isSuccess: false, data: undefined });
+    const afterSuccess = describeQuery({ isPending: false, isError: false, isSuccess: true, data: ['sea', 'oceanic', 'seabed'] });
+
+    console.log(whileLoading);
+    console.log(afterError);
+    console.log(afterSuccess);
+    ```
+    ```+test
+    wrap(whileLoading).should('equal', 'Loading...').run('A pending query should return `Loading...`', 'Handled the pending state');
+    wrap(afterError).should('equal', 'Something went wrong.').run('A failed query should return `Something went wrong.`', 'Handled the error state');
+    wrap(afterSuccess).should('equal', 'Found 3 words').run('A successful query should count its data', 'Handled the success state');
+    ```
+
+2. Building a query key. The word finder identifies its query with the array `["ml", searchTerm]`. Write `buildKey` so it returns an array with the endpoint first and the search term second, so that a meaning search and a spelling search for the same term get different keys.
+
+    ```{javascript}
+    function buildKey(endpoint, searchTerm) {
+      // TODO: return an array holding the endpoint, then the search term
+      return [];
+    }
+
+    const meaningKey = buildKey('ml', 'state');
+    const spellingKey = buildKey('sp', 'state');
+
+    console.log(JSON.stringify(meaningKey));
+    console.log(JSON.stringify(spellingKey));
+    ```
+    ```+solution
+    function buildKey(endpoint, searchTerm) {
+      return [endpoint, searchTerm];
+    }
+
+    const meaningKey = buildKey('ml', 'state');
+    const spellingKey = buildKey('sp', 'state');
+
+    console.log(JSON.stringify(meaningKey));
+    console.log(JSON.stringify(spellingKey));
+    ```
+    ```+test
+    wrap(meaningKey).should('equal', ['ml', 'state']).run('`buildKey("ml", "state")` should return the array `["ml", "state"]`', 'Built the meaning-search key');
+    wrap(spellingKey).should('equal', ['sp', 'state']).run('`buildKey("sp", "state")` should return the array `["sp", "state"]`', 'Built the spelling-search key');
+    ```
+
+3. Holding a query back
+
+    ```{mcq}
+    A component loads a user profile with `useQuery`, but the `userId` it needs is `null` until the visitor picks someone from a list. Which option keeps the query from running while there is no id yet?
+    correct: Correct. `enabled` takes a boolean, and while it is false the query does not run. It is the same move the word finder makes with `enabled: searchTerm.length > 0`.
+    wrong: React hooks cannot be called conditionally, so the on/off switch has to live inside the query description itself. Look back at "Only Searching When It Makes Sense".
+    [x] `enabled: userId !== null`
+    [ ] Wrapping the `useQuery` call in an `if` statement
+    [ ] `queryKey: []`
+    [ ] `isPending: false`
+    ```
+
+4. A search you already made
+
+    ```{mcq}
+    In the word finder, whose query key is `["ml", searchTerm]`, you search for `state`, then `ocean`, then `state` again. What happens on the third search?
+    correct: Correct. The QueryClient filed the first result under `["ml", "state"]`, so those words are on screen immediately. (It may also refetch quietly in the background to keep the entry fresh.)
+    wrong: The QueryClient remembers every query it has run, filed by key. Think about what it can do when a key it has already seen comes back. Look back at "The `queryKey`: One Entry Per Search".
+    [x] The cached words for `["ml", "state"]` are shown right away
+    [ ] The app refetches from scratch and shows nothing until the network answers
+    [ ] The query fails, because two searches cannot share a key
+    [ ] The page reloads to reset the query state
+    ```
+
+## Resources
+
+- [TanStack Query: Overview](https://tanstack.com/query/latest/docs/framework/react/overview)
+- [TanStack Query: Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)
+- [TanStack Query: Important Defaults](https://tanstack.com/query/latest/docs/framework/react/guides/important-defaults)
+- [MDN: Using the Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)

@@ -1,0 +1,230 @@
+# Event Objects
+
+So far we can react to events, but not to the details of them. Sometimes we need more: not just that the user clicked, but *where* they clicked; not just that they pressed a key, but *which* key.
+
+That information arrives in an **event object**, and the browser passes it into our callback automatically. We have been ignoring it, because our callbacks have taken no parameters. To use it, we give the callback a parameter:
+
+```html id=page1
+<button>Click me</button>
+```
+
+```{javascript autorun}
+const button = document.querySelector('button');
+
+function callback(event) {
+  console.log(event);
+}
+
+button.addEventListener('click', callback);
+```
+```+id=page1
+```
+
+Click the button and look at the object that gets logged. It is full of properties describing exactly what happened.
+
+The parameter can be called anything. `event`, `ev`, and `e` are all common; we will use `event`.
+
+## Mouse Events
+
+Click, `mousemove`, `mousedown`, and the rest all deliver a **mouse event**, which carries information about where the pointer was and what was held down.
+
+Three pairs of coordinates, which differ in what they are measured from:
+
+- **`clientX`** and **`clientY`** are relative to the viewport, the visible part of the page.
+- **`pageX`** and **`pageY`** are relative to the whole document, regardless of how far you have scrolled.
+- **`screenX`** and **`screenY`** are relative to your physical screen.
+
+On a page scrolled to the top, `clientY` and `pageY` are the same. Scroll down 500 pixels and they differ by 500.
+
+There is also:
+
+- **`button`**, which says which mouse button was used: left, middle, or right. This has nothing to do with the HTML `<button>` element; it is an unfortunate name collision.
+- **`ctrlKey`**, **`shiftKey`**, **`altKey`**, and **`metaKey`** (Command on a Mac), each a boolean saying whether that modifier was held down at the moment of the event.
+
+And, on every event of any kind:
+
+- **`type`**, the name of the event, such as `'click'`.
+- **`target`**, the element the event actually happened on.
+
+This box reports several of them on every click:
+
+```html id=page2
+<div id="box">Click anywhere in this box</div>
+<p id="readout">No clicks yet.</p>
+```
+
+```{javascript autorun}
+const box = document.querySelector('#box');
+const readout = document.querySelector('#readout');
+
+box.addEventListener('click', (event) => {
+  readout.textContent =
+    'type: ' + event.type +
+    ' | clientX: ' + event.clientX +
+    ' | pageX: ' + event.pageX +
+    ' | shift held: ' + event.shiftKey;
+});
+```
+```+id=page2
+```
+```+css
+#box { border: 2px solid #00274c; padding: 40px; text-align: center; }
+```
+
+Click in different corners of the box and watch the numbers change. Then hold Shift while clicking.
+
+## Keyboard Events
+
+Listeners for `keydown` and `keyup` get a **keyboard event** instead, with its own properties:
+
+- **`key`** is the key that was pressed, as a string: `'a'`, `'Enter'`, `'Backspace'`, `'ArrowLeft'`.
+- **`repeat`** is a boolean: `true` when the key is being held down and repeating, rather than freshly pressed.
+- The same `ctrlKey`, `shiftKey`, `altKey`, and `metaKey` modifiers as mouse events.
+
+Here they are on a text input:
+
+```html id=page3
+<input type="text" placeholder="Type here">
+<p id="key-readout">Press a key in the box.</p>
+```
+
+```{javascript autorun}
+const input = document.querySelector('input');
+const readout = document.querySelector('#key-readout');
+
+input.addEventListener('keydown', (event) => {
+  readout.textContent = 'key: ' + event.key + ' | repeat: ' + event.repeat;
+});
+```
+```+id=page3
+```
+
+Type a few letters, then press Backspace, then an arrow key, then hold a key down and watch `repeat` turn `true`.
+
+## A Worked Example: Enter to Submit
+
+Here is where `event.key` earns its keep. Imagine a chat box with a Submit button. Clicking Submit should send the message, and so should pressing Enter in the input.
+
+The trick is to write the behavior once, in its own function, and reach it from both places:
+
+```html id=page4
+<input id="chat" type="text" placeholder="Say something">
+<button id="submit">Submit</button>
+<p id="sent">Nothing sent yet.</p>
+```
+
+```{javascript autorun}
+const input = document.querySelector('#chat');
+const button = document.querySelector('#submit');
+const output = document.querySelector('#sent');
+
+function onSubmit() {
+  output.textContent = 'Sent: ' + input.value;
+  input.value = '';
+}
+
+button.addEventListener('click', onSubmit);
+
+input.addEventListener('keydown', (event) => {
+  if (event.key === 'Enter') {
+    onSubmit();
+  }
+});
+```
+```+id=page4
+```
+
+Type something and press Enter, then type something else and click Submit. Both routes end up in the same `onSubmit` function, so the sending logic exists in exactly one place.
+
+Notice that `onSubmit` takes no parameter. It does not need the event object, so it does not ask for one, and the click listener can hand it straight to `addEventListener`.
+
+## Exercises
+
+1. Both buttons share one listener function. Use the event object to put the text of whichever button was clicked into the paragraph.
+
+    ```html id=page5
+    <button id="first">First button</button>
+    <button id="second">Second button</button>
+    <p id="message"></p>
+    ```
+
+    ```{javascript}
+    const message = document.querySelector('#message');
+
+    function onClick(event) {
+      // Write your code here
+    }
+
+    document.querySelector('#first').addEventListener('click', onClick);
+    document.querySelector('#second').addEventListener('click', onClick);
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const message = document.querySelector('#message');
+
+    function onClick(event) {
+      message.textContent = event.target.textContent;
+    }
+
+    document.querySelector('#first').addEventListener('click', onClick);
+    document.querySelector('#second').addEventListener('click', onClick);
+    ```
+    ```+test
+    assert('#first').click().run('Could not find the `#first` button', 'Clicked the first button');
+    assert('#message').should('have.text', 'First button').run('Clicking the first button should show `First button`. Read `event.target`', 'The first button works');
+    assert('#second').click().run('Could not find the `#second` button', 'Clicked the second button');
+    assert('#message').should('have.text', 'Second button').run('The same listener should show `Second button` for the other button, which means reading it from the event rather than hard-coding it', 'One listener handles both buttons');
+    ```
+
+2. Record the horizontal position of a click, measured from the edge of the viewport, into `lastClickX`.
+
+    ```html id=page6
+    <div id="target" style="border: 2px solid #00274c; padding: 30px;">Click me</div>
+    ```
+
+    ```{javascript}
+    const box = document.querySelector('#target');
+
+    let lastClickX = null;
+
+    box.addEventListener('click', (event) => {
+      // Write your code here
+    });
+    ```
+    ```+id=page6
+    ```
+    ```+solution
+    const box = document.querySelector('#target');
+
+    let lastClickX = null;
+
+    box.addEventListener('click', (event) => {
+      lastClickX = event.clientX;
+    });
+    ```
+    ```+test
+    wrap(lastClickX === null).should('equal', true).run('`lastClickX` should still be `null` before any click', 'Nothing recorded before the click');
+    assert('#target').click().run('Could not find the `#target` box', 'Clicked the box');
+    wrap(typeof lastClickX).should('equal', 'number').run('After the click, `lastClickX` should hold a number read from the event. Use `event.clientX`', 'Recorded the click position');
+    wrap(source.includes('clientX')).should('equal', true).run('Use `event.clientX`, which is measured from the edge of the viewport', 'Used clientX');
+    ```
+
+3. A page is scrolled 500 pixels down, and the user clicks something. How do `clientY` and `pageY` compare?
+
+    ```{mcq}
+    The user has scrolled 500 pixels down the page and clicks. What is the relationship between `event.clientY` and `event.pageY`?
+    correct: Correct! `clientY` is measured from the top of the visible area and `pageY` from the top of the whole document, so once you have scrolled 500 pixels they differ by 500.
+    wrong: Look back at the three pairs of coordinates under "Mouse Events" and what each one is measured from.
+    [x] `pageY` is 500 larger than `clientY`
+    [ ] They are always equal
+    [ ] `clientY` is 500 larger than `pageY`
+    [ ] Both become negative once the page is scrolled
+    ```
+
+## Resources
+
+- [MDN: Event](https://developer.mozilla.org/en-US/docs/Web/API/Event)
+- [MDN: Event.target](https://developer.mozilla.org/en-US/docs/Web/API/Event/target)
+- [MDN: MouseEvent](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent)
+- [MDN: KeyboardEvent.key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key)

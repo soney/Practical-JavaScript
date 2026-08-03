@@ -1,0 +1,186 @@
+# Sharing State Across Components
+
+Every state variable so far has belonged to one component. Real interfaces are not built that way. Components are **interdependent**: several of them read the same data, several of them change it, and all of them have to agree.
+
+That is **shared state**, and this lesson is about where to put it.
+
+## A Concrete Example
+
+Picture a search interface for fruit. You type a query, results appear, you click a result, and the query box updates to what you clicked while a panel shows details of it.
+
+Broken into components, it might be:
+
+```text
+App
+ |-- SearchBar        holds the text being searched for
+ |-- ResultList       needs the query in order to produce results
+      |-- ResultItem  displays one result; clicking it changes the query
+```
+
+Now trace the data:
+
+- The **query** starts in the search bar, and `ResultList` needs it to know what to look for.
+- Each **`ResultItem`** gets its text from `ResultList`.
+- Clicking a `ResultItem` has to **change the query**, which lives up in the search bar.
+- Clicking also has to tell **`App`** which result to show details for.
+
+Two questions fall out of that, and they are the questions of this whole lesson.
+
+**Where should each state variable live?** The query could plausibly belong to `SearchBar`, to `ResultList`, or to `App`.
+
+**How does everything stay in sync?** If the query lives in `SearchBar`, how does `ResultList` see it, and how does a click three levels down change it?
+
+## The Rule
+
+**Put shared state in the nearest common ancestor of every component that needs it.**
+
+The query is read by `ResultList` and written by `ResultItem`. Their nearest common ancestor is `App`, so the query belongs to `App`, even though the component that displays it is `SearchBar`.
+
+That single rule answers the first question, and it creates a problem for the second, because the state is now above the components that use it. Data goes **down** by props, which you know how to do. Getting a change back **up** is what the next reading is about.
+
+```{react autorun}
+function CountDisplay({ label, count }) {
+  return <p>{label}: {count}</p>;
+}
+
+function App() {
+  // Both displays need this number, so it lives in their nearest common ancestor.
+  const [count, setCount] = React.useState(0);
+
+  return (
+    <section>
+      <button onClick={() => setCount(count + 1)}>Add</button>
+      <CountDisplay label="First view" count={count} />
+      <CountDisplay label="Second view" count={count} />
+    </section>
+  );
+}
+
+renderReact(<App />);
+```
+
+Click the button and both displays change together. They do not each hold a count; there is **one** number, in one place, sent to both. That is what makes them impossible to get out of step.
+
+## What Goes Wrong Otherwise
+
+Give each display its own state and the bug is immediate:
+
+```{react autorun}
+function BrokenDisplay({ label }) {
+  const [count, setCount] = React.useState(0);
+
+  return (
+    <p>
+      {label}: {count} <button onClick={() => setCount(count + 1)}>Add</button>
+    </p>
+  );
+}
+
+function BrokenApp() {
+  return (
+    <section>
+      <BrokenDisplay label="First view" />
+      <BrokenDisplay label="Second view" />
+    </section>
+  );
+}
+
+renderReact(<BrokenApp />);
+```
+
+Click one of these buttons and only that row moves. Two components, two independent counts, and nothing keeping them equal. This is correct behavior for something like a toggle button, where each instance genuinely owns its own state, and it is wrong whenever the components are meant to be showing the same thing.
+
+The choice between these two is exactly the question "does this data belong to one component, or to several?"
+
+## Do Not Lift Everything
+
+Moving state up costs something. A value held higher up has to be passed down through every layer between, and every component in the chain gains a prop it does not care about. That gets tedious, and there is a name for it, **prop drilling**, and a tool for it later in this lesson.
+
+So the rule is the *nearest* common ancestor, not the top of the application. State that only one component uses should stay in that component.
+
+## Exercises
+
+1. Two displays should show the same count. Move the state so they do.
+
+   ```{react}
+   function Display({ label }) {
+     const [count, setCount] = React.useState(0);
+
+     return <p>{label}: {count}</p>;
+   }
+
+   function App() {
+     return (
+       <section>
+         <button>Add</button>
+         <Display label="A" />
+         <Display label="B" />
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function Display({ label, count }) {
+     return <p>{label}: {count}</p>;
+   }
+
+   function App() {
+     const [count, setCount] = React.useState(0);
+
+     return (
+       <section>
+         <button onClick={() => setCount(count + 1)}>Add</button>
+         <Display label="A" count={count} />
+         <Display label="B" count={count} />
+       </section>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap((source.match(/React\.useState/g) || []).length).should('equal', 1).run('There should be one state variable, in the nearest common ancestor, rather than one per display', 'Only one piece of state');
+     wrap((source.match(/count=\{count\}/g) || []).length).should('equal', 2).run('Pass the same `count` down to both displays as a prop', 'Passed the count to both');
+     assert('button').click().run('Click Add', 'Clicked Add');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       wrap(document.querySelectorAll('p')[0].textContent).should('equal', 'A: 1').run('The first display should show `A: 1`', 'The first display updated');
+       wrap(document.querySelectorAll('p')[1].textContent).should('equal', 'B: 1').run('The second should show `B: 1`. One shared value means they can never disagree', 'Both displays stay in step');
+     }, 50);
+   }, 50);
+   ```
+
+2. Where should the query state live?
+
+   ```{mcq}
+   `ResultList` reads the query and `ResultItem` changes it. `App` contains both. Where does the query belong?
+   correct: Correct! The nearest common ancestor of every component that reads or writes it, which is `App`. Anywhere lower and one of the two could not reach it.
+   wrong: Find the lowest component that contains both the reader and the writer. Look back at "The Rule".
+   [x] In `App`, the nearest common ancestor of the components that use it
+   [ ] In `SearchBar`, because that is where the text is displayed
+   [ ] In `ResultItem`, because that is what changes it
+   [ ] Duplicated in each component that needs it
+   ```
+
+3. Why not put shared state at the very top of the application?
+
+   ```{mcq}
+   The root component contains everything, so it would always work. What is the cost?
+   correct: Correct! Every layer between the root and the component that needs the value has to accept and pass along a prop it does not use. That is prop drilling, and it is why the rule says nearest, not highest.
+   wrong: Think about what has to happen in each of the components sitting between the state and the one that reads it.
+   [x] Every component in between has to pass along a prop it does not use
+   [ ] React only allows one state variable in the root component
+   [ ] State in the root component cannot be updated
+   [ ] The application would render only once
+   ```
+
+## Resources
+
+- [React Docs: Sharing state between components](https://react.dev/learn/sharing-state-between-components)
+- [React Docs: Choosing the state structure](https://react.dev/learn/choosing-the-state-structure)
+- [React Docs: Thinking in React](https://react.dev/learn/thinking-in-react)

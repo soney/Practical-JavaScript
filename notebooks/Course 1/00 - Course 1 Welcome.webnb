@@ -1,0 +1,71 @@
+# Welcome!
+
+Welcome to the course!
+
+- **Course 1** is an introduction to Web programming, including:
+  - HTML fundamentals (module 1)
+  - CSS fundamentals (module 2)
+  - Programming fundamentals in JavaScript (Module 3)
+  - JavaScript basics (module 4)
+- **Course 2** goes deeper into JavaScript
+- **Course 3** goes further
+- **Course 4** focuses on frameworks
+
+There are a combination of (1) readings like this, (2) videos, and (3) exercises. Beyond the readings and videos, **the exercises are crucial to your learning**.
+
+## What Will You Learn?
+
+The focus of this specialization is on building _interactive_ web applications. By "interactive", we mean applications that are responsive to user input (e.g., mouse clicks, keyboard input, etc.). We will learn _just enough_ HTML and CSS to get started but the focus will be on **JavaScript**.
+
+### Why JavaScript?
+
+JavaScript is the language of the web and [the most widely used programming language](https://survey.stackoverflow.co/2025/technology#most-popular-technologies-language-language). It powers the interactive elements of virtually every modern website. JavaScript can power web applications, mobile applications, desktop applications, and even server-side applications. It is a versatile language that can be used for a wide range of applications.
+
+## How to Use These Notebooks
+
+- If you want to load these on your own computer, you can (optionally):
+  1. Install [Visual Studio Code](https://code.visualstudio.com/)
+  2. Install [the WebNB extension](https://marketplace.visualstudio.com/items/?itemName=oney.web-notebook)
+  3. Download [the course repository from GitHub](https://github.com/academic-innovation-online-learning/Practical-JavaScript)
+- However, you can also use the web version of the notebooks. You can run them in your browser without installing anything.
+
+These notebooks come equipped with interactive exercises. For example, in the following code cell, try to:
+
+1. Change the number `1` to `5` so that it reads:
+   ```javascript
+   const x = 5;
+   ```
+2. Click the "Run" button to run the code cell.
+3. Look at the output below the code cell, which should confirm that you completed the exercise correctly.
+
+```{javascript}
+const x = 1;
+```
+
+```+solution
+const x = 5;
+```
+
+```+test
+wrap(x).should('equal', 5).run('Failed; x should be 5', 'Nice job!');
+```
+
+There are also multiple choice questions like the following:
+
+```{mcq}
+What will we be learning in this course? (Select all that apply)
+correct: Correct. We will be learning HTML, CSS, and JavaScript.
+wrong: Try again. Review the question and choose the options that match the lesson.
+[x] HTML
+[x] CSS
+[x] JavaScript
+[ ] Python
+[ ] Java
+```
+
+## Resources
+
+- [MDN: Getting started with the web](https://developer.mozilla.org/en-US/docs/Learn_web_development/Getting_started)
+- [MDN: HTML](https://developer.mozilla.org/en-US/docs/Web/HTML)
+- [MDN: CSS](https://developer.mozilla.org/en-US/docs/Web/CSS)
+- [MDN: JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)

@@ -1,0 +1,190 @@
+# Configuring a Bundler: Webpack
+
+Running Webpack with no configuration at all is fine for a test. Real projects want control: a different entry file, output somewhere else, a build tuned for debugging rather than for shipping. All of that lives in one file.
+
+Webpack looks for **`webpack.config.js`** in your project directory. If it exists, Webpack reads it; if not, you get the defaults from the previous reading.
+
+## The Shape of the File
+
+```javascript
+// webpack.config.js
+module.exports = {
+  entry: './src/index.js',
+  output: {
+    filename: 'main.js'
+  },
+  mode: 'development'
+};
+```
+
+That `module.exports` is the CommonJS export syntax. Webpack loads this file with Node, and Node's default module system is CommonJS, which is why configuration files are written this way rather than with `export default`.
+
+Webpack has a very large number of options, organized into categories in its documentation. Three of them do most of the work.
+
+## `entry`
+
+The file Webpack starts from, and therefore the root of the dependency graph:
+
+```javascript
+module.exports = {
+  entry: './src/index.js'
+};
+```
+
+`./src/index.js` is the default. If your main file is called something else, say the entry to match:
+
+```javascript
+  entry: './src/my_code.js'
+```
+
+## `output`
+
+Where the bundle is written. It takes two properties worth knowing.
+
+**`filename`** is the name of the bundle, `main.js` by default:
+
+```javascript
+  output: {
+    filename: 'out.js'
+  }
+```
+
+Worth knowing: changing this does not clean up after the old one. Build to `main.js`, then rename the output to `out.js`, and `dist/` now contains both files, one of them stale.
+
+**`path`** is the directory to write into, `dist` by default. It has one requirement that catches everybody: **it must be an absolute path.** A relative `'output'` will not do.
+
+You could paste in an absolute path, and you should not:
+
+```javascript
+  output: {
+    path: '/home/alice/code/my-webpack-project/output'
+  }
+```
+
+That works on exactly one computer. Anyone else who checks out the project, and you on your other machine, get a path that does not exist.
+
+Instead, build the absolute path at run time. Node gives every file a variable **`__dirname`**, the directory that file is in, so this is portable:
+
+```javascript
+  output: {
+    path: __dirname + '/output'
+  }
+```
+
+And the form you will see most often in real configuration files:
+
+```javascript
+const path = require('path');
+
+module.exports = {
+  output: {
+    filename: 'out.js',
+    path: path.resolve(__dirname, 'output')
+  }
+};
+```
+
+`path` is a module built into Node, and `path.resolve` takes pieces of a path and returns one absolute path from them. It handles the separators for you, which is the difference between the two forms: your string concatenation assumes `/`, and `path.resolve` is right on every operating system.
+
+Note that this runtime provides a simplified `path` module with `join`, `basename`, `dirname`, and `extname` on it, and no `resolve`, so treat the configurations on this page as files to write rather than cells to run.
+
+## `mode`
+
+This one changes the character of the build.
+
+```javascript
+  mode: 'development'
+```
+
+**`development`** optimizes for build speed and for debugging. The output is longer, spread over many lines, and keeps comments explaining Webpack's own machinery. It is readable when something has gone wrong.
+
+**`production`** optimizes the result. The bundle comes out minified, effectively on one line, with almost nothing left that a human would want to read. It is the smallest, fastest thing to download.
+
+Use `development` while you are building and `production` for what you deploy. The two are not interchangeable: shipping a development build means sending every visitor a much larger file, and debugging a production build means reading minified code.
+
+## Putting It Together
+
+```javascript
+// webpack.config.js
+const path = require('path');
+
+module.exports = {
+  entry: './src/my_code.js',
+  output: {
+    filename: 'out.js',
+    path: path.resolve(__dirname, 'output')
+  },
+  mode: 'development'
+};
+```
+
+```
+$ npx webpack
+```
+
+No arguments needed. Webpack finds the configuration file itself.
+
+## Exercises
+
+1. Write a configuration that starts from `./src/app.js`, writes `bundle.js` into a `build` directory next to the configuration file, and produces a build optimized for deployment. Use `__dirname` for the path rather than `path.resolve`, so the cell can run here.
+
+    ```{node}
+    // webpack.config.js
+
+    module.exports = {
+      // Write your configuration here
+    };
+
+    console.log(module.exports);
+    ```
+    ```+solution
+    // webpack.config.js
+
+    module.exports = {
+      entry: './src/app.js',
+      output: {
+        filename: 'bundle.js',
+        path: __dirname + '/build'
+      },
+      mode: 'production'
+    };
+
+    console.log(module.exports);
+    ```
+    ```+test
+    wrap(module.exports.entry).should('equal', './src/app.js').run('Set `entry` to `./src/app.js`', 'Set the entry point');
+    wrap(module.exports.output.filename).should('equal', 'bundle.js').run('Set `output.filename` to `bundle.js`', 'Named the output file');
+    wrap(typeof module.exports.output.path === 'string' && module.exports.output.path.endsWith('/build')).should('equal', true).run('Set `output.path` to `__dirname + \'/build\'`, so the directory is next to the configuration file on any machine', 'Set the output directory');
+    wrap(module.exports.mode).should('equal', 'production').run('A build for deployment should use `production` mode, which minifies the bundle', 'Chose the deployment mode');
+    ```
+
+2. Why write `path.resolve(__dirname, 'output')` instead of an absolute path like `/home/alice/project/dist`?
+
+    ```{mcq}
+    What does building the path at run time buy you?
+    correct: Correct! `__dirname` is wherever the file happens to be, so the path is right on any machine and any operating system, and `path.resolve` gets the separators right too.
+    wrong: Think about what happens to a hardcoded absolute path when a colleague clones the project onto a different computer.
+    [x] It works on any computer, wherever the project directory happens to be
+    [ ] It makes the bundle run faster in the browser
+    [ ] It hides your folder names for security
+    [ ] It makes Webpack delete the old output before building
+    ```
+
+3. You are in the middle of building a feature and want readable code and clear errors in the browser. Which mode, and why?
+
+    ```{mcq}
+    Which mode fits development work?
+    correct: Correct! `development` skips minification and keeps the output readable, which is what you want when you are trying to understand what went wrong.
+    wrong: One mode optimizes the file for downloading, the other optimizes it for being read by a person.
+    [x] `development`, because it skips minification and keeps the code readable
+    [ ] `production`, because it makes the file as small as possible
+    [ ] `production`, because it is the standard mode for all JavaScript
+    [ ] `development`, because it uploads your code to the internet automatically
+    ```
+
+## Resources
+
+- [Webpack: configuration](https://webpack.js.org/configuration/)
+- [Webpack: mode](https://webpack.js.org/configuration/mode/)
+- [Webpack: output](https://webpack.js.org/configuration/output/)
+- [Node.js: path.resolve()](https://nodejs.org/api/path.html#pathresolvepaths)

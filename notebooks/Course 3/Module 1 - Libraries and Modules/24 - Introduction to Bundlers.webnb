@@ -1,0 +1,171 @@
+# Introduction to Bundlers
+
+Modules solved one problem and created another. Splitting code across files is good for writing; it is not good for shipping. A real application has dozens of files, most of them dependencies of dependencies you never chose, and every one is a separate download the browser has to make before anything works.
+
+A **bundler** takes all of that and produces one file, or a handful, optimized for delivery.
+
+## The Dependency Graph
+
+Start from one file, the **entry point**, usually something like `main.js`, and look at what it imports:
+
+```
+main.js  ->  api.js
+main.js  ->  lodash
+main.js  ->  utils.js
+api.js   ->  utils.js
+```
+
+That is a **graph**, not a list. `main.js` needs three things, one of those needs something itself, and `utils.js` is needed twice, by two different files.
+
+A bundler reads the entry point, follows every import, follows the imports of what it finds, and keeps going until nothing new turns up. Here is that search, in a cell you can run:
+
+```{javascript autorun}
+const graph = {
+  'main.js': ['api.js', 'lodash', 'utils.js'],
+  'api.js': ['utils.js'],
+  'utils.js': [],
+  'lodash': []
+};
+
+// Start with the entry point and add whatever it leads to.
+const found = ['main.js'];
+
+// The list grows while we walk it, so files discovered later get visited too.
+for (const fileName of found) {
+  for (const dependency of graph[fileName]) {
+    if (!found.includes(dependency)) {
+      found.push(dependency);
+    }
+  }
+}
+
+console.log(found);
+```
+
+Four files from one starting point, each appearing exactly once even though `utils.js` was reached twice. That is the graph a bundler builds, and it is what lets it answer two questions you would otherwise answer by hand: **which files does this application actually need**, and **in what order do they have to run**.
+
+## What You Get
+
+**Dependency management.** No list of script tags to maintain, and no ordering to get right, because the imports already say what depends on what.
+
+**Fewer requests.** One file instead of forty. This matters most on a slow or high-latency connection, which is to say on a phone.
+
+**Optimization.** A bundler can drop code that is never used, and run the result through [a minifier](<07 - Minification.webnb>): shorter variable names, no whitespace, no comments, as we saw in Lesson 2. Some can rewrite code into a form that is equivalent but faster.
+
+**Compatibility.** A bundler can translate newer JavaScript into older equivalents, so you write current syntax and still support browsers that do not understand it.
+
+## What It Costs
+
+**Configuration.** This is the real cost. Bundlers are configurable in every direction, and the price of that is a configuration file you have to understand. The next two readings are about exactly that.
+
+**Build time.** Bundling is a step between writing code and seeing it run. On a large project with large dependencies it is not instant.
+
+**One file is not always right.** If you use a common library like Lodash, folding it into your bundle means every visitor downloads your copy, when they might already have the CDN's copy cached from another site. That is a genuine trade-off, and it is settled by configuring the bundler to leave that library out rather than by abandoning bundling.
+
+The point of all this is that you get to write code the way modules let you, in small files with explicit imports, and still hand the browser one optimized file.
+
+## Exercises
+
+1. Finish the loop so `order` lists the files in an order where every file comes after everything it depends on.
+
+    ```{javascript}
+    const graph = {
+      'main.js': ['api.js', 'utils.js'],
+      'api.js': ['utils.js'],
+      'utils.js': []
+    };
+
+    const found = ['main.js', 'api.js', 'utils.js'];
+    const order = [];
+
+    // The pass limit is only a safety net, so a mistake cannot loop forever.
+    let passes = 0;
+
+    while (order.length < found.length && passes < 10) {
+      passes++;
+
+      for (const fileName of found) {
+        if (!order.includes(fileName)) {
+          let ready = true;
+
+          // TODO: set ready to false if any dependency of fileName
+          // is not in order yet
+
+          if (ready) {
+            order.push(fileName);
+          }
+        }
+      }
+    }
+
+    console.log(order);
+    ```
+    ```+solution
+    const graph = {
+      'main.js': ['api.js', 'utils.js'],
+      'api.js': ['utils.js'],
+      'utils.js': []
+    };
+
+    const found = ['main.js', 'api.js', 'utils.js'];
+    const order = [];
+
+    // The pass limit is only a safety net, so a mistake cannot loop forever.
+    let passes = 0;
+
+    while (order.length < found.length && passes < 10) {
+      passes++;
+
+      for (const fileName of found) {
+        if (!order.includes(fileName)) {
+          let ready = true;
+
+          for (const dependency of graph[fileName]) {
+            if (!order.includes(dependency)) {
+              ready = false;
+            }
+          }
+
+          if (ready) {
+            order.push(fileName);
+          }
+        }
+      }
+    }
+
+    console.log(order);
+    ```
+    ```+test
+    wrap(order).should('equal', ['utils.js', 'api.js', 'main.js']).run('A file can only be added once every one of its dependencies is already in `order`, so `utils.js` goes first and `main.js` last', 'Ordered the files correctly');
+    wrap(order.length).should('equal', 3).run('Each file should appear exactly once', 'Included each file once');
+    ```
+
+2. Why does a bundler need the dependency graph?
+
+    ```{mcq}
+    What does building the graph let a bundler do?
+    correct: Correct! Following the imports is how it discovers every file the application needs, including ones you never mention directly, and how it works out an order in which each file runs after whatever it depends on.
+    wrong: Think about the two questions the graph answered in the cell above.
+    [x] Find every file the application needs and include them in a working order
+    [ ] Help the developer visualize the code structure while debugging
+    [ ] Automatically delete any file larger than one megabyte
+    [ ] Convert the JavaScript into another language
+    ```
+
+3. Your bundle is a single file and still too large for mobile users. What does running it through a minifier do?
+
+    ```{mcq}
+    What does minification change?
+    correct: Correct! It shortens names, strips whitespace, and removes comments, all without changing what the code does. This is the same process as in Lesson 2, applied to the bundle.
+    wrong: Look back at the minification reading. What is safe to remove from code without changing its behavior?
+    [x] Shortens variable names, removes whitespace, and deletes comments
+    [ ] Deletes half of your functions to save space
+    [ ] Puts the file in a zip archive that the browser has to extract
+    [ ] Rewrites the code so it only runs on fast computers
+    ```
+
+## Resources
+
+- [Webpack: concepts](https://webpack.js.org/concepts/)
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+- [MDN: minification](https://developer.mozilla.org/en-US/docs/Glossary/Minification)

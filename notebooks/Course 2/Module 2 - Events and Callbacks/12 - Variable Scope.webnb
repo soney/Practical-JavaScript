@@ -1,0 +1,240 @@
+# Variable Scope
+
+Every time we declare a variable with `let` or `const`, it gets three things: a name, a value, and a **scope**. The scope determines where in our code that variable can be referenced. Getting it wrong is one of the most common sources of confusing bugs.
+
+Broadly there are two kinds:
+
+- **Global scope**, which can be used anywhere.
+- **Local scope**, which can only be used in specific places.
+
+A variable's scope is decided by *where* it is declared, and partly by *how*.
+
+## How Scopes Get Created
+
+JavaScript uses **lexical scoping**, which means a variable's scope is determined by where it sits in the code as written, not by what happens at run time. Three things create scopes:
+
+- The global scope is created automatically.
+- Every **function call** creates a new local scope.
+- Every **block** creates a new local scope. A block is code between a pair of curly braces: the body of an `if`, a loop, and so on.
+
+There are a few other cases, but those three cover nearly everything.
+
+## Global Scope
+
+Any variable declared outside of any block has global scope, and can be used anywhere. Global variables are even shared **across files**: if `file_1.js` declares `x` at the top level, `file_2.js` can read it. (There is one exception, modules, which we will meet in Course 3.)
+
+## The Scope Stack
+
+Local scopes **stack**. The global scope is at the bottom, and each new local scope is pushed on top of the one containing it.
+
+The rule that matters: **a scope can see variables declared in scopes below it on the stack, but never above it.** So if there are four scopes stacked up, scope 2 can see scope 1 and the global scope, and cannot see scopes 3 or 4.
+
+```{javascript autorun}
+const x = 1;
+
+if (x > 0) {
+  const y = 2;
+  console.log(y);
+}
+
+console.log(x);
+console.log(y);
+```
+
+`y` was declared inside the `if` block, so it belongs to that block's scope. Once we leave the block, that scope is gone, and the last line gets a `ReferenceError`: `y is not defined`. Delete that line and the rest runs cleanly.
+
+Nesting stacks the scopes deeper:
+
+```{javascript autorun}
+const x = 1;
+
+if (x > 0) {
+  const y = 2;
+  console.log(y);
+
+  if (y > 0) {
+    const z = 3;
+    console.log(z);
+    console.log(x);
+  }
+}
+```
+
+Inside the inner `if`, all three variables are reachable. Reading `x` there works like this: the engine looks for `x` in the innermost block, does not find it, looks in the enclosing `if` block, does not find it, looks in the global scope, and finds it. It searches downward through the stack, never upward.
+
+## Every Loop Iteration Gets Its Own Scope
+
+Because a block creates a scope, and a loop body is a block, **each pass through a loop creates a fresh scope**:
+
+```{javascript autorun}
+for (const item of [1, 2, 3]) {
+  const x = item;
+  console.log(x);
+}
+```
+
+The first pass creates a scope where `item` is `1` and `x` is `1`. That scope is discarded, and the second pass creates a new one where both are `2`. Three passes, three separate scopes, three separate `item` variables.
+
+That sounds like a technicality. It is about to matter a great deal.
+
+## Function Scope and `var`
+
+There is a second kind of local scope. **A variable declared with `var` has function scope**, meaning it belongs to the whole function it was declared in, regardless of which blocks it happens to sit inside.
+
+```{javascript autorun}
+function foo() {
+  const x = 1;
+
+  if (x > 0) {
+    const y = 2;
+    var z = 3;
+    console.log(x, y, z);
+  }
+
+  console.log(z);
+  console.log(y);
+}
+
+foo();
+```
+
+`y` was declared with `const`, so it belongs to the `if` block and is gone after it. `z` was declared with `var`, so it belongs to `foo` and is still readable after the block ends. The last line fails on `y`.
+
+That might even look convenient. It is not, and here is why.
+
+### The Bug `var` Causes
+
+Three fruit buttons and a price tag. We loop over the fruits, and give each button a click handler showing that fruit's price.
+
+```html id=page1
+<button id="apple">apple</button>
+<button id="banana">banana</button>
+<button id="pear">pear</button>
+<div id="price-tag"></div>
+```
+
+```{javascript autorun}
+const prices = { apple: 6, banana: 8, pear: 10 };
+
+for (var id of ['apple', 'banana', 'pear']) {
+  const button = document.querySelector('#' + id);
+
+  button.addEventListener('click', () => {
+    const priceTag = document.querySelector('#price-tag');
+    priceTag.textContent = id + ' costs ' + prices[id];
+  });
+}
+```
+```+id=page1
+```
+
+Click apple. It says `pear costs 10`. Click banana: `pear costs 10`. Only pear is right.
+
+The reason is scope. `var id` has function scope, so it is **not** recreated on each pass; there is exactly **one** `id` variable shared by all three handlers. The loop finishes long before anyone clicks, and by then that single variable has been left at its final value, `'pear'`. Every handler reads the same variable and sees the same thing.
+
+Change one word:
+
+```{javascript autorun}
+const prices = { apple: 6, banana: 8, pear: 10 };
+
+for (const id of ['apple', 'banana', 'pear']) {
+  const button = document.querySelector('#' + id);
+
+  button.addEventListener('click', () => {
+    const priceTag = document.querySelector('#price-tag');
+    priceTag.textContent = id + ' costs ' + prices[id];
+  });
+}
+```
+```+id=page1
+```
+
+Now each button reports its own price, because `const id` is block-scoped and each iteration has its own.
+
+**One more trap.** If you forget to declare a variable at all and just write `id = ...`, JavaScript quietly declares it for you **with `var`**. So the broken version above is exactly what you get from a missing `const`, with no error to warn you. This is the clearest reason to always declare your variables, and to use `let` and `const` when you do.
+
+## Exercises
+
+1. Declare a variable inside the `if` block and copy its value into `result`, which is declared outside.
+
+    ```{javascript}
+    let result = '';
+
+    if (true) {
+      // Write your code here
+    }
+
+    console.log(result);
+    ```
+    ```+solution
+    let result = '';
+
+    if (true) {
+      const inside = 'block value';
+      result = inside;
+    }
+
+    console.log(result);
+    ```
+    ```+test
+    wrap(result).should('equal', 'block value').run('Declare a variable inside the block and assign its value to `result`', 'Read an inner variable from the outer scope');
+    ```
+
+2. This loop attaches a handler to each button, and every button reports the wrong color. Fix it by changing how the loop variable is declared.
+
+    ```html id=page2
+    <button id="red">red</button>
+    <button id="green">green</button>
+    <button id="blue">blue</button>
+    <p id="chosen"></p>
+    ```
+
+    ```{javascript}
+    const output = document.querySelector('#chosen');
+
+    for (var color of ['red', 'green', 'blue']) {
+      const button = document.querySelector('#' + color);
+
+      button.addEventListener('click', () => {
+        output.textContent = 'you chose ' + color;
+      });
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const output = document.querySelector('#chosen');
+
+    for (const color of ['red', 'green', 'blue']) {
+      const button = document.querySelector('#' + color);
+
+      button.addEventListener('click', () => {
+        output.textContent = 'you chose ' + color;
+      });
+    }
+    ```
+    ```+test
+    assert('#red').click().run('Could not find the `#red` button', 'Clicked red');
+    assert('#chosen').should('have.text', 'you chose red').run('Clicking red should say `you chose red`. `var` gives all three handlers one shared variable; use `const` so each pass has its own', 'Red reports itself');
+    assert('#green').click().run('Could not find the `#green` button', 'Clicked green');
+    assert('#chosen').should('have.text', 'you chose green').run('Clicking green should say `you chose green`', 'Green reports itself');
+    ```
+
+3. Why does the `var` version of the fruit loop show `pear costs 10` for every button?
+
+    ```{mcq}
+    With `var id` as the loop variable, every button reports the last fruit. Why?
+    correct: Correct! `var` is function-scoped, so all three handlers share a single `id` variable. The loop finishes before any click happens, leaving that one variable at `'pear'`.
+    wrong: Revisit "The Bug `var` Causes", and think about how many `id` variables exist in each version.
+    [x] `var` is function-scoped, so there is one shared `id`, left at `'pear'` by the time any handler runs
+    [ ] The handlers were attached to the wrong buttons
+    [ ] `prices` only contains an entry for pear
+    [ ] Click handlers always read the last value of any loop
+    ```
+
+## Resources
+
+- [MDN: Scope](https://developer.mozilla.org/en-US/docs/Glossary/Scope)
+- [MDN: let](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let)
+- [MDN: var](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/var)
+- [MDN: Closures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures)

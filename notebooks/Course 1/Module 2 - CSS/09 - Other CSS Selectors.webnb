@@ -1,0 +1,281 @@
+# Other CSS Selectors
+
+I consider the selectors we have learned so far to be the **essential** ones: they cover most of what a page needs. But CSS has many more selectors, some of which can be very useful. In this reading, I will focus on two groups: **pseudo-classes** and more **combinators** (beyond [compound selectors](<07 - Combining Selectors.webnb#compound-selectors>), [descendant selectors](<07 - Combining Selectors.webnb#descendant-selectors>), and [selector lists](<07 - Combining Selectors.webnb#selector-lists>), which we covered earlier).
+
+## Pseudo-Classes
+
+A **pseudo-class** describes a state an element (rather than something written in HTML). It attaches to a selector after a colon.
+
+### `:hover`
+
+`:hover` matches while the mouse pointer is over the element. Move your pointer over the button below:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      button {
+        font-size: 16px;
+        padding: 8px 16px;
+      }
+      button:hover {
+        background-color: gold;
+      }
+    </style>
+  </head>
+  <body>
+    <button>Hover over me</button>
+  </body>
+</html>
+```
+
+Nothing about the button's HTML changed. The browser applies the second rule while the pointer is inside it and drops it when the pointer leaves.
+
+### `:focus`
+
+`:focus` matches while the element has keyboard focus, which is where typing would go. Click into the field below, or press Tab until it is selected:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      input:focus {
+        outline: 3px solid red;
+      }
+    </style>
+  </head>
+  <body>
+    <input placeholder="Click here, or press Tab">
+  </body>
+</html>
+```
+
+This one is worth taking seriously rather than treating as decoration. Somebody navigating with the keyboard has no pointer to tell them where they are, and a visible focus style is the only thing showing them.
+
+### `:first-child` and `:nth-child()`
+
+These match on **position among siblings**. `:first-child` matches an element that is the first child of its parent. `:nth-child()` takes a value in parentheses and matches accordingly: a number for one position, or a keyword like `even` or `odd`, which is the usual way to get striped rows:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      .examples li:first-child {
+        color: green;
+      }
+      .examples li:nth-child(even) {
+        background-color: lightyellow;
+      }
+    </style>
+  </head>
+  <body>
+    <ul class="examples">
+      <li>First item</li>
+      <li>Second item</li>
+      <li>Third item</li>
+      <li>Fourth item</li>
+    </ul>
+  </body>
+</html>
+```
+
+The first item is green, and every second item has a pale background. Add another `<li>` to the list and the striping extends to it without any change to the CSS, which is the reason to write it this way instead of adding a class to every other row.
+
+### `:not()` and `:has()`
+
+`:not()` matches elements that do **not** match the selector inside it. `:has()` matches elements that **contain** something matching the selector inside it:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      .notes p:not(.special) {
+        opacity: 0.4;
+      }
+      section:has(h2) {
+        background-color: lavender;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="notes">
+      <p class="special">This paragraph is special.</p>
+      <p>This one is not.</p>
+      <p>Neither is this one.</p>
+    </div>
+
+    <section>
+      <h2>This section has a heading</h2>
+      <p>So the section gets a background.</p>
+    </section>
+
+    <section>
+      <p>This section has no heading, so it does not.</p>
+    </section>
+  </body>
+</html>
+```
+
+`:has()` is a little different from other selectors we have written, as it looks at what is *inside* an element to decide how the element itself should look.
+
+[There are many more pseudo-classes](https://developer.mozilla.org/en-US/docs/Web/CSS/Pseudo-classes), including `:active` (while a button or link is being pressed), `:visited` (a link the user has already followed), and `:last-child`.
+
+## More Combinators
+
+The descendant selector (`A B`, with a space) matches a `B` anywhere inside an `A`. Three more combinators say something more specific about the relationship.
+
+**The child combinator, `A > B`,** matches a `B` that is a *direct* child of an `A`, and not one nested more deeply:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      .parent > span {
+        background-color: lightblue;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="parent">
+      <span>A direct child of the div.</span>
+      <p>A paragraph holding <span>a span nested one level deeper.</span></p>
+    </div>
+  </body>
+</html>
+```
+
+Only the first span is highlighted. Change the `>` to a space and run the cell again: both spans match, because both are descendants.
+
+**The adjacent sibling combinator, `A + B`,** matches a `B` that comes immediately after an `A`, with the same parent.
+
+**The subsequent sibling combinator, `A ~ B`,** matches every `B` that comes after an `A` under the same parent, immediately or not:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      h3 + p {
+        font-weight: bold;
+      }
+      h3 ~ p {
+        color: darkblue;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Before the heading.</p>
+    <h3>A heading</h3>
+    <p>Immediately after the heading.</p>
+    <p>Later, still after the heading.</p>
+  </body>
+</html>
+```
+
+Both paragraphs after the heading turn dark blue, because `~` reaches all of them. Only the one directly after it is bold, because `+` reaches exactly one. The paragraph before the heading is untouched by either: these combinators only look forward.
+
+## Exercises
+
+1. Make the list stripe: give every even-numbered `<li>` a `lightyellow` background using `:nth-child()`.
+
+    ```html id=page1
+    <ul>
+      <li>One</li>
+      <li>Two</li>
+      <li>Three</li>
+      <li>Four</li>
+    </ul>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    li:nth-child(even) {
+      background-color: lightyellow;
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+test
+    assert('li:nth-child(2)').should('have.css', 'background-color: lightyellow').run('The second item should have a lightyellow background. Try `li:nth-child(even)`', 'Striped the even items');
+    assert('li:nth-child(4)').should('have.css', 'background-color: lightyellow').run('Every even item should be striped, not only the second one', 'Striped every even item');
+    assert('li:nth-child(1)').should('not.have.css', 'background-color: lightyellow').run('The odd-numbered items should be left alone', 'Left the odd items alone');
+    ```
+
+2. Use `:hover` to turn the button's `background-color` `gold` while the pointer is over it, and leave it alone otherwise.
+
+    ```html id=page2
+    <button>Press me</button>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    button:hover {
+      background-color: gold;
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+test
+    wrap(/button\s*:\s*hover/.test(source)).should('equal', true).run('Attach the `:hover` pseudo-class to the `button` selector', 'Used the :hover pseudo-class');
+    wrap(/background-color\s*:\s*gold/.test(source)).should('equal', true).run('Set `background-color` to `gold` inside the `:hover` rule', 'Set the hover background');
+    assert('button').should('not.have.css', 'background-color: gold').run('The button should only be gold while the pointer is over it, so put the declaration inside the `:hover` rule rather than the plain `button` rule', 'The plain button is unstyled');
+    ```
+
+3. Use the child combinator to give a `lightblue` background to spans that are direct children of `.parent`, leaving the more deeply nested span alone.
+
+    ```html id=page3
+    <div class="parent">
+      <span>Direct child</span>
+      <p>Paragraph with <span>a nested span</span></p>
+    </div>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    .parent > span {
+      background-color: lightblue;
+    }
+    ```
+    ```+id=page3
+    ```
+    ```+test
+    assert('.parent > span').should('have.css', 'background-color: lightblue').run('The direct child span should have a lightblue background', 'Styled the direct child');
+    assert('.parent p span').should('not.have.css', 'background-color: lightblue').run('The nested span should be left alone. A space matches any descendant; `>` matches only a direct child', 'Left the nested span alone');
+    ```
+
+4. Reading `:has()`
+
+    ```{mcq}
+    Which elements does `section:has(h2)` select?
+    correct: Correct! `:has()` selects the element itself, based on what it contains. It is the one selector that looks inside an element to decide how that element should look.
+    wrong: Read the selector out loud: "a section that has an h2". Which part of that is the thing being styled?
+    [x] Every `<section>` that contains an `<h2>`
+    [ ] Every `<h2>` that is inside a `<section>`
+    [ ] Every `<section>` that comes immediately after an `<h2>`
+    [ ] Every `<h2>` and, separately, every `<section>`
+    ```
+
+5. What is the difference between `+` and `~`?
+
+    ```{mcq}
+    A page has an `<h3>` followed by three `<p>` elements. How many does `h3 + p` style, and how many does `h3 ~ p` style?
+    correct: Correct! `+` matches only the sibling immediately after, so one paragraph. `~` matches every later sibling, so all three.
+    wrong: One combinator reaches exactly one element and the other reaches all the following siblings. Look back at "More Combinators".
+    [x] `+` styles one, `~` styles all three
+    [ ] `+` styles all three, `~` styles one
+    [ ] Both style all three
+    [ ] Both style only the first
+    ```
+
+## Resources
+
+- [MDN: Pseudo-classes](https://developer.mozilla.org/en-US/docs/Web/CSS/Pseudo-classes)
+- [MDN: :nth-child()](https://developer.mozilla.org/en-US/docs/Web/CSS/:nth-child)
+- [MDN: :has()](https://developer.mozilla.org/en-US/docs/Web/CSS/:has)
+- [MDN: Child combinator](https://developer.mozilla.org/en-US/docs/Web/CSS/Child_combinator)
+- [MDN: Next-sibling combinator](https://developer.mozilla.org/en-US/docs/Web/CSS/Next-sibling_combinator)

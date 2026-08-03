@@ -1,0 +1,236 @@
+# React Events: Understanding the Mechanics
+
+We have written `onClick={handleClick}` many times. In the video, we taught freact, our fake React from Lesson 2, to handle it, which turns that syntax from a rule into a mechanism.
+
+The updated code is in `freact/03-events/` next to this notebook. It is the same project as `freact/02-fragments/` plus one helper and one loop, and this reading walks through exactly what changed. To watch it run, right-click `index.html` in that folder, choose "Show Preview", and open the browser console before you click anything.
+
+## What Happens to `onClick`
+
+Nothing special, at first:
+
+```jsx
+<button onClick={callback}>Click Me</button>
+```
+
+The compiler translates it like any other attribute:
+
+```javascript
+createElement('button', { onClick: callback }, 'Click Me')
+```
+
+So the element description carries `onClick` in its props, alongside props like `id` and `className`, and its value happens to be a function rather than a string. Everything interesting happens when a DOM node is built from that description.
+
+## Two Kinds of Prop
+
+Until now, `_createDomNode` wrote every prop to the DOM with `setAttribute`. That is wrong for a handler: `setAttribute('onClick', someFunction)` would stringify the function into an attribute, and nothing would ever call it. Handlers need `addEventListener`, which we know from Course 2.
+
+So the props have to be split into two kinds, and the rule React uses is a naming convention.
+
+```{walkthrough}
+title: The changes in freact.js
+step: Recognizing an event prop
+file: freact/03-events/freact.js
+region: is-event
+The entire test: a prop whose name starts with `on` is an event. This is why every handler prop you have ever written is `onSomething`.
+@"startsWith('on')": `startsWith`, from Course 2's string methods, checking two characters. That is all the magic there is.
+
+step: The attribute loop skips events
+file: freact/03-events/freact.js
+region: attributes
+The loop from Part I, with one new condition: an ordinary prop still becomes an attribute, an event prop is now left alone here.
+@"!isEvent(propName)": Without this check, the button would get a useless `onClick="function callback() {...}"` attribute and no working listener.
+
+step: A second loop attaches listeners
+file: freact/03-events/freact.js
+region: event-listeners
+A second pass over the same props, taking only the events. Each one has its name converted and its function registered on the freshly created node.
+@"substring(2)": The name conversion, and the entire reason for React's naming rule. Lowercase the camelCase name and drop the first two characters: `onClick` becomes `click`, `onMouseEnter` becomes `mouseenter`, `onKeyDown` becomes `keydown`.
+@"dom.addEventListener": The same `addEventListener` you used directly in Course 2. React is not a different event system; it is a translation layer in front of the one you already know.
+```
+
+## Seeing It Run
+
+```{walkthrough}
+title: The component with a handler
+file: freact/03-events/App.jsx
+The component from the video: a button whose `onClick` is a function defined right in the component.
+@"function callback": Defined during render, and *not called* during render. It is handed to freact as a value.
+@"onClick={callback}": No parentheses. The prop carries the function itself; freact calls `addEventListener('click', callback)` with it, and the browser calls it when the click happens.
+```
+
+Preview the page, open the console, and click the button: `Clicked` appears once per click. Then right-click the button, choose Inspect, and look at the element: **there is no `onClick` attribute on it**. The prop was consumed to register a listener and then discarded.
+
+That is worth pausing on, because it answers something you may have wondered. `onClick` is not an HTML attribute that React happens to spell differently. It never reaches the HTML at all.
+
+## Render Now, Handle Later
+
+The mechanism also makes the timing concrete. There are two separate moments:
+
+1. **During render**, your component hands freact a function. Nothing runs.
+2. **When the event fires**, the DOM calls that function.
+
+That gap is why `onClick={handleClick}` works and `onClick={handleClick()}` does not. The second one calls the function during render and passes freact whatever it returned, which is usually `undefined`, so nothing is listening when the click finally happens.
+
+Here is the same thing in real React:
+
+```{react autorun}
+function SaveStatus() {
+  const [status, setStatus] = React.useState('Unsaved');
+
+  function handleSave() {
+    setStatus('Saved');
+  }
+
+  return (
+    <section>
+      <button onClick={handleSave}>Save</button>
+      <p>{status}</p>
+    </section>
+  );
+}
+
+renderReact(<SaveStatus />);
+```
+
+React received `handleSave` while rendering and called it when you clicked. In between, the function sat in a listener, exactly as it does in freact.
+
+## Exercises
+
+1. Write `isEvent`, which decides whether a prop name is an event, and the conversion from a prop name to a DOM event type.
+
+    ```{javascript}
+    function isEvent(key) {
+      // TODO: an event prop is one whose name starts with 'on'
+    }
+
+    function eventTypeFor(propName) {
+      // TODO: turn 'onClick' into 'click' by lowercasing the name
+      // and dropping the first two characters
+    }
+
+    console.log(isEvent('onClick'), eventTypeFor('onClick'));
+    ```
+    ```+solution
+    function isEvent(key) {
+      return key.startsWith('on');
+    }
+
+    function eventTypeFor(propName) {
+      return propName.toLowerCase().substring(2);
+    }
+
+    console.log(isEvent('onClick'), eventTypeFor('onClick'));
+    ```
+    ```+test
+    wrap(isEvent('onClick')).should('equal', true).run('`onClick` starts with `on`, so it is an event prop', 'Recognized an event prop');
+    wrap(isEvent('className')).should('equal', false).run('`className` is an ordinary attribute, not an event', 'Left ordinary props alone');
+    wrap(eventTypeFor('onClick')).should('equal', 'click').run('`onClick` should become `click`', 'Converted onClick');
+    wrap(eventTypeFor('onMouseEnter')).should('equal', 'mouseenter').run('`onMouseEnter` should become `mouseenter`. Lowercasing the whole name is what makes camelCase work here', 'Converted onMouseEnter');
+    ```
+
+2. Complete the prop loop so events are registered as listeners and everything else becomes an attribute. (This cell reaches the real document as `window.document`, since a cell's own `document` has no `createElement`.)
+
+    ```{javascript}
+    const realDocument = window.document;
+
+    function isEvent(key) {
+      return key.startsWith('on');
+    }
+
+    let fired = false;
+
+    const element = {
+      type: 'button',
+      props: {
+        id: 'go',
+        onClick: function () { fired = true; },
+        children: []
+      }
+    };
+
+    const dom = realDocument.createElement(element.type);
+
+    for (const propName in element.props) {
+      if (propName === 'children') {
+        continue;
+      }
+
+      // TODO: if this prop is an event, add a listener for the converted
+      // event type. Otherwise set it as an attribute.
+    }
+
+    dom.click();
+
+    console.log('fired: ' + fired);
+    ```
+    ```+solution
+    const realDocument = window.document;
+
+    function isEvent(key) {
+      return key.startsWith('on');
+    }
+
+    let fired = false;
+
+    const element = {
+      type: 'button',
+      props: {
+        id: 'go',
+        onClick: function () { fired = true; },
+        children: []
+      }
+    };
+
+    const dom = realDocument.createElement(element.type);
+
+    for (const propName in element.props) {
+      if (propName === 'children') {
+        continue;
+      }
+
+      if (isEvent(propName)) {
+        dom.addEventListener(propName.toLowerCase().substring(2), element.props[propName]);
+      } else {
+        dom.setAttribute(propName, element.props[propName]);
+      }
+    }
+
+    dom.click();
+
+    console.log('fired: ' + fired);
+    ```
+    ```+test
+    wrap(dom.getAttribute('id')).should('equal', 'go').run('Ordinary props should still become attributes', 'Set the ordinary attribute');
+    wrap(fired).should('equal', true).run('Register the handler with `addEventListener`, so clicking the button runs it', 'The handler ran on click');
+    wrap(dom.hasAttribute('onClick')).should('equal', false).run('An event prop should not be written to the DOM as an attribute', 'Did not set an onClick attribute');
+    ```
+
+3. The reason for the naming rule
+
+    ```{mcq}
+    React requires handler props to be named `onSomething`. What does the `on` prefix let React do?
+    correct: Correct! The prefix is how React tells an event prop from an ordinary attribute, and lowercasing the rest of the camelCase name produces the DOM event type: `onMouseEnter` becomes `mouseenter`.
+    wrong: Two decisions have to be made for every prop: is it an event, and if so, which one. Look back at "Two Kinds of Prop".
+    [x] Recognize which props are handlers, and derive the DOM event name from the rest
+    [ ] Sort the props alphabetically before rendering
+    [ ] Guarantee the handler runs before the component renders
+    [ ] Prevent the handler from being called more than once
+    ```
+
+4. What lands in the HTML
+
+    ```{mcq}
+    After React renders `<button onClick={handleClick}>`, what does the button element look like in the DOM?
+    correct: Correct! There is no `onClick` attribute. The prop was used to call `addEventListener` and never written to the element, which is why you will not find it in the elements panel.
+    wrong: Preview the stage 3 project, click Inspect on the button, and look at its attributes.
+    [x] No `onClick` attribute; the handler was registered with `addEventListener`
+    [ ] An `onClick` attribute holding the function's source code
+    [ ] An `onclick` attribute holding the function's name
+    [ ] A `data-onclick` attribute React adds automatically
+    ```
+
+## Resources
+
+- [React Docs: Responding to events](https://react.dev/learn/responding-to-events)
+- [MDN: EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
+- [MDN: String.prototype.substring()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/substring)

@@ -1,0 +1,234 @@
+# Common Event Types
+
+So far every listener we have written has been for `'click'`. This lesson is a tour of the other event types you can listen for. There are a great many, far too many to cover exhaustively, and you are not expected to memorize them. The aim is to know roughly what exists so you know what to search for.
+
+## Mouse Events
+
+- `click`: the user clicks the element.
+- `dblclick`: the user double-clicks it.
+- `mousedown`: the user presses the mouse button down.
+- `mouseup`: the user releases it.
+- `mousemove`: the pointer moves within the element.
+- `mouseenter` and `mouseleave`: the pointer moves onto, or off, the element.
+- `mouseover` and `mouseout`: also fired when the pointer moves onto, or off, the element.
+
+Those last two pairs look like duplicates and are not quite. **`mouseenter` fires only when the pointer enters the element itself, while `mouseover` also fires when the pointer moves onto any of its children.** So on a button containing an icon, moving from the button onto the icon fires another `mouseover`, and does not fire another `mouseenter`. `mouseleave` and `mouseout` differ the same way.
+
+If you only care about the element as a whole, `mouseenter` and `mouseleave` usually give you fewer surprises.
+
+## Keyboard Events
+
+- `keydown`: the user presses a key down.
+- `keyup`: the user releases it.
+- `keypress`: both together. This one is deprecated; use `keydown`.
+
+## Window and Browser Events
+
+- `load`: the page, or a particular resource, has finished loading.
+- `resize`: the browser window has been resized.
+- `scroll`: the user has scrolled.
+- `beforeunload`: fired just *before* the user leaves the page. This is how a page warns you that you have unsaved changes.
+
+```{javascript autorun}
+console.log('window is ' + window.innerWidth + ' pixels wide');
+
+window.addEventListener('resize', () => {
+  console.log('new width is ' + window.innerWidth);
+});
+
+window.addEventListener('scroll', () => {
+  console.log('scrolled to ' + window.scrollY);
+});
+```
+
+Run that, then drag the edge of your browser window, and scroll the page. `window.innerWidth` and `window.scrollY` report the current state each time the event fires.
+
+### The `load` Event
+
+`load` is worth its own note because it works on two quite different things.
+
+**On the `window`**, it fires when the whole page has finished loading, including images and stylesheets:
+
+```javascript
+window.addEventListener('load', () => {
+  console.log('page loaded');
+});
+```
+
+**On a particular element**, such as an `<img>`, it fires when that one resource has finished downloading:
+
+```javascript
+const img = document.querySelector('img');
+
+img.addEventListener('load', () => {
+  console.log('image loaded');
+});
+```
+
+On a fast connection an image loads almost instantly and it can be hard to tell the event fired at all. To see it properly, open the developer tools, go to the **Network** panel, tick **Disable cache**, and change the throttling dropdown from "No throttling" to a slow connection such as 3G. Reload, and you can watch the image arrive and the event fire afterwards.
+
+### Using `load` to Fix Script Timing
+
+Back in [Module 1](<../Module 1 - Manipulating the DOM/02 - Selecting DOM Elements from JavaScript.webnb#timing-matters>) we saw that a script in the `<head>` gets `null` from `querySelector`, because the elements do not exist yet, and that the fix was to move the script to the end of the `<body>`.
+
+The `load` event gives us a second fix. Code inside a `load` listener does not run until the page is fully built, so it can find anything:
+
+```html
+<html>
+  <head>
+    <script>
+      window.addEventListener('load', () => {
+        const input = document.querySelector('input');
+        console.log(input);        // the input element, not null
+      });
+    </script>
+  </head>
+  <body>
+    <input type="text">
+  </body>
+</html>
+```
+
+The script still sits in the `<head>` and still runs first, but all it does when it runs is register a listener. The part that touches the page waits.
+
+## Input and Device Events
+
+- `input`: fires whenever an input's value changes, including a checkbox or radio button being toggled.
+- `change`: fires when a value is committed, which for a text field means when it loses focus.
+- `focus` and `blur`: an element gains or loses keyboard focus.
+- `submit`: a form is submitted.
+- `touchstart` and `touchend`: on a touchscreen, the user puts a finger down or lifts it. Multi-touch devices report each finger separately.
+
+There are many more, and some are specific to particular devices. When you need one, MDN's event reference lists them all.
+
+## Trying Several at Once
+
+Click the button, hover it, and double-click it, then type in the box and click away. The log shows whichever event fired last:
+
+```html id=page1
+<button id="click-target">Click or hover me</button>
+<input id="text-target" placeholder="Type here">
+<p id="event-log">Try the controls.</p>
+```
+
+```{javascript autorun}
+const clickTarget = document.querySelector('#click-target');
+const textTarget = document.querySelector('#text-target');
+const eventLog = document.querySelector('#event-log');
+
+clickTarget.addEventListener('click', () => {
+  eventLog.textContent = 'click event';
+});
+
+clickTarget.addEventListener('dblclick', () => {
+  eventLog.textContent = 'dblclick event';
+});
+
+clickTarget.addEventListener('mouseenter', () => {
+  eventLog.textContent = 'mouseenter event';
+});
+
+textTarget.addEventListener('input', () => {
+  eventLog.textContent = 'input event: ' + textTarget.value;
+});
+
+textTarget.addEventListener('focus', () => {
+  eventLog.textContent = 'focus event';
+});
+
+textTarget.addEventListener('blur', () => {
+  eventLog.textContent = 'blur event';
+});
+```
+```+id=page1
+```
+
+Hover the button, click it, double-click it, click into the input, type, then click away. Each action names itself.
+
+## Exercises
+
+1. Listen for the `input` event and copy whatever is typed into the paragraph as the user types.
+
+    ```html id=page2
+    <input id="name" placeholder="Your name">
+    <p id="preview"></p>
+    ```
+
+    ```{javascript}
+    const nameInput = document.querySelector('#name');
+    const preview = document.querySelector('#preview');
+
+    // Write your code here
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const nameInput = document.querySelector('#name');
+    const preview = document.querySelector('#preview');
+
+    nameInput.addEventListener('input', () => {
+      preview.textContent = nameInput.value;
+    });
+    ```
+    ```+test
+    assert('#name').type('Ada').run('Could not find the `#name` input', 'Typed into the input');
+    assert('#preview').should('have.text', 'Ada').run('The `input` listener should copy the value into the paragraph', 'The preview updates as you type');
+    ```
+
+2. Wire up two different event types on this small form: typing in the input should show the current text, and clicking the button should clear both the input and the paragraph.
+
+    ```html id=page3
+    <input id="entry" placeholder="Type something">
+    <button id="clear">Clear</button>
+    <p id="readout"></p>
+    ```
+
+    ```{javascript}
+    const entry = document.querySelector('#entry');
+    const clearButton = document.querySelector('#clear');
+    const readout = document.querySelector('#readout');
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const entry = document.querySelector('#entry');
+    const clearButton = document.querySelector('#clear');
+    const readout = document.querySelector('#readout');
+
+    entry.addEventListener('input', () => {
+      readout.textContent = entry.value;
+    });
+
+    clearButton.addEventListener('click', () => {
+      entry.value = '';
+      readout.textContent = '';
+    });
+    ```
+    ```+test
+    assert('#entry').type('hello there').run('Could not find the `#entry` input', 'Typed into the input');
+    assert('#readout').should('have.text', 'hello there').run('The `input` listener should show what was typed', 'Typing updates the readout');
+    assert('#clear').click().run('Could not find the `#clear` button', 'Clicked Clear');
+    assert('#readout').should('have.text', '').run('Clicking Clear should empty the paragraph', 'Clear empties the paragraph');
+    wrap(entry.value).should('equal', '').run('Clicking Clear should also empty the input', 'Clear empties the input');
+    ```
+
+3. Which event would you use to warn someone about unsaved work?
+
+    ```{mcq}
+    A page has a document the user has edited but not saved, and you want to warn them if they navigate away. Which event fits?
+    correct: Correct! `beforeunload` fires just before the user leaves the page, which is the last moment you can say anything to them.
+    wrong: Look back at the list under "Window and Browser Events", and at which one fires before the page goes away.
+    [x] `beforeunload`
+    [ ] `load`
+    [ ] `blur`
+    [ ] `change`
+    ```
+
+## Resources
+
+- [MDN: Event reference](https://developer.mozilla.org/en-US/docs/Web/Events)
+- [MDN: Element mouseenter event](https://developer.mozilla.org/en-US/docs/Web/API/Element/mouseenter_event)
+- [MDN: Element input event](https://developer.mozilla.org/en-US/docs/Web/API/Element/input_event)
+- [MDN: Window load event](https://developer.mozilla.org/en-US/docs/Web/API/Window/load_event)

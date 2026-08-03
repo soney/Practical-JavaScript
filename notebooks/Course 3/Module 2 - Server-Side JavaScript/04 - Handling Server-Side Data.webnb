@@ -1,0 +1,331 @@
+# Handling Server-Side Data
+
+If all you need is to hand over files, there are excellent servers you can download and never think about again. The reason to write your own is that yours can be **dynamic**: it can process data and keep **state**, meaning information that changes over time.
+
+The classic example, and one you may remember from older websites, is a **hit counter**: "you are visitor number 123".
+
+## State in a Variable
+
+Start with the obvious version. Keep a number, and add one whenever the home page is requested:
+
+```javascript
+let hitCount = 0;
+
+const server = http.createServer((request, response) => {
+  let url = request.url;
+
+  if (url === '/') {
+    url = 'index.html';
+    hitCount++;
+  }
+
+  // ...serve the file as before
+});
+```
+
+Then add a URL that reports it:
+
+```javascript
+  if (url === '/getHitCount') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end(String(hitCount));
+  }
+```
+
+A URL like `/getHitCount` that exists to return data rather than a page is usually called an **endpoint**.
+
+Two details in that small block.
+
+**`String(hitCount)`.** `response.end` sends text, and `hitCount` is a number. Convert it, or Node complains.
+
+**And it is missing a `return`.** Without one, execution carries on into the file-serving code, which tries to read a file named `getHitCount`, fails, and calls `writeHead` a second time:
+
+```
+Error [ERR_HTTP_HEADERS_SENT]: Cannot set headers after they are sent to the client
+```
+
+A response's header can only be sent once. When you see that error, something answered a request and then kept going:
+
+```javascript
+  if (url === '/getHitCount') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end(String(hitCount));
+    return;
+  }
+```
+
+## The Variable Problem
+
+Visit the page a few times, watch the count climb, then restart the server. It is back to zero.
+
+A variable lives in the program's memory, and memory disappears when the program does. That data is **volatile**: a restart, a crash, or a deployment loses it. Anything you want to survive has to be written somewhere outside the process.
+
+The simplest somewhere is a file.
+
+## State in a File
+
+Two helpers, one to write and one to read:
+
+```javascript
+function setHitCount(count) {
+  fs.writeFile('hit-count.txt', String(count), () => {});
+}
+```
+
+`fs.writeFile` takes a path, the contents, and a callback for when it finishes. The count is converted to a string again, because a file holds bytes rather than numbers.
+
+Reading is more interesting, because of *when* the answer arrives:
+
+```javascript
+function getHitCount() {
+  return new Promise((resolve) => {
+    fs.readFile('hit-count.txt', 'utf8', (error, content) => {
+      if (error) {
+        resolve(0);
+      } else {
+        resolve(parseInt(content));
+      }
+    });
+  });
+}
+```
+
+Three things worth naming here.
+
+**The error case is not a failure.** The very first time this runs, `hit-count.txt` does not exist, `readFile` reports an error, and the right answer is `0` rather than a crash.
+
+**`parseInt(content)`** turns the text read from the file back into a number.
+
+**The promise.** `readFile` reports its result to a callback, and we want a value we can `await`. Wrapping a callback-style function in `new Promise` is the standard way to convert one into the other, and it is worth recognizing because plenty of older Node APIs still work this way. (`fs` also has a promise-based version, so in real code you would often not need to do this by hand.)
+
+## Awaiting It in the Handler
+
+Because the count now arrives asynchronously, the handler has to wait for it, which means making the handler `async`:
+
+```javascript
+const server = http.createServer(async (request, response) => {
+  let url = request.url;
+
+  if (url === '/') {
+    url = 'index.html';
+
+    setHitCount(await getHitCount() + 1);
+  }
+
+  if (url === '/getHitCount') {
+    response.writeHead(200, { 'Content-Type': 'text/plain' });
+    response.end(String(await getHitCount()));
+    return;
+  }
+
+  // ...serve the file as before
+});
+```
+
+This is the [`async` and `await` from Course 2 Module 3](<../../Course 2/Module 3 - Asynchronous Data and Fetching/07 - async and await.webnb>), in a new place. Reading a file takes time; without `await`, we would send a response before the number arrived.
+
+Now the count is in `hit-count.txt`, and restarting the server no longer resets it.
+
+## Showing It in the Page
+
+The server has the number and the browser needs it, which is exactly what `fetch` is for. In `index.html`:
+
+```html
+<footer>
+  This page has been visited <span id="count">0</span> times.
+</footer>
+
+<script>
+  fetch('/getHitCount')
+    .then((response) => response.text())
+    .then((content) => {
+      document.querySelector('#count').textContent = content;
+    });
+</script>
+```
+
+`response.text()` because the endpoint sends plain text, not JSON.
+
+Load the page in Firefox and then in Chrome and the number keeps climbing across both, which is the whole point of server-side state: there is one count, on the server, shared by everyone. Compare that with anything stored in a browser, which each visitor would have their own copy of.
+
+This is one number, and the structure does not change as the data gets bigger. Module 3 stores users, passwords, and sessions in a database, and the shape is the same: state on the server, endpoints to read and change it, `fetch` from the client.
+
+## Running It Yourself
+
+The finished counter is `demo-server/counter-server.js`, next to this notebook:
+
+```{walkthrough}
+title: demo-server/counter-server.js
+file: demo-server/counter-server.js
+region: storage
+The two helpers that put the count somewhere outside the process.
+@"fs.writeFile": Path, contents, and a callback for when the write finishes. The empty callback says we are not going to do anything once it lands.
+@"resolve(0)": Not a failure. The first time this ever runs the file does not exist, and zero is the right answer.
+@"parseInt": A file holds text, so the number has to be converted back on the way in, as it was converted to text on the way out.
+
+step: Using it in the handler
+file: demo-server/counter-server.js
+region: handler
+@"async (request, response)": The handler has to be `async`, because the count now arrives from a file rather than from a variable.
+@"return;": Take this line out, restart, and requesting `/getHitCount` produces `ERR_HTTP_HEADERS_SENT`: this branch answers, then execution falls through to the file-serving code, which answers again.
+```
+
+Run it and reload the page a few times:
+
+```
+$ cd "demo-server"
+$ node counter-server.js
+Listening on port 3000
+```
+
+Then do the experiment the reading is really about. Stop the server with Ctrl+C, start it again, and reload: the count carries on from where it was, because it is in `hit-count.txt` and not in memory. Look in the folder and that file is there, holding a single number. Delete it and the count starts over at zero, which is the `resolve(0)` branch doing its job.
+
+To feel the difference, replace `await getHitCount()` with a plain `let hitCount = 0` variable and try the same restart. The count resets every time.
+
+## Exercises
+
+1. Complete the `/getHitCount` route. The fake response below behaves like a real one and refuses to send a header twice.
+
+    ```{node}
+    let hitCount = 7;
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        if (sent.statusCode !== null) {
+          throw new Error('Cannot set headers after they are sent to the client');
+        }
+
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      // TODO: for '/getHitCount', send a 200 with Content-Type text/plain
+      // and the count as text, then stop.
+
+      // Everything else falls through to the page.
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end('<h1>Home</h1>');
+    }
+
+    const counted = makeFakeResponse();
+    handleRequest({ url: '/getHitCount' }, counted);
+
+    console.log(counted.statusCode + ' ' + counted.body);
+    ```
+    ```+solution
+    let hitCount = 7;
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        if (sent.statusCode !== null) {
+          throw new Error('Cannot set headers after they are sent to the client');
+        }
+
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      if (request.url === '/getHitCount') {
+        response.writeHead(200, { 'Content-Type': 'text/plain' });
+        response.end(String(hitCount));
+        return;
+      }
+
+      // Everything else falls through to the page.
+      response.writeHead(200, { 'Content-Type': 'text/html' });
+      response.end('<h1>Home</h1>');
+    }
+
+    const counted = makeFakeResponse();
+    handleRequest({ url: '/getHitCount' }, counted);
+
+    console.log(counted.statusCode + ' ' + counted.body);
+    ```
+    ```+test
+    wrap(counted.statusCode).should('equal', 200).run('Send a `200` status for `/getHitCount`', 'Sent a success status');
+    wrap(counted.headers && counted.headers['Content-Type']).should('equal', 'text/plain').run('The count is plain text, so send `Content-Type: text/plain`', 'Sent the right content type');
+    wrap(counted.body).should('equal', '7').run('Send the count as the body, converted with `String(hitCount)`', 'Sent the count');
+    wrap(typeof counted.body).should('equal', 'string').run('`response.end` sends text, so convert the number with `String(...)`', 'Converted the number to text');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ url: '/' }, r); return r.body; })()).should('equal', '<h1>Home</h1>').run('A request for anything else should still reach the page below', 'Left the fall-through working');
+    ```
+
+2. Write `countFromFile`, which turns what `fs.readFile` reports into a usable number.
+
+    ```{node}
+    function countFromFile(error, content) {
+      // TODO: return 0 when there was an error reading the file,
+      // and the content as a number otherwise
+    }
+
+    console.log(countFromFile(null, '42'));
+    console.log(countFromFile(new Error('ENOENT'), null));
+    ```
+    ```+solution
+    function countFromFile(error, content) {
+      if (error) {
+        return 0;
+      }
+
+      return parseInt(content);
+    }
+
+    console.log(countFromFile(null, '42'));
+    console.log(countFromFile(new Error('ENOENT'), null));
+    ```
+    ```+test
+    wrap(countFromFile(null, '42')).should('equal', 42).run('With no error, convert the file contents with `parseInt`', 'Converted the file contents');
+    wrap(typeof countFromFile(null, '42')).should('equal', 'number').run('Return a number rather than the string from the file', 'Returned a number');
+    wrap(countFromFile(new Error('ENOENT'), null)).should('equal', 0).run('An error means the file is not there yet, so the count is `0`', 'Handled the missing file');
+    wrap(countFromFile(null, '0')).should('equal', 0).run('A stored count of `0` should come back as `0` too', 'Handled a stored zero');
+    ```
+
+3. Why store the hit count in a file rather than in `let hitCount = 0;`?
+
+    ```{mcq}
+    What is wrong with keeping it in a variable?
+    correct: Correct! A variable lives in the program's memory, so the number is gone the moment the server stops or crashes. Data that has to outlive the process must be written outside it.
+    wrong: Think about what happened to the count when the server was restarted.
+    [x] A variable is volatile: the value is lost when the server restarts or crashes
+    [ ] Variables in Node can only hold numbers up to 100
+    [ ] Reading a text file is faster than reading a variable
+    [ ] Browsers cannot read a variable from a server
+    ```
+
+4. Why did the request handler have to become `async`, with `await getHitCount()`?
+
+    ```{mcq}
+    What does awaiting the count achieve?
+    correct: Correct! Reading a file takes time and reports back later. Without waiting, the handler would answer before the count existed and send nothing useful.
+    wrong: Think about when `readFile` produces its answer, relative to when the handler wants to send a response.
+    [x] Reading a file takes time, and the response must wait until the number has arrived
+    [ ] `async` makes the counter increment faster
+    [ ] It is not necessary, but it is conventional
+    [ ] It stops other people from reading the count
+    ```
+
+## Resources
+
+- [Node.js: fs.writeFile()](https://nodejs.org/api/fs.html#fswritefilefile-data-options-callback)
+- [Node.js: fs promises API](https://nodejs.org/api/fs.html#promises-api)
+- [MDN: using promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises)
+- [MDN: parseInt()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/parseInt)

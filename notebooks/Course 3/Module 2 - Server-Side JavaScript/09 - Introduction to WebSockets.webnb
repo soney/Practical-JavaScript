@@ -1,0 +1,260 @@
+# Introduction to WebSockets
+
+HTTP has a shape built into it: the client asks, the server answers. In the last reading, Server-Sent Events loosened that shape by letting the server keep talking after its first answer, but in one direction only: the server speaks, the client listens. For a chat application, a shared document, or a game, both sides need to speak whenever they have something to say.
+
+That is what a **WebSocket** is: one connection, open for as long as you like, carrying messages **both ways**.
+
+## How the Connection Starts
+
+A WebSocket connection begins as an HTTP request, and then stops being one.
+
+1. The client sends an ordinary HTTP request asking to **upgrade** the connection.
+2. The server agrees, answering with status **`101 Switching Protocols`**.
+3. From that point the connection is no longer HTTP. It is a WebSocket, and both sides can send messages down it at will.
+4. Either side can close the connection when it is finished.
+
+`101` is worth remembering, because it is the one status code that means "we are done speaking HTTP on this connection".
+
+A server can hold many of these open at once, dozens or hundreds of clients simultaneously. That is what makes the interesting applications possible: if the server is connected to everyone, it can pass a message from any client to all the others. **The clients never talk to each other directly; they talk through the server.**
+
+## Installing the Library
+
+WebSockets are not built into Node the way `http` is, so the video's first move is to install a library capable of creating a WebSocket server:
+
+```
+$ npm install ws
+```
+
+The demos for this reading and the next two live in `ws-demo/`, next to this notebook, and their `package.json` already names `ws` as a dependency. So there the command is `npm install` with no package name, run once inside `ws-demo`: npm reads the dependency list and fetches everything on it.
+
+## The Server Half
+
+The video starts from a server we have written twice already, one that answers requests by reading a file, and turns it into a WebSocket server by adding two lines. Here is the result, `ws-demo/connect-server.js`:
+
+```{walkthrough}
+title: The server half
+step: A server we already know
+file: ws-demo/connect-server.js
+region: setup
+Everything here is Lesson 1, except one line.
+@"require('ws')": The new require. `ws` is the library that `npm install` fetched, and requiring it works like requiring `http` or `fs`, except that npm put it here rather than Node.
+@"connect-page": The one page this server sends is the client half of the demo. We will read it next.
+
+step: Attaching the WebSocket server
+file: ws-demo/connect-server.js
+region: attach
+And here is the other new line.
+@"new WebSocket.Server({ server })": Creates the WebSocket server. Passing our HTTP server in attaches the two together, which is what lets them share port 3000. The next section unpacks this line piece by piece.
+```
+
+## Sharing One Port
+
+Two things are packed into `new WebSocket.Server({ server })`, so let's slow down on it.
+
+The first is the argument. `{ server: server }` is a plain object whose `server` key holds our HTTP server, and passing it in is what attaches the two. The library *could* run a separate WebSocket server on its own port; given an HTTP server to ride on, it watches that server's port instead. A request to `localhost:3000` for a page is answered by the HTTP half, and a request to `localhost:3000` asking to *upgrade* is taken over by the WebSocket half. One port, one address, two kinds of traffic.
+
+The second is the spelling. When an object's key and the variable filling it have the same name, JavaScript lets you write the name once:
+
+```{javascript autorun}
+const server = 'pretend this is the HTTP server';
+
+const longWay = { server: server };
+const shortWay = { server };
+
+console.log(longWay.server === shortWay.server);
+```
+
+`{ server }` means `{ server: server }`, nothing more, and the shorthand is everywhere in real code, so it is worth recognizing on sight. Try adding a second key to `shortWay`, such as `port: 3000`, then log the whole object to see what the shorthand builds.
+
+One naming note: our files follow the video and write `const WebSocket = require('ws')`, then `new WebSocket.Server(...)`. The library's documentation often spells the same thing `const { WebSocketServer } = require('ws')` and `new WebSocketServer(...)`, using the destructuring form from Module 1. Both construct the same server.
+
+## The Client Half
+
+The browser needs no library, because `WebSocket` is built in. The client is an ordinary page, `ws-demo/connect-page/index.html`, and the connection is two lines inside its script element:
+
+```{walkthrough}
+title: The client half
+step: Opening the connection
+file: ws-demo/connect-page/index.html
+region: connect
+The lines live in a script element at the bottom of an otherwise plain page. Click the file name above the code to open the whole thing.
+@"location.protocol === 'https:'": Picks the scheme to connect with. The next section explains why the page cannot simply hard-code one.
+@"new WebSocket(": The built-in constructor. Creating the object is what sends the upgrade request; there is no separate connect call.
+```
+
+### The URL
+
+The address handed to `WebSocket` is worth reading twice.
+
+The protocol is **`ws://`** rather than `http://`, because after the upgrade this connection does not speak HTTP. Its encrypted form is **`wss://`**, which matches `https://` the same way.
+
+Which of the two to use is not a free choice: a page loaded over `https://` is not allowed to open an insecure `ws://` connection, and the browser blocks the attempt outright. That is why the scheme is picked from `location.protocol` rather than written in by hand. A page served over plain `http://` gets `ws://`, and the identical file served over `https://` gets `wss://`. The video hard-codes `ws://`, which is fine on `localhost`, but the line above is what keeps the same page working once it is served securely, as it is in this course's lab.
+
+`location` is a built-in object holding the page's own address. `location.host` is the host and port the page came from, without the protocol part: `localhost:3000` on our machine. `location.pathname` is the path part, usually just `/`. Building the URL out of both means the page connects back to exactly where it was served from, so the same code keeps working when the site is deployed somewhere else, including behind an address that adds a prefix to the path. (You will also see the URL written as a template literal with backticks; it produces the same string.) It also points the WebSocket at the same port the pages come from, which works because of the attachment we made on the server. If the WebSocket server were a separate program on its own port, you would spell out that address here instead.
+
+## One Message Each Way
+
+The next reading is all about sending data properly. As a preview, each side of this demo sends one greeting, and the code that does it is already sitting in the two files we walked:
+
+```{walkthrough}
+title: One message each way
+step: The browser speaks
+file: ws-demo/connect-page/index.html
+region: greet
+The rest of the page's script.
+@"addEventListener('open'": Opening a connection takes time, so for a moment `ws` exists with nothing usable behind it. The `open` event announces that the handshake finished, so code that should run once the connection is ready goes in this listener.
+@"ws.send('hello from browser'": Sending is one method call, and this message travels up to the server.
+
+step: The server speaks
+file: ws-demo/connect-server.js
+region: connection
+Back in the server file, below the lines we walked earlier.
+@"wss.on('connection'": Fires once for every client that connects, and hands the callback that client's socket, plus the HTTP request that started it all. A server with fifty clients has run this callback fifty times and holds fifty sockets.
+@"console.log('a client connected'": Watch the terminal: one of these per visitor.
+@"socket.send('hello from server'": The same one-call send, pointed the other way. Nothing in the browser is listening for messages yet - that is the next reading - but the message still crosses, and the Network tab can show it to you.
+```
+
+## Run It Yourself
+
+A connection that stays open is not something a notebook cell can show. Open a terminal, install the library once, and start the server:
+
+```
+$ cd "ws-demo"
+$ npm install
+$ node connect-server.js
+Listening on port 3000
+```
+
+Then visit `http://localhost:3000` and look in three places:
+
+1. **The terminal** prints `a client connected`. Refresh the page and it prints again: every page load opens a fresh connection.
+2. **The Network tab** shows the request the `WebSocket` constructor made, answered with status `101 Switching Protocols`. That is the upgrade happening.
+3. Click that request and open its **Messages** pane. Both greetings are there, `hello from browser` going up and `hello from server` coming down, on a connection that is still open.
+
+Close the tab and the connection closes with it. Stop the server with `Ctrl+C` when you are done, since every demo in this lesson wants port 3000.
+
+## Exercises
+
+1. Write `socketUrlFor`, which builds the WebSocket URL for a page, given the page's `location`. A page loaded over `https:` has to connect with `wss:`; a page loaded over plain `http:` uses `ws:`.
+
+    ```{javascript}
+    function socketUrlFor(location) {
+      // TODO: return a WebSocket URL pointing at the same host the page came
+      // from, using wss:// if location.protocol is 'https:' and ws:// otherwise
+    }
+
+    console.log(socketUrlFor({ protocol: 'http:', host: 'localhost:3000' }));
+    console.log(socketUrlFor({ protocol: 'https:', host: 'example.com' }));
+    ```
+    ```+solution
+    function socketUrlFor(location) {
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+      return wsProtocol + '//' + location.host;
+    }
+
+    console.log(socketUrlFor({ protocol: 'http:', host: 'localhost:3000' }));
+    console.log(socketUrlFor({ protocol: 'https:', host: 'example.com' }));
+    ```
+    ```+test
+    wrap(socketUrlFor({ protocol: 'http:', host: 'localhost:3000' })).should('equal', 'ws://localhost:3000').run('A page served over `http:` connects with the `ws://` protocol followed by `location.host`', 'Built the development URL');
+    wrap(socketUrlFor({ protocol: 'https:', host: 'example.com' })).should('equal', 'wss://example.com').run('A page served over `https:` must connect with `wss://`, because a secure page is not allowed to open an insecure connection', 'Used wss:// on a secure page');
+    wrap(socketUrlFor({ protocol: 'https:', host: 'chat.example.com:8443' })).should('equal', 'wss://chat.example.com:8443').run('Take the host from `location.host` rather than writing an address in, so the same code works wherever the page is served', 'Works for any host');
+    ```
+
+2. Complete the handshake handler: answer an upgrade request with the code that means the protocol is changing, and refuse anything else.
+
+    ```{node}
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleUpgrade(request, response) {
+      // TODO: if request.headers.upgrade is 'websocket', answer with the
+      // switching-protocols status and end with the body 'switching'.
+      // Otherwise answer 400 and end with the body 'expected a websocket upgrade'.
+    }
+
+    const upgraded = makeFakeResponse();
+    handleUpgrade({ headers: { upgrade: 'websocket' } }, upgraded);
+
+    console.log(upgraded.statusCode + ' ' + upgraded.body);
+    ```
+    ```+solution
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleUpgrade(request, response) {
+      if (request.headers.upgrade === 'websocket') {
+        response.writeHead(101, { 'Content-Type': 'text/plain' });
+        response.end('switching');
+      } else {
+        response.writeHead(400, { 'Content-Type': 'text/plain' });
+        response.end('expected a websocket upgrade');
+      }
+    }
+
+    const upgraded = makeFakeResponse();
+    handleUpgrade({ headers: { upgrade: 'websocket' } }, upgraded);
+
+    console.log(upgraded.statusCode + ' ' + upgraded.body);
+    ```
+    ```+test
+    wrap(upgraded.statusCode).should('equal', 101).run('The status code for switching protocols is `101`', 'Answered the upgrade with 101');
+    wrap(upgraded.body).should('equal', 'switching').run('End the response with the body `switching`', 'Sent the expected body');
+    wrap((function () { const r = makeFakeResponse(); handleUpgrade({ headers: {} }, r); return r.statusCode + '|' + r.body; })()).should('equal', '400|expected a websocket upgrade').run('A request with no upgrade header should get `400` and the body `expected a websocket upgrade`', 'Refused a plain request');
+    ```
+
+3. Reading the Network tab
+
+    ```{mcq}
+    In the Network tab you find the request your page made when it created a `new WebSocket(...)`. Its status is `101 Switching Protocols`. What does that tell you?
+    correct: Correct! `101 Switching Protocols` is the server agreeing to the upgrade. From that response on, the connection stops being HTTP, and both sides can send messages down it at will.
+    wrong: `101` is not an error, a redirect, or a wait. It is the server's answer to one specific thing the client asked for.
+    [x] The server agreed to upgrade, and this connection is now a WebSocket
+    [ ] The server refused the upgrade, so the browser fell back to plain HTTP
+    [ ] The handshake is still in progress and the real status has not arrived yet
+    [ ] The server moved the WebSocket endpoint to a different address
+    ```
+
+4. One port, two protocols
+
+    ```{mcq}
+    A page served from `http://localhost:3000` connects with `new WebSocket('ws://' + location.host)`. No second port is opened anywhere. Why does this work?
+    correct: Correct! `ws://` is the WebSocket protocol, and because the WebSocket server was attached with `new WebSocket.Server({ server })`, the `ws` library watches the HTTP server's own port and takes over the requests that ask to upgrade.
+    wrong: The connection genuinely changes protocol, nothing here is encrypted, and no hidden port exists. Think about what passing the HTTP server into `new WebSocket.Server(...)` did.
+    [x] `ws://` is the WebSocket protocol, and the attached WebSocket server handles upgrade requests on the same port the HTTP server listens on
+    [ ] The `ws://` prefix is decoration; the connection stays an ordinary HTTP request underneath
+    [ ] Node forwards traffic from port 3000 to a hidden second port where the WebSocket server runs
+    [ ] The browser switches to `wss://` automatically, which does not need its own port
+    ```
+
+## Resources
+
+- [MDN: the WebSockets API](https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API)
+- [MDN: WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket)
+- [MDN: 101 Switching Protocols](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/101)
+- [ws: the Node WebSocket library](https://www.npmjs.com/package/ws)

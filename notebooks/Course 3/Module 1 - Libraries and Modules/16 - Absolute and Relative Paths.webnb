@@ -1,0 +1,250 @@
+# Absolute and Relative Paths
+
+A **path** says where a file or directory is. We met [paths in Course 1](<../../Course 1/Module 4 - JavaScript Fundamentals/11 - Paths.webnb>) when linking to files from a web page; this reading is the same idea applied to the files on your computer, which is what the console and npm work with.
+
+Here is a small file system to work from. By convention a name ending in `/` is a directory, and one without is a file:
+
+```
+/
+  home/
+    alice/
+      code/
+        personal-website/
+          main.js
+        data-analysis/
+      Pictures/
+    bob/
+      Pictures/
+        vacation.jpg
+  shared/
+```
+
+## Four Special Directories
+
+- **`/` is the root directory.** Everything on the file system is inside it.
+- **`.` is the working directory**: the one you are currently working in, such as the folder you have open in VS Code or in a terminal.
+- **`..` is the parent directory**: the directory that contains the working directory.
+- **`~` is the home directory**: the current user's own folder, `/home/alice` for Alice.
+
+## Absolute and Relative
+
+An **absolute path** starts at the root and spells out the whole way down. It means the same thing no matter where you are:
+
+```
+/home/alice/code/personal-website/main.js
+```
+
+A **relative path** starts at the working directory. It only means something once you know where you are.
+
+Say the working directory is `/home/alice`. Then this relative path reaches the same file:
+
+```
+code/personal-website/main.js
+```
+
+Put the working directory in front of a relative path and you get the absolute path:
+
+```
+/home/alice  +  code/personal-website/main.js
+=  /home/alice/code/personal-website/main.js
+```
+
+That is the whole relationship. A relative path is the second half of an absolute one, with the working directory supplying the first half.
+
+## Going Up
+
+To reach something *outside* the working directory, use `..`. Still standing in `/home/alice`, Bob's pictures are:
+
+```
+../bob/Pictures
+```
+
+Work out the absolute path by folding the `..` in. Starting from `/home/alice`, the `..` cancels `alice`, leaving `/home`, and then `bob/Pictures` gets appended:
+
+```
+/home/alice/../bob/Pictures   =  /home/bob/Pictures
+```
+
+Each `..` cancels one directory, so a deeper working directory needs more of them. From `/home/alice/code/personal-website`, the same target is three levels up:
+
+```
+../../../bob/Pictures         =  /home/bob/Pictures
+```
+
+Count them off against the tree: up out of `personal-website`, up out of `code`, up out of `alice`, and now we are in `/home`.
+
+Here is that resolution written as code, so you can try it on the video's three examples and on your own:
+
+```{javascript autorun}
+function resolve(workingDirectory, relativePath) {
+  const parts = [];
+
+  for (const part of workingDirectory.split('/')) {
+    if (part !== '') {
+      parts.push(part);
+    }
+  }
+
+  for (const part of relativePath.split('/')) {
+    if (part === '..') {
+      parts.pop();
+    } else if (part !== '' && part !== '.') {
+      parts.push(part);
+    }
+  }
+
+  let out = '';
+
+  for (const part of parts) {
+    out = out + '/' + part;
+  }
+
+  return out;
+}
+
+console.log(resolve('/home/alice', 'code/personal-website/main.js'));
+console.log(resolve('/home/alice', '../bob/Pictures'));
+console.log(resolve('/home/alice/code/personal-website', '../../../bob/Pictures'));
+```
+
+Notice that `..` is `parts.pop()`, and that a `.` changes nothing at all, which is exactly what "the directory I am already in" should do.
+
+## The Home Shortcut
+
+`~` stands in for the current user's home directory, so for Alice:
+
+```
+~/code/data-analysis     is     /home/alice/code/data-analysis
+```
+
+It saves typing and, more usefully, it means the same instruction works for any user. `~` is not relative to where you are standing, so a path starting with `~` is absolute.
+
+## Telling Them Apart
+
+That gives a rule you can apply by eye:
+
+- Starts with `/` or `~`: **absolute**. Location is fully specified.
+- Anything else, including one starting with `./` or `../`: **relative**. You need to know the working directory to know what it points at.
+
+## Exercises
+
+1. Finish `resolve` so it handles `..` by stepping back up one directory.
+
+    ```{javascript}
+    function resolve(workingDirectory, relativePath) {
+      const parts = [];
+
+      for (const part of workingDirectory.split('/')) {
+        if (part !== '') {
+          parts.push(part);
+        }
+      }
+
+      for (const part of relativePath.split('/')) {
+        // TODO: handle '..' by removing the last part,
+        // skip '' and '.', and push everything else
+        parts.push(part);
+      }
+
+      let out = '';
+
+      for (const part of parts) {
+        out = out + '/' + part;
+      }
+
+      return out;
+    }
+
+    console.log(resolve('/home/alice', '../bob/Pictures'));
+    ```
+    ```+solution
+    function resolve(workingDirectory, relativePath) {
+      const parts = [];
+
+      for (const part of workingDirectory.split('/')) {
+        if (part !== '') {
+          parts.push(part);
+        }
+      }
+
+      for (const part of relativePath.split('/')) {
+        if (part === '..') {
+          parts.pop();
+        } else if (part !== '' && part !== '.') {
+          parts.push(part);
+        }
+      }
+
+      let out = '';
+
+      for (const part of parts) {
+        out = out + '/' + part;
+      }
+
+      return out;
+    }
+
+    console.log(resolve('/home/alice', '../bob/Pictures'));
+    ```
+    ```+test
+    wrap(resolve('/home/alice', 'code/main.js')).should('equal', '/home/alice/code/main.js').run('A plain relative path should be appended to the working directory', 'Handled a simple relative path');
+    wrap(resolve('/home/alice', '../bob/Pictures')).should('equal', '/home/bob/Pictures').run('`..` should remove the last part, so this is `/home/bob/Pictures`. Use `parts.pop()`', 'Handled the parent directory');
+    wrap(resolve('/home/alice/code/personal-website', '../../../bob/Pictures')).should('equal', '/home/bob/Pictures').run('Three `..` parts should step up three directories', 'Handled several levels');
+    wrap(resolve('/home/alice', './code')).should('equal', '/home/alice/code').run('A `.` part means the current directory, so it should change nothing', 'Ignored the current-directory part');
+    ```
+
+2. Write `isAbsolute`, which reports whether a path is absolute.
+
+    ```{javascript}
+    function isAbsolute(path) {
+      // TODO: return true only for absolute paths
+      return false;
+    }
+
+    console.log(isAbsolute('/home/alice/main.js'));
+    console.log(isAbsolute('../bob/Pictures'));
+    ```
+    ```+solution
+    function isAbsolute(path) {
+      return path.startsWith('/') || path.startsWith('~');
+    }
+
+    console.log(isAbsolute('/home/alice/main.js'));
+    console.log(isAbsolute('../bob/Pictures'));
+    ```
+    ```+test
+    wrap(isAbsolute('/home/alice/main.js')).should('equal', true).run('A path starting with `/` is absolute', 'Recognized a root path');
+    wrap(isAbsolute('~/code/data-analysis')).should('equal', true).run('A path starting with `~` is absolute too, since the home directory does not depend on where you are', 'Recognized a home path');
+    wrap(isAbsolute('../bob/Pictures')).should('equal', false).run('A path starting with `..` is relative', 'Recognized a parent-relative path');
+    wrap(isAbsolute('code/main.js')).should('equal', false).run('A bare path with no prefix is relative to the working directory', 'Recognized a bare relative path');
+    ```
+
+3. Your working directory is `/home/alice/`, and you want to reach `/home/alice/code/app.js`. What is the relative path?
+
+    ```{mcq}
+    Which of these is the relative path from `/home/alice/` to that file?
+    correct: Correct! The file is inside the working directory, so the relative path is just the part that comes after it. No slash at the front, because a leading slash would start over at the root.
+    wrong: Take the absolute path and remove the working directory from the front of it.
+    [x] `code/app.js`
+    [ ] `/home/alice/code/app.js`
+    [ ] `../alice/code/app.js`
+    [ ] `/code/app.js`
+    ```
+
+4. Your terminal is open at `/home/alice/projects/website` and you move to `../../../bob/`. Where do you end up?
+
+    ```{mcq}
+    Three parent directories up, then into `bob`.
+    correct: Correct! The three `..` parts step out of `website`, out of `projects`, and out of `alice`, leaving `/home`, and then `bob/` goes back down.
+    wrong: Cancel one directory from the right-hand end of the working directory for each `..`.
+    [x] `/home/bob/`
+    [ ] `/home/alice/bob/`
+    [ ] `/home/alice/projects/bob/`
+    [ ] `/bob/`
+    ```
+
+## Resources
+
+- [MDN: What is a file path?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Getting_started/Environment_setup/Dealing_with_files)
+- [Node.js: the path module](https://nodejs.org/api/path.html)
+- [MDN: String.prototype.split()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/split)

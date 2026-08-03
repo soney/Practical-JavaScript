@@ -1,0 +1,102 @@
+# A Brief History of JavaScript
+
+In the last lesson we said that JavaScript is the language that makes web pages react to their users. Before we write any of it, I want to give you a brief history of where the language came from. Partly because I think it is interesting, but mostly because the history actually informs the way the language was designed. A few of JavaScript's rules look strange on their own and make much more sense once you know why they are there.
+
+## A Language Built in 10 Days
+
+Back in 1995, Netscape was one of the first web browsers and its popularity was growing quickly. Netscape could render HTML, but its creators realized that to expand the audience for the World Wide Web it would not be enough to publish *content*. People would want to build *applications* on the web.
+
+At the time there was a very popular programming language named Java, and the plan was to build on it: web authors would write their application code as full Java components running in the browser. But Java was a hard language for beginners, so Netscape also wanted a small scripting language to sit alongside it. That scripting language would be the **glue**: novices would write a little of it to reference and call the heavyweight Java components. You might have a thousand lines of Java and a handful of lines of the scripting language deciding when that Java code runs.
+
+There was already a model for a language like that, Microsoft's Visual Basic, but Netscape could couldn't use a Microsoft product. So they built their own. It was originally named **Mocha**, and was later renamed to **JavaScript**.
+
+When JavaScript was first designed it had only three requirements:
+
+- It should be approachable for beginners.
+- It should look like Java, with a similar syntax.
+- Since this was a fast-moving startup, there should be a working prototype in 10 days.
+
+That was the entire brief. Netscape hired a single developer (Brendan Eich) to implement it, and beyond those three requirements he had a lot of freedom in how the language would look and work.
+
+### A Platypus of a Language
+
+For everything the brief did *not* specify, Eich took inspiration from what he thought were the best features of several other languages, including Scheme, Self, and HyperTalk, and combined them into one.
+
+I think of the result as the platypus of programming languages. A platypus lays eggs like a reptile, has a beak like a duck, produces milk like a mammal, and carries venom like a snake. You would think none of those things belong in one animal, and yet somehow it works. JavaScript is the same kind of creature: features from languages that have almost nothing to do with each other, living together under one roof.
+
+## From Glue to the Language of the Web
+
+That initial 10-day prototype kept growing. Its feature set expanded, and before long it became obvious that the Java half of the plan was not needed at all: JavaScript could do everything on its own. It quickly became the de facto language of the web, and to this day it remains the only programming language that browsers run natively.
+
+Skipping over a period of copyright battles and browser wars, every browser eventually adopted JavaScript. That is why the cell below runs no matter which browser you are reading this in. Each one ships its own JavaScript engine:
+
+```{javascript autorun}
+console.log(navigator.userAgent);
+```
+
+Universal adoption came at a cost, though. JavaScript was originally *proprietary*: it belonged to Netscape. When other companies started making browsers, such as Microsoft with Internet Explorer, they had to write their own versions of the language. Those versions had subtly different features and behaviors, so the same page could act differently depending on where it was opened.
+
+### What's in a Name?
+
+Even the name is complicated. "JavaScript" is a trademarked term, currently owned by Oracle, and the official name of the language is **ECMAScript**. Almost nobody says that out loud, though, so like everyone else we will keep calling it JavaScript.
+
+## The Rule of Backwards Compatibility
+
+Here is where the quirks really come from. While the browser wars were going on, real websites were being built in JavaScript. A site that worked in Netscape 1.0 could not break in version 2.0, or 3.0, or 20.0. So Netscape could not remove or change old features, and neither could anyone else. Once something is added to JavaScript, it has to be supported forever, even when a better way of doing the same thing comes along later.
+
+JavaScript has evolved enormously since 1995, but every change has to be **backwards compatible**: it must not break old websites. Decades-old code still runs in today's browsers.
+
+Imagine if every new version of macOS had to contain everything every old version had. You would end up with layer on layer of features, and you would start asking questions like "why are there three different ways to open an application?" and "why are there two trash bins, and why does this one look so old?" That is roughly the situation JavaScript is in. Some of the original decisions were not the best ones, and they cannot be retracted without breaking existing websites.
+
+The most visible consequence is that for many tasks there is an old way and a new way, and both still work. Backwards compatibility also means quirks (or even outright mistakes) are permanent, because too much code now depends on it.
+
+I will focus on modern JavaScript rather than the legacy ways of doing things. I will occasionally show you an older approach when it is common enough that you will run into it in an existing codebase or in older documentation.
+
+## Exercises
+
+1. Replace `2000` with `1995` in the code below, so that the cell logs how old the language is.
+
+    ```{javascript}
+    const javascriptBirthYear = 2000;
+
+    console.log('JavaScript is ' + (2026 - javascriptBirthYear) + ' years old.');
+    ```
+    ```+solution
+    const javascriptBirthYear = 1995;
+
+    console.log('JavaScript is ' + (2026 - javascriptBirthYear) + ' years old.');
+    ```
+    ```+test
+    wrap(javascriptBirthYear).should('equal', 1995).run('Set `javascriptBirthYear` to the year JavaScript was created (1995)', 'Passed!');
+    ```
+
+2. Why was JavaScript given a syntax that looks like Java?
+
+    ```{mcq}
+    Netscape's brief for the new language said it should resemble Java. Why?
+    correct: Correct! Java was the popular language of the moment, and the new scripting language was meant to act as glue for Java components, so a familiar syntax made it easier to pick up.
+    wrong: Look back at "A Language Built in 10 Days" and at what the scripting language was originally supposed to sit next to.
+    [x] It was meant to complement Java code in the browser, so a familiar-looking syntax would be easier to adopt.
+    [ ] Java and JavaScript are two names for the same language.
+    [ ] Browsers could only run languages that looked like Java.
+    [ ] Brendan Eich was only allowed to copy Java's design.
+    ```
+
+3. What does backwards compatibility mean for the JavaScript you write today?
+
+    ```{mcq}
+    Which of these is a direct consequence of JavaScript never breaking old websites?
+    correct: Correct! Because old features can never be removed, new ones are layered on top, so there are often several ways to accomplish the same task.
+    wrong: Revisit "The Rule of Backwards Compatibility" and the cell with `var` and `let` in it.
+    [x] There are often two or three different ways to do the same thing, and all of them still work.
+    [ ] Old JavaScript code stops running after a browser update.
+    [ ] JavaScript can no longer add new features.
+    [ ] Every browser runs a different language.
+    ```
+
+## Resources
+
+- [Wirfs-Brock and Eich: JavaScript: the first 20 years](https://dl.acm.org/doi/10.1145/3386327) (ACM History of Programming Languages, 2020)
+- [MDN: JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
+- [MDN: A re-introduction to JavaScript](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Introduction)
+- [MDN: JavaScript technologies overview (JavaScript and ECMAScript)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/JavaScript_technologies_overview)

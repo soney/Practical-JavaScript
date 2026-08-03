@@ -1,0 +1,383 @@
+# Handling Query Parameters
+
+In the last reading, a `POST` carried its data in the request body. A `GET` has no body, so when a `GET` needs to say more than "give me this path", the extra information rides in the URL itself, as a **query string**, also called **query parameters**. (If you tried the last experiment in the previous reading, you have already watched a form put one there.)
+
+## Where the Query String Sits
+
+A full URL has these parts:
+
+```
+http  ://  localhost:3000  /search  ?  query=milk&maxPrice=4
+ |          |               |           |
+ |          |               |           the query string
+ |          |               the path: what we are asking for
+ |          the host: which machine
+ the protocol: how to talk to it
+```
+
+- The **protocol** is the language used to talk to the server: `http`, `https`, or `file`.
+- The **host** picks out one machine among all of them. Ours is `localhost`, plus the port.
+- The **path** says what we want, and you can think of it as which file.
+- Then an optional **`?`**, and after it the **query string**: the specifics of the request, which the server can read and use to decide how to answer.
+
+## Query Strings Are Key-Value Pairs
+
+A query string holds pairs. The key comes before the `=`, the value after, and pairs are separated by `&`. It is the same idea as an object, in a different syntax:
+
+```
+?sl=giraffe&topics=animal            two pairs
+?query=milk&maxPrice=4               two pairs
+?category=books&sort=price&limit=10  three pairs
+?page=3                              one pair
+```
+
+## Building the Search Page
+
+This reading's demo is a grocery search: the browser sends what you are looking for and the most you will pay, and the server answers with the products that fit. It is `demo-server/search-server.js`, next to this notebook, with its page in `demo-server/search-page/`. Following the video, we start on the client:
+
+```{walkthrough}
+title: demo-server/search-page/index.html
+file: demo-server/search-page/index.html
+region: controls
+The whole interface: what to search for, the most to pay, and a button.
+@"Search groceries": A text input for the search term.
+@"step=": `type="number"` makes this input take a number, and `step="0.01"` makes its up and down arrows move by cents rather than by whole dollars.
+
+step: Finding the elements
+file: demo-server/search-page/index.html
+region: elements
+This code sits in a `script` element on the same page, so it runs in the browser. It starts the way Course 2 pages did: `querySelector` for each element.
+
+step: Sending the query string
+file: demo-server/search-page/index.html
+region: search-click
+@"new URLSearchParams": Takes an object and turns its keys and values into a query string. The values here are whatever the two inputs hold at click time.
+@"fetch('/search?'": The request URL is the path, then a `?`, then the pairs: `/search?query=milk&maxPrice=4`.
+@"response.json()": We will write the server to answer with JSON, so the response is read with `json()` rather than `text()`.
+@"JSON.stringify(data)": The video stops at `console.log`; this line also puts the server's reply on the page, so you can see it without opening the console.
+```
+
+Why `URLSearchParams` instead of gluing the string together by hand? Because values can contain spaces, `&`, or `=`, and those have to be encoded or they would be read as part of the query string's own syntax. Here is that argument, run for real:
+
+```{javascript autorun}
+const params = new URLSearchParams({
+  query: 'organic milk & eggs',
+  maxPrice: '4'
+});
+
+console.log(params.toString());
+```
+
+The space and the `&` inside the value come out encoded, so the server reads one parameter rather than two.
+
+## Taking the URL Apart on the Server
+
+Click Search right now, with the Lesson 1 server logic on the other end, and the answer would be a `404`. The server treats everything after the host as a file name, so it goes looking for a file called `search?query=milk&maxPrice=4`, and no such file exists. Even routing would fail first: `request.url === '/search'` is `false` once a query string is attached.
+
+So the server's first job is to separate the path from the query string, and Node gives us the same [`URL` object we used in Course 1](<../../Course 1/Module 4 - JavaScript Fundamentals/10 - URL Components.webnb>) to do it:
+
+```{walkthrough}
+title: demo-server/search-server.js
+file: demo-server/search-server.js
+region: parse
+@"console.log": Watch the terminal while you search and you can see the problem: `request.url` arrives as the path and the query string run together.
+@"new URL(request.url": Two arguments, because `request.url` is only the second half of a URL. The base supplies the missing front, and `request.headers.host` is the host the client asked for, `localhost:3000` in development.
+@"parsedUrl.pathname": From here on, routing and file lookups use `pathname`, the path with the query string removed, instead of `request.url`.
+@"pathname = 'index.html'": The default-page rule from Lesson 1, now applied to the clean path.
+```
+
+What `new URL(...)` gives back is an object with the pieces separated:
+
+```javascript
+parsedUrl.pathname       // '/search'
+parsedUrl.search         // '?query=milk&maxPrice=4'
+parsedUrl.searchParams   // an object for reading the pairs
+parsedUrl.protocol       // 'http:'
+parsedUrl.origin         // 'http://localhost:3000'
+```
+
+And **`searchParams.get(name)`** reads one parameter:
+
+```{javascript autorun}
+const parsedUrl = new URL('/search?query=milk&maxPrice=4', 'http://localhost:3000');
+
+console.log('pathname: ' + parsedUrl.pathname);
+console.log('search:   ' + parsedUrl.search);
+
+const query = parsedUrl.searchParams.get('query');
+const maxPrice = Number(parsedUrl.searchParams.get('maxPrice'));
+
+console.log('query is ' + query + ' (a ' + typeof query + ')');
+console.log('maxPrice is ' + maxPrice + ' (a ' + typeof maxPrice + ')');
+```
+
+Note the `Number(...)`. **A query string is text, so every value `get` returns is a string**, including ones that look like numbers. Strings compare alphabetically, so `'10' < '9'` is `true`; convert with `Number(...)` before comparing or calculating.
+
+## Answering with JSON
+
+A search endpoint returns data rather than a page, so it answers with JSON. Here is the rest of the server:
+
+```{walkthrough}
+title: The /search route
+file: demo-server/search-server.js
+region: products
+Some stand-in back-end data. In a real store this would come from a database, which is a topic for the next module.
+
+step: Building the response
+file: demo-server/search-server.js
+region: search
+When the path is `/search`, the server does not look for a file. It builds the answer in JavaScript.
+@"searchResponse": The video names this object `response`, but here that name is taken by the handler's parameter, so it is `searchResponse`.
+@"searchParams.get('query')": The video filters on price alone; narrowing by name as well would be one more condition inside the same `if`.
+@"Number(": `get` returned a string such as `'2'`; the comparison below wants the number `2`.
+@"product.price <= maxPrice": The filter: collect the name of every product at or below the limit.
+@"application/json": The content type that says "this response is JSON data", and the reason the client could call `response.json()`.
+@"JSON.stringify(searchResponse)": `response.end` sends text, so the object has to be converted with `JSON.stringify`.
+```
+
+The filtering itself is plain JavaScript, so it runs right here:
+
+```{javascript autorun}
+const products = [
+  { name: 'Milk', price: 3.49 },
+  { name: 'Eggs', price: 2.99 },
+  { name: 'Orange Juice', price: 4.29 },
+  { name: 'Bread', price: 2.49 },
+  { name: 'Butter', price: 3.79 },
+  { name: 'Cheese', price: 5.19 },
+  { name: 'Apples', price: 1.99 },
+  { name: 'Bananas', price: 0.69 }
+];
+
+const parsedUrl = new URL('/search?query=milk&maxPrice=2', 'http://localhost:3000');
+const maxPrice = Number(parsedUrl.searchParams.get('maxPrice'));
+
+const searchResponse = { results: [] };
+
+for (const product of products) {
+  if (product.price <= maxPrice) {
+    searchResponse.results.push(product.name);
+  }
+}
+
+console.log(JSON.stringify(searchResponse));
+```
+
+Try changing `maxPrice=2` to `maxPrice=3` and rerunning the cell: four results instead of two. The server's answer now depends on the request, which is the whole point.
+
+## Running It Yourself
+
+Stop any other server on port 3000, then:
+
+```
+$ cd "demo-server"
+$ node search-server.js
+Listening on port 3000
+```
+
+Open `http://localhost:3000` and try these:
+
+1. Search for `milk` with a Max Price of `2`. The page shows `{"results":["Apples","Bananas"]}`, the two products at two dollars or less. Raise the price to `3` and search again: four results, `Eggs`, `Bread`, `Apples`, `Bananas`.
+2. Watch the terminal while you do it: `GET /search?query=milk&maxPrice=2`. That log line is the exact string the server had to take apart.
+3. Put `http://localhost:3000/search?maxPrice=3` straight into the address bar. Raw JSON appears in the browser: the endpoint is an ordinary `GET`, so a query URL is a complete, shareable address. Anyone opening it sends the same request with the same parameters.
+4. Search for `milk & eggs`. In the Network tab the request says `query=milk+%26+eggs`: the space and the `&` are encoded, so they cannot be mistaken for the query string's own separators. On the server, `searchParams.get('query')` quietly decodes them back.
+5. Leave Max Price empty and search. The request carries `maxPrice=`, `Number('')` is `0`, and nothing costs zero or less, so the results come back empty.
+
+## Exercises
+
+1. Pull the path and both parameters out of this request URL, with `page` as a number.
+
+    ```{javascript}
+    const requestUrl = '/articles?topic=javascript&page=3';
+
+    const parsedUrl = new URL(requestUrl, 'http://localhost:3000');
+
+    const pathname = /* the path, without the query string */;
+    const topic = /* the topic parameter */;
+    const page = /* the page parameter, as a number */;
+
+    console.log(pathname, topic, page);
+    ```
+    ```+solution
+    const requestUrl = '/articles?topic=javascript&page=3';
+
+    const parsedUrl = new URL(requestUrl, 'http://localhost:3000');
+
+    const pathname = parsedUrl.pathname;
+    const topic = parsedUrl.searchParams.get('topic');
+    const page = Number(parsedUrl.searchParams.get('page'));
+
+    console.log(pathname, topic, page);
+    ```
+    ```+test
+    wrap(pathname).should('equal', '/articles').run('`parsedUrl.pathname` is the path with the query string removed', 'Read the path');
+    wrap(topic).should('equal', 'javascript').run('Use `parsedUrl.searchParams.get(\'topic\')`', 'Read the topic parameter');
+    wrap(page).should('equal', 3).run('Read the `page` parameter and wrap it in `Number(...)`, since query values are always strings', 'Read the page parameter');
+    wrap(typeof page).should('equal', 'number').run('`page` should be the number `3`, not the string `\'3\'`', 'Converted it to a number');
+    ```
+
+2. Complete the search endpoint: read `maxPrice` from the URL, collect the names of every product at or below it, and send the result as JSON.
+
+    ```{node}
+    const products = [
+      { name: 'Milk', price: 3.49 },
+      { name: 'Eggs', price: 2.99 },
+      { name: 'Orange Juice', price: 4.29 },
+      { name: 'Bread', price: 2.49 },
+      { name: 'Butter', price: 3.79 },
+      { name: 'Cheese', price: 5.19 },
+      { name: 'Apples', price: 1.99 },
+      { name: 'Bananas', price: 0.69 }
+    ];
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleSearch(request, response) {
+      const parsedUrl = new URL(request.url, 'http://' + request.headers.host);
+
+      // TODO: read maxPrice as a number, build { results: [ ...names... ] },
+      // then answer with 200, Content-Type application/json, and the object
+      // converted to text.
+    }
+
+    const response = makeFakeResponse();
+    handleSearch({ url: '/search?query=milk&maxPrice=2', headers: { host: 'localhost:3000' } }, response);
+
+    console.log(response.statusCode + ' ' + response.body);
+    ```
+    ```+solution
+    const products = [
+      { name: 'Milk', price: 3.49 },
+      { name: 'Eggs', price: 2.99 },
+      { name: 'Orange Juice', price: 4.29 },
+      { name: 'Bread', price: 2.49 },
+      { name: 'Butter', price: 3.79 },
+      { name: 'Cheese', price: 5.19 },
+      { name: 'Apples', price: 1.99 },
+      { name: 'Bananas', price: 0.69 }
+    ];
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleSearch(request, response) {
+      const parsedUrl = new URL(request.url, 'http://' + request.headers.host);
+
+      const maxPrice = Number(parsedUrl.searchParams.get('maxPrice'));
+
+      const searchResponse = { results: [] };
+
+      for (const product of products) {
+        if (product.price <= maxPrice) {
+          searchResponse.results.push(product.name);
+        }
+      }
+
+      response.writeHead(200, { 'Content-Type': 'application/json' });
+      response.end(JSON.stringify(searchResponse));
+    }
+
+    const response = makeFakeResponse();
+    handleSearch({ url: '/search?query=milk&maxPrice=2', headers: { host: 'localhost:3000' } }, response);
+
+    console.log(response.statusCode + ' ' + response.body);
+    ```
+    ```+test
+    wrap(response.statusCode).should('equal', 200).run('Answer with a `200` status', 'Sent a success status');
+    wrap(response.headers && response.headers['Content-Type']).should('equal', 'application/json').run('The content type for JSON is `application/json`', 'Sent the right content type');
+    wrap(typeof response.body).should('equal', 'string').run('`response.end` sends text, so convert the object with `JSON.stringify`', 'Converted the object to text');
+    wrap(response.body).should('equal', '{"results":["Apples","Bananas"]}').run('At a maxPrice of 2 the results should be `Apples` and `Bananas`, in the order they appear in `products`. Remember to convert the parameter with `Number(...)`', 'Filtered the products correctly');
+    wrap((function () { const r = makeFakeResponse(); handleSearch({ url: '/search?maxPrice=3', headers: { host: 'localhost:3000' } }, r); return r.body; })()).should('equal', '{"results":["Eggs","Bread","Apples","Bananas"]}').run('At a maxPrice of 3, four products should match', 'Works for another price');
+    ```
+
+3. Build the request URL the way the search page does: turn the two values below into a query string with `URLSearchParams`, and attach it to the path `/search`.
+
+    ```{javascript}
+    const searchFor = 'orange juice';
+    const maxPrice = 5;
+
+    // TODO: build the pairs with URLSearchParams, using the keys
+    // query and maxPrice, then combine them with the path
+    const url = '';
+
+    console.log(url);
+    ```
+    ```+solution
+    const searchFor = 'orange juice';
+    const maxPrice = 5;
+
+    const params = new URLSearchParams({
+      query: searchFor,
+      maxPrice: maxPrice
+    });
+
+    const url = '/search?' + params.toString();
+
+    console.log(url);
+    ```
+    ```+test
+    wrap(/new\s+URLSearchParams/.test(source)).should('equal', true).run('Build the pairs with `new URLSearchParams(...)` rather than gluing the string together by hand, so the space in `orange juice` is encoded for you', 'Used URLSearchParams');
+    wrap(url).should('equal', '/search?query=orange+juice&maxPrice=5').run('`url` should be `/search?` followed by the pairs: the keys are `query` and `maxPrice`, and the values come from the two variables', 'Built the URL');
+    ```
+
+4. When `request.url` stops being enough.
+
+    ```{mcq}
+    A server routes with `request.url === '/search'`, and it worked until the client started sending requests like `/search?query=milk`. Why did it break, and what is the fix?
+    correct: Correct! `request.url` is one string with the path and the query string run together, so `/search?query=milk` does not equal `/search`. Parsing with `new URL(...)` separates the two: `pathname` for routing, `searchParams` for the data.
+    wrong: Look at the exact string `request.url` holds once a query string is attached, and compare it character by character with `/search`.
+    [x] `request.url` now includes the query string, so it no longer equals `/search`; parse it with `new URL(...)` and compare `parsedUrl.pathname` instead
+    [ ] `===` cannot compare strings that contain `?`, so the check needs `==` instead
+    [ ] `request.url` stops being filled in once a `?` appears; use `request.pathname`, which Node provides automatically
+    [ ] The server must be restarted whenever clients start sending new parameters
+    ```
+
+5. Counting the pairs.
+
+    ```{mcq}
+    A request arrives for this URL:
+
+    ~~~
+    https://music.example.com/albums?artist=jones&year=2016&sort=title&limit=5
+    ~~~
+
+    How many key-value pairs are in the query string, and what is the value of `sort`?
+    correct: Correct! Four pairs, separated by three ampersands, and `sort` is set to `title`.
+    wrong: Pairs are separated by `&`, and within a pair the key sits before the `=` and the value after it.
+    [x] Four pairs; `sort` is `title`
+    [ ] Three pairs; `sort` is `title`
+    [ ] Four pairs; `sort` is `limit`
+    [ ] Four pairs; `sort` is `5`
+    ```
+
+## Resources
+
+- [MDN: URL](https://developer.mozilla.org/en-US/docs/Web/API/URL)
+- [MDN: URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
+- [MDN: JSON.stringify()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify)
+- [MDN: what is a URL?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL)

@@ -1,0 +1,408 @@
+# Manual Animations
+
+An animation is nothing more than repeatedly changing a value over time, fast enough that the change looks smooth. In this lesson we build one by hand, moving a block from one horizontal position to another.
+
+We are writing it manually so you can see how animation actually works. In production you would reach for the browser APIs in the later lessons of this module, and having built the loop yourself is what makes those APIs make sense.
+
+## The Screen Coordinate System
+
+First we need to agree what a position means on screen. Think of the screen as a 2D grid:
+
+- `x = 0` is the left edge, and `x` increases as we move to the **right**.
+- `y = 0` is the **top** edge, and `y` increases as we move **down**.
+
+That vertical direction is the opposite of what you may have seen in math class, where `y` increases upward. On a screen, larger `y` means further down.
+
+So `(0, 0)` is the top-left corner. When we place a rectangle at a coordinate, that coordinate is where its **top-left corner** goes. A block at `(100, 0)` has its top-left corner 100 pixels from the left edge and flush with the top.
+
+For this lesson we animate only `x`. Animating `y` works identically.
+
+## Step 1: A Function That Sets the Position
+
+Before animating anything, we need a way to move the block. We write to its `left` CSS property:
+
+```html id=page1
+<div id="demo-area"><div id="block"></div></div>
+```
+
+```{javascript autorun}
+function setX(x) {
+  const element = document.querySelector('#block');
+  element.style.setProperty('left', x + 'px');
+}
+
+setX(0);
+```
+```+id=page1
+```
+```+css
+#demo-area {
+  position: relative;
+  height: 50px;
+  width: 350px;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+}
+#block {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-color: #00274c;
+  border-radius: 6px;
+}
+```
+
+The dashed box is the **corridor** the block moves along: it is `#demo-area`, and `left` is measured from its left edge. Every animation in this lesson happens inside a box like it, so you can always see the space being crossed and where the two ends are.
+
+Change the `0` in `setX(0)` to `200` and run the cell again. The block jumps.
+
+For `left` to have any effect the element needs a `position`. Here the block is `position: absolute` inside a container that is `position: relative`, so `left` is measured from the container's left edge.
+
+To animate, we want to call `setX` many times with gradually changing values.
+
+## Why a `while` Loop Does Not Work
+
+The obvious first attempt is a loop:
+
+```javascript
+// This does NOT animate anything
+let x = 0;
+const toX = 300;
+
+while (x < toX) {
+  setX(x);
+  x += 1;
+}
+```
+
+That produces no visible motion at all, for two reasons.
+
+**The browser only repaints after your JavaScript finishes and hands control back.** A `while` loop does not hand control back until it is completely done, so all 300 `setX` calls happen with no repaint between them. The user sees only the final position.
+
+**And it runs in a fraction of a millisecond anyway.** Even if every step were drawn, the motion would be far too fast to see.
+
+A loop that never yields to the browser is a **blocking** loop, and we met the consequences back in [Module 3](<../Module 3 - Asynchronous Data and Fetching/01 - Synchronous vs Asynchronous.webnb#one-thing-at-a-time>): while it runs, nothing else can happen. No repaint, no clicks, no scrolling.
+
+The fix is to make each step its own separate turn, with a small delay in between, so the browser can repaint and stay responsive.
+
+## Step 2: One Step at a Time
+
+Instead of a loop, we write a `step` function that does **one** step and then schedules the next with `setTimeout`:
+
+```html id=page2
+<button>Animate</button>
+<div id="demo-area"><div id="block"></div></div>
+```
+
+```{javascript autorun}
+function setX(x) {
+  document.querySelector('#block').style.setProperty('left', x + 'px');
+}
+
+document.querySelector('button').addEventListener('click', () => {
+  let x = 0;
+  const toX = 300;
+
+  const step = () => {
+    setX(x);
+    x += 1;
+
+    if (x < toX) {
+      setTimeout(step, 10);
+    }
+  };
+
+  step();
+});
+```
+```+id=page2
+```
+```+css
+#demo-area {
+  position: relative;
+  height: 50px;
+  width: 350px;
+  margin-top: 8px;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+}
+#block {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-color: #00274c;
+  border-radius: 6px;
+}
+```
+
+Click Animate. The block moves, smoothly.
+
+Three things to notice:
+
+- **`step` refers to itself** inside its own body. Each call schedules the next, so `step` keeps calling itself roughly every 10 milliseconds until `x` reaches `toX`.
+- **The final `step()` call kicks it off.** Without it, `step` is defined and never runs.
+- **The `10` is a delay in milliseconds**, which controls how often we redraw.
+
+## Frame Rate
+
+The number of redraws per second is the **frame rate**, in frames per second (fps).
+
+- 30 fps is a common rate for video.
+- 60 fps is what most games target and what most screens can display. Higher looks smoother.
+
+To redraw `fps` times per second, the delay must be `1000 / fps` milliseconds: a second divided into `fps` equal slices.
+
+```javascript
+function animateWithFramerate(fps) {
+  let x = 0;
+  const toX = 300;
+
+  const step = () => {
+    setX(x);
+    x += 1;
+
+    if (x < toX) {
+      setTimeout(step, 1000 / fps);
+    }
+  };
+
+  step();
+}
+```
+
+**There is a problem.** Because we always add `1` to `x` per frame, changing `fps` also changes how *fast* the block travels. Smoothness and speed should be independent. Fixing that means measuring time.
+
+## Time in JavaScript
+
+A **timestamp** represents a single point in time: now, the past, or the future. In JavaScript a timestamp is a **number**: the count of milliseconds since midnight UTC on 1 January 1970. That moment is called the **Unix epoch**.
+
+- `0` is 1 January 1970, 00:00:00 UTC.
+- `1000` is one second after that.
+
+**`Date.now()`** returns the current timestamp.
+
+```{javascript autorun}
+console.log(Date.now());
+console.log(Date.now() / 1000);
+```
+
+Because timestamps are plain numbers, subtracting two of them gives elapsed time:
+
+```{javascript autorun}
+const pageLoaded = Date.now();
+
+setTimeout(() => {
+  const now = Date.now();
+  const msSince = now - pageLoaded;
+
+  console.log(msSince + ' milliseconds passed');
+  console.log(msSince / 1000 + ' seconds passed');
+  console.log(Math.round(msSince / 1000) + ' seconds, rounded');
+}, 250);
+```
+
+The pattern: **capture a starting timestamp once, then subtract it from `Date.now()` whenever you want to know how much time has gone by.** `Math.round` is a built-in that rounds a number to the nearest whole number, useful when you want a tidy figure to display.
+
+Our animation is about to depend entirely on this trick.
+
+## Step 3: Duration Instead of Step Size
+
+Now we can specify how long the animation should take, its **duration**, separately from the frame rate. Instead of adding a fixed amount each frame, we work out how far along we are as a **fraction** of the duration.
+
+```javascript
+function animateWithDuration(fps, duration) {
+  const toX = 300;
+  const animationStarted = Date.now();
+
+  const step = () => {
+    const now = Date.now();
+    const pct = (now - animationStarted) / duration;
+
+    if (now < animationStarted + duration) {
+      setX(pct * toX);
+      setTimeout(step, 1000 / fps);
+    } else {
+      setX(toX);
+    }
+  };
+
+  step();
+}
+```
+
+Why that works:
+
+- `now - animationStarted` is the elapsed milliseconds. Divided by `duration` it gives `pct`, which is `0` when the animation starts and `1` when the elapsed time equals the duration.
+- `pct * toX` turns that fraction into a position: `0` at the start, `toX` at the end.
+- The `else` branch **snaps to exactly `toX`** at the end. Frames do not land precisely on the duration boundary, so the last computed `pct` is usually a little over `1`, which would overshoot. This one line is easy to forget and the overshoot is visible.
+
+Now `duration` controls speed and `fps` controls smoothness, independently.
+
+## Step 4: Animating From Anywhere, In Either Direction
+
+So far we always start at `0`. To go from any `fromX` to any `toX`, we **interpolate**:
+
+```javascript
+const x = fromX + pct * (toX - fromX);
+```
+
+Read it at the extremes:
+
+- At `pct = 0`: `x = fromX + 0`, which is `fromX`. We are at the start.
+- At `pct = 1`: `x = fromX + (toX - fromX)`, which is `toX`. We are at the end.
+- In between, `x` is proportionally between the two.
+
+One formula, both directions. If `toX` is smaller than `fromX`, then `toX - fromX` is negative and the block moves left, with no other change.
+
+## Step 5: `requestAnimationFrame`
+
+Choosing an `fps` ourselves is guesswork. The right value depends on things our code cannot know:
+
+- how fast the user's computer is
+- how busy it is right now
+- whether the device is conserving battery
+- whether the user is even looking at our page, or has switched tabs
+
+The browser knows all of that. **`requestAnimationFrame(callback)`** asks the browser to run our callback at the **next available frame**, and lets it decide when that is. We pass no delay. It matches the display's refresh rate, and it stops entirely when the tab is in the background rather than burning battery animating something nobody can see.
+
+Replacing `setTimeout(step, 1000 / fps)` with `requestAnimationFrame(step)` gives us the finished loop:
+
+```html id=page3
+<button id="right">Animate right</button>
+<button id="left">Animate left</button>
+<button id="slow">Slowly</button>
+<div id="demo-area"><div id="block"></div></div>
+```
+
+```{javascript autorun}
+function setX(x) {
+  document.querySelector('#block').style.setProperty('left', x + 'px');
+}
+
+function animate(duration, fromX, toX) {
+  const animationStarted = Date.now();
+
+  const step = () => {
+    const now = Date.now();
+    const pct = (now - animationStarted) / duration;
+
+    if (now < animationStarted + duration) {
+      const x = fromX + pct * (toX - fromX);
+      setX(x);
+      requestAnimationFrame(step);
+    } else {
+      setX(toX);
+    }
+  };
+
+  requestAnimationFrame(step);
+}
+
+document.querySelector('#right').addEventListener('click', () => animate(1000, 0, 300));
+document.querySelector('#left').addEventListener('click', () => animate(1000, 300, 0));
+document.querySelector('#slow').addEventListener('click', () => animate(4000, 0, 300));
+```
+```+id=page3
+```
+```+css
+#demo-area {
+  position: relative;
+  height: 50px;
+  width: 350px;
+  margin-top: 8px;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+}
+#block {
+  position: absolute;
+  width: 50px;
+  height: 50px;
+  background-color: #00274c;
+  border-radius: 6px;
+}
+```
+
+There is the manual animation loop in the form you would actually use: the browser controls the frame rate, `duration` controls speed, and the interpolation handles either direction. Try all three buttons.
+
+You may notice something about the motion: it starts and stops abruptly, at a constant speed throughout. Real objects do not move like that, and fixing it is the subject of the next lesson.
+
+## Exercises
+
+1. On screen, where is `(0, 0)` and which way does `y` increase?
+
+    ```{mcq}
+    In the screen coordinate system, where is the origin and which direction does `y` grow?
+    correct: Correct! The origin is the top-left corner and `y` grows downward, the opposite of most math classes.
+    wrong: Look back at "The Screen Coordinate System".
+    [x] `(0, 0)` is top-left, and `y` increases as you move down
+    [ ] `(0, 0)` is top-left, and `y` increases as you move up
+    [ ] `(0, 0)` is in the center, and `y` increases as you move up
+    [ ] `(0, 0)` is bottom-left, and `y` increases as you move up
+    ```
+
+2. Complete `elapsedSeconds` so it returns how many whole seconds have passed since the timestamp it is given.
+
+    ```{javascript}
+    function elapsedSeconds(startTimestamp) {
+      // Write your code here
+    }
+
+    console.log(elapsedSeconds(Date.now() - 3000));
+    ```
+    ```+solution
+    function elapsedSeconds(startTimestamp) {
+      return Math.round((Date.now() - startTimestamp) / 1000);
+    }
+
+    console.log(elapsedSeconds(Date.now() - 3000));
+    ```
+    ```+test
+    wrap(elapsedSeconds(Date.now() - 3000)).should('equal', 3).run('Three seconds ago should give `3`. Subtract the start timestamp from `Date.now()`, divide by 1000, and round', 'Computed elapsed seconds');
+    wrap(elapsedSeconds(Date.now())).should('equal', 0).run('Right now should give `0`', 'Handles zero elapsed time');
+    wrap(elapsedSeconds(Date.now() - 10000)).should('equal', 10).run('Ten seconds ago should give `10`', 'Scales correctly');
+    ```
+
+3. Write the interpolation that drives the animation. Given a fraction `pct` from `0` to `1`, return the position between `fromX` and `toX`. It has to work in both directions.
+
+    ```{javascript}
+    function positionAt(pct, fromX, toX) {
+      return /* Your code here */;
+    }
+
+    console.log(positionAt(0.5, 100, 300));
+    ```
+    ```+solution
+    function positionAt(pct, fromX, toX) {
+      return fromX + pct * (toX - fromX);
+    }
+
+    console.log(positionAt(0.5, 100, 300));
+    ```
+    ```+test
+    wrap(positionAt(0, 100, 300)).should('equal', 100).run('At `pct = 0` the result should be `fromX`', 'Start position is right');
+    wrap(positionAt(1, 100, 300)).should('equal', 300).run('At `pct = 1` the result should be `toX`', 'End position is right');
+    wrap(positionAt(0.5, 100, 300)).should('equal', 200).run('At `pct = 0.5` the result should be halfway between them', 'Halfway position is right');
+    wrap(positionAt(0.5, 300, 100)).should('equal', 200).run('It should also work when `toX` is smaller than `fromX`, for right-to-left motion', 'Works in reverse too');
+    ```
+
+4. Why prefer `requestAnimationFrame` over choosing an fps and using `setTimeout`?
+
+    ```{mcq}
+    What does letting the browser schedule frames get you?
+    correct: Correct! The browser knows the display's refresh rate, how loaded the machine is, whether it is saving battery, and whether the tab is even visible. It can match the right rate and stop entirely when nobody is looking.
+    wrong: Revisit the list at the start of "Step 5", of things your code cannot know but the browser can.
+    [x] It matches the display and the machine's current conditions, and pauses when the tab is hidden
+    [ ] It makes the animation finish sooner
+    [ ] It removes the need to compute positions from elapsed time
+    [ ] It allows animations to run without any callback
+    ```
+
+## Resources
+
+- [MDN: Date.now()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/now)
+- [MDN: Window.requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)
+- [MDN: Math.round()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round)
+- [MDN: CSS position](https://developer.mozilla.org/en-US/docs/Web/CSS/position)

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Grocery search</title>
+    <style>
+      body { font-family: sans-serif; max-width: 40em; margin: 2em auto; padding: 0 1em; }
+      input, button { font-size: 15px; padding: 6px; }
+      #results { color: #00274c; }
+    </style>
+  </head>
+  <body>
+    <h1>Grocery search</h1>
+
+    <!-- #region controls -->
+    <input id="query" placeholder="Search groceries">
+    <input id="maxPrice" placeholder="Max Price" type="number" step="0.01">
+    <button id="search-btn">Search</button>
+    <!-- #endregion -->
+
+    <p>The server sent back: <span id="results">nothing yet</span></p>
+
+    <script>
+      // #region elements
+      const queryEl = document.querySelector('#query');
+      const maxPriceEl = document.querySelector('#maxPrice');
+      const searchBtn = document.querySelector('#search-btn');
+      const resultsEl = document.querySelector('#results');
+      // #endregion
+
+      // #region search-click
+      searchBtn.addEventListener('click', () => {
+        const params = new URLSearchParams({
+          query: queryEl.value,
+          maxPrice: maxPriceEl.value
+        });
+
+        fetch('/search?' + params.toString())
+          .then((response) => response.json())
+          .then((data) => {
+            console.log(data);
+            resultsEl.textContent = JSON.stringify(data);
+          });
+      });
+      // #endregion
+    </script>
+  </body>
+</html>

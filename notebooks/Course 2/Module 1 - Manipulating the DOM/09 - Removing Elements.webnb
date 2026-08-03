@@ -1,0 +1,190 @@
+# Removing Elements
+
+Just as we can add elements from JavaScript, we can remove them. If we have a reference to an element, removing it takes one call: **`el.remove()`**.
+
+```html id=page1
+<p>This is <strong>bold</strong> text</p>
+```
+
+```{javascript autorun}
+const el = document.querySelector('strong');
+
+el.remove();
+```
+```+id=page1
+```
+
+The `<strong>` element is gone from the page. Note what happened to the text around it: the paragraph still reads `This is  text`, because we removed the element, not the sentence.
+
+## The Element Still Exists
+
+This is worth being precise about. `remove()` takes the element **out of the DOM tree**. It does not destroy it. The element object is still sitting in our variable, and it is not displayed only because it is no longer part of the tree the browser is drawing.
+
+Which means we can put it back somewhere else:
+
+```html id=page2
+<p>This is <strong>bold</strong> text</p>
+<div id="footer">Footer: </div>
+```
+
+```{javascript autorun}
+const el = document.querySelector('strong');
+const footer = document.querySelector('#footer');
+
+el.remove();
+
+footer.append(el);
+```
+```+id=page2
+```
+
+The bold text left the paragraph and turned up in the footer, still bold, still the same element. Removing and re-attaching is how you move an element from one place to another.
+
+## Removing Every Child
+
+Sometimes we do not want one element gone, we want a container emptied. We could loop over the children and call `remove()` on each, and there is a much shorter way:
+
+```html id=page3
+<ul id="items">
+  <li>One</li>
+  <li>Two</li>
+  <li>Three</li>
+</ul>
+```
+
+```{javascript autorun}
+const list = document.querySelector('#items');
+
+console.log(list.children.length);
+
+list.innerHTML = '';
+
+console.log(list.children.length);
+```
+```+id=page3
+```
+
+Setting `innerHTML` to an empty string replaces everything inside the element with nothing, which removes every child at once. You will see this a lot. It is one of the few places where reaching for `innerHTML` is uncontroversial, because an empty string cannot contain anything dangerous.
+
+There are other removal methods, such as `parent.removeChild(child)`. `element.remove()` covers everything we need, so that is the one we will use.
+
+## A Dismissible Banner
+
+Here is the pattern in a real shape. Many sites greet you with a banner the first time you visit, along with a button to dismiss it.
+
+```html id=page4
+<p id="banner">Welcome to my website! <button id="dismiss">Dismiss</button></p>
+<p>The rest of the page.</p>
+```
+
+```{javascript autorun}
+const banner = document.querySelector('#banner');
+const button = document.querySelector('#dismiss');
+
+function removeBanner() {
+  banner.remove();
+}
+
+button.addEventListener('click', removeBanner);
+```
+```+id=page4
+```
+```+css
+#banner { background-color: #b00; color: white; padding: 8px; }
+```
+
+Click Dismiss and the whole banner disappears, including the button inside it. That is fine: the button was a child of the banner, so removing the banner removed it too, and the click handler had already finished running by then.
+
+## Exercises
+
+1. Remove the list item with ID `banana`.
+
+    ```html id=page5
+    <ul id="fruits">
+      <li>Apple</li>
+      <li id="banana">Banana</li>
+      <li>Cherry</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const banana = document.querySelector('#banana');
+
+    // Write your code here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const banana = document.querySelector('#banana');
+
+    banana.remove();
+    ```
+    ```+test
+    wrap(document.querySelector('#banana') === null).should('equal', true).run('Call `.remove()` on the banana list item', 'Removed the banana item');
+    assert('#fruits li').should('have.length', 2).run('The other two items should still be there', 'Left the other items alone');
+    ```
+
+2. Empty the list completely, so it has no children left.
+
+    ```html id=page6
+    <ul id="tasks">
+      <li>Old task</li>
+      <li>Another old task</li>
+      <li>One more</li>
+    </ul>
+    ```
+
+    ```{javascript}
+    const tasks = document.querySelector('#tasks');
+
+    // Write your code here
+    ```
+    ```+id=page6
+    ```
+    ```+solution
+    const tasks = document.querySelector('#tasks');
+
+    tasks.innerHTML = '';
+    ```
+    ```+test
+    wrap(tasks.children.length).should('equal', 0).run('The list should have no children left. Setting `innerHTML` to an empty string clears them all at once', 'Emptied the list');
+    wrap(document.querySelector('#tasks') === null).should('equal', false).run('Remove the list\'s children, not the list itself', 'The list element is still there');
+    ```
+
+3. Wire up the delete button so that clicking it removes the whole message, button included.
+
+    ```html id=page7
+    <div id="message">A message you might want to get rid of. <button id="delete">Delete</button></div>
+    <p>This paragraph should stay.</p>
+    ```
+
+    ```{javascript}
+    const message = document.querySelector('#message');
+    const deleteButton = document.querySelector('#delete');
+
+    // Write your code here
+    ```
+    ```+id=page7
+    ```
+    ```+solution
+    const message = document.querySelector('#message');
+    const deleteButton = document.querySelector('#delete');
+
+    function removeMessage() {
+      message.remove();
+    }
+
+    deleteButton.addEventListener('click', removeMessage);
+    ```
+    ```+test
+    wrap(document.querySelector('#message') === null).should('equal', false).run('The message should still be there until the button is clicked', 'Nothing happens before the click');
+    assert('#delete').click().run('Could not find the `#delete` button', 'Clicked the button');
+    wrap(document.querySelector('#message') === null).should('equal', true).run('Clicking the button should remove the whole `#message` element', 'The message was removed');
+    assert('p').should('exist').run('The other paragraph should still be on the page', 'Left the rest of the page alone');
+    ```
+
+## Resources
+
+- [MDN: Element.remove()](https://developer.mozilla.org/en-US/docs/Web/API/Element/remove)
+- [MDN: Element.innerHTML](https://developer.mozilla.org/en-US/docs/Web/API/Element/innerHTML)
+- [MDN: Element.append()](https://developer.mozilla.org/en-US/docs/Web/API/Element/append)

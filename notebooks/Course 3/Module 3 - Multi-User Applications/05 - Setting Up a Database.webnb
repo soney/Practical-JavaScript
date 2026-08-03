@@ -1,0 +1,274 @@
+# Setting Up a Database
+
+We are using **LowDB**: a small NoSQL database written for JavaScript. It is not built for production, and it is unusually good for learning, because it stores everything in a **JSON file you can open and read**. Most databases keep their data in binary files that tell you nothing.
+
+## Starting the Project
+
+```
+$ npm init -y
+$ npm i lowdb
+```
+
+One extra step: LowDB is a **pure ESM package**, meaning it is only available through `import`. As we saw in [Module 1](<../Module 1 - Libraries and Modules/20 - CommonJS Modules.webnb>), Node treats `.js` files as CommonJS unless told otherwise, so add the field that switches it over:
+
+```json
+{
+  "name": "my-first-database",
+  "type": "module",
+  "dependencies": {
+    "lowdb": "^7.0.1"
+  }
+}
+```
+
+Without `"type": "module"` the import fails, and the error message is not especially forthcoming.
+
+## Creating the Database
+
+```javascript
+// my-first-database.js
+import { Low } from 'lowdb';
+import { JSONFile } from 'lowdb/node';
+
+const adapter = new JSONFile('db.json');
+const defaultData = { posts: [] };
+
+const db = new Low(adapter, defaultData);
+```
+
+Three things there.
+
+An **adapter** decides *where and how* the data is stored. `JSONFile` stores it in a JSON file, and it is the one we want because we can read the result. Other adapters exist for other destinations.
+
+**`'db.json'`** is the file. It does not have to exist yet.
+
+**`defaultData`** is what the database contains when there is no file, so `{ posts: [] }` says "this database holds an array of posts, and it starts empty". That matters more than it looks: without it, your first run has no `posts` array to push into.
+
+## Reading
+
+```javascript
+await db.read();
+
+console.log(db.data);      // { posts: [] } on the very first run
+```
+
+`db.read()` loads the file and puts the result in **`db.data`**. From then on `db.data` is an ordinary JavaScript object.
+
+Note the **`await`**. `read` returns a promise, because reading a file takes time. Leave the `await` off and the next line runs before the data has arrived, so `db.data` is `undefined` or still holds whatever it held before. Node allows `await` at the top level of an ESM file, which is why this works outside a function.
+
+## Writing
+
+Change `db.data` however you like, using plain JavaScript, then save:
+
+```javascript
+db.data.posts.push('hello');
+
+await db.write();
+```
+
+That creates `db.json`:
+
+```json
+{
+  "posts": ["hello"]
+}
+```
+
+Open it, read it, and it says exactly what you would expect. Run the program again without the `push` and `db.read()` brings `hello` back.
+
+This is the part worth appreciating: there is no query language here. To add a post you push onto an array, because `db.data` really is an array inside an object.
+
+## `db.update`: Both Steps at Once
+
+Modifying and then writing are two calls that always go together, so LowDB offers one that does both:
+
+```javascript
+await db.update((data) => {
+  data.posts.push('goodbye');
+});
+```
+
+`update` hands your function the data, lets you change it, and calls `write` for you. The result is the same as the two lines above; the advantage is that you cannot forget the second half, which is the most common LowDB mistake.
+
+## The Same Idea, Running Here
+
+There is no file system in a notebook, so here is a miniature LowDB over a string that stands in for the file. What matters is the relationship between the three methods:
+
+```{node autorun}
+// Pretend this string is db.json on disk.
+let fileOnDisk = '';
+
+function makeDb(defaultData) {
+  const db = { data: null };
+
+  db.read = function () {
+    if (fileOnDisk === '') {
+      db.data = defaultData;
+    } else {
+      db.data = JSON.parse(fileOnDisk);
+    }
+
+    return Promise.resolve();
+  };
+
+  db.write = function () {
+    fileOnDisk = JSON.stringify(db.data);
+
+    return Promise.resolve();
+  };
+
+  db.update = function (changeFunction) {
+    changeFunction(db.data);
+
+    return db.write();
+  };
+
+  return db;
+}
+
+const db = makeDb({ posts: [] });
+
+db.read();
+console.log('first run, data is ' + JSON.stringify(db.data));
+
+db.data.posts.push('hello');
+db.write();
+console.log('the file now holds ' + fileOnDisk);
+
+db.update((data) => {
+  data.posts.push('goodbye');
+});
+console.log('after update, the file holds ' + fileOnDisk);
+```
+
+`read` fills `data`, `write` saves it, and `update` does a change plus a save. In the real library each of those returns a promise you `await`; here they resolve immediately so the cell can print in order.
+
+## Exercises
+
+1. Complete `addPost` so the post is stored **and** saved.
+
+    ```{node}
+    const db = { data: { posts: [] }, written: false };
+
+    db.write = function () {
+      db.written = true;
+
+      return Promise.resolve();
+    };
+
+    async function addPost(database, postText) {
+      // TODO: add postText to database.data.posts, then save the database
+    }
+
+    addPost(db, 'My first post');
+
+    console.log(db.data.posts, db.written);
+    ```
+    ```+solution
+    const db = { data: { posts: [] }, written: false };
+
+    db.write = function () {
+      db.written = true;
+
+      return Promise.resolve();
+    };
+
+    async function addPost(database, postText) {
+      database.data.posts.push(postText);
+
+      await database.write();
+    }
+
+    addPost(db, 'My first post');
+
+    console.log(db.data.posts, db.written);
+    ```
+    ```+test
+    wrap(db.data.posts[0]).should('equal', 'My first post').run('Push the post onto `database.data.posts`', 'Stored the post');
+    wrap(db.written).should('equal', true).run('Call `database.write()`, or the change stays in memory and never reaches the file', 'Saved the database');
+    wrap(/await\s+database\.write|await\s+db\.write/.test(source)).should('equal', true).run('`write` returns a promise, so `await` it', 'Waited for the write to finish');
+    ```
+
+2. Implement `update`, which should apply a change and then save.
+
+    ```{node}
+    let fileOnDisk = '{"posts":["hello"]}';
+
+    const db = { data: JSON.parse(fileOnDisk) };
+
+    db.write = function () {
+      fileOnDisk = JSON.stringify(db.data);
+
+      return Promise.resolve();
+    };
+
+    db.update = function (changeFunction) {
+      // TODO: let changeFunction change db.data, then save the database
+      // and return whatever write() returns
+    };
+
+    db.update((data) => {
+      data.posts.push('goodbye');
+    });
+
+    console.log(fileOnDisk);
+    ```
+    ```+solution
+    let fileOnDisk = '{"posts":["hello"]}';
+
+    const db = { data: JSON.parse(fileOnDisk) };
+
+    db.write = function () {
+      fileOnDisk = JSON.stringify(db.data);
+
+      return Promise.resolve();
+    };
+
+    db.update = function (changeFunction) {
+      changeFunction(db.data);
+
+      return db.write();
+    };
+
+    db.update((data) => {
+      data.posts.push('goodbye');
+    });
+
+    console.log(fileOnDisk);
+    ```
+    ```+test
+    wrap(db.data.posts).should('equal', ['hello', 'goodbye']).run('Call `changeFunction` with `db.data` so it can make its change', 'Applied the change');
+    wrap(fileOnDisk).should('equal', '{"posts":["hello","goodbye"]}').run('After the change, call `db.write()` so the file is saved. That is what `update` does for you', 'Saved the change');
+    wrap(typeof db.update(function () {}).then).should('equal', 'function').run('Return what `write()` returns, so the caller can `await` it', 'Returned the promise');
+    ```
+
+3. You call `db.read()` without `await` and use `db.data` on the next line. What happens?
+
+    ```{mcq}
+    Why is the `await` necessary?
+    correct: Correct! `read` returns a promise and the file has not loaded when the next line runs, so `db.data` is either `undefined` or whatever it held before. Nothing errors, which is what makes it confusing.
+    wrong: Reading a file takes time. What is the rest of your code doing during that time?
+    [x] `db.data` may be `undefined` or hold stale data, because the next line runs before the file has loaded
+    [ ] The program pauses by itself until the file is ready
+    [ ] The database file is deleted
+    [ ] LowDB makes the call synchronous automatically
+    ```
+
+4. What does `db.update(...)` give you over changing `db.data` and calling `db.write()`?
+
+    ```{mcq}
+    What is the benefit?
+    correct: Correct! It performs the change and the save together in one call, so there is no way to make the change and then forget to save it.
+    wrong: Compare the number of steps in each approach, and think about which step is easy to leave out.
+    [x] It does the modification and the write in one step
+    [ ] It is the only way to delete data from a NoSQL database
+    [ ] It removes the need for an adapter
+    [ ] It lets you write SQL queries instead of JavaScript
+    ```
+
+## Resources
+
+- [LowDB](https://github.com/typicode/lowdb)
+- [npm: lowdb](https://www.npmjs.com/package/lowdb)
+- [Node.js: determining module system](https://nodejs.org/api/packages.html#determining-module-system)
+- [MDN: await](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/await)

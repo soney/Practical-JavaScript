@@ -1,0 +1,205 @@
+# JSON Data
+
+**JSON** stands for **JavaScript Object Notation**, and it is a format for representing structured data as **text**. It is the most common way data travels around the internet.
+
+One of its nice properties is that it looks almost exactly like an ordinary JavaScript object, so you can read it. Despite the name, it is used far beyond JavaScript: essentially every language can read and write it.
+
+## Why a Text Format?
+
+Here is the reason JSON exists. Lots of things we need to talk to - web pages, APIs, servers, files, databases - can only send and receive **text**. You cannot put a JavaScript object on the network. You can only put a string.
+
+JSON is the agreed-upon way of turning structured data, meaning objects and arrays, into a string, and turning it back again. That is what lets us send an object over a network or store one in a text file.
+
+## `JSON.stringify` and `JSON.parse`
+
+Two methods do all the work:
+
+- **`JSON.stringify(object)`** converts an object into a JSON-formatted string.
+- **`JSON.parse(string)`** converts a JSON-formatted string back into an object.
+
+```{javascript autorun}
+const um = {
+  founded: 1817,
+  type: 'public',
+  enrollment: 52065,
+  nickname: 'Wolverines',
+  colors: ['maize', 'blue']
+};
+
+const umStr = JSON.stringify(um);
+
+console.log(umStr);
+console.log(typeof um, typeof umStr);
+```
+
+The output looks like the object we started with, and it is a **string**. That difference matters:
+
+```{javascript autorun}
+const umStr = '{"founded":1817,"type":"public","nickname":"Wolverines"}';
+
+console.log(umStr.founded);
+
+const um = JSON.parse(umStr);
+
+console.log(um.founded);
+```
+
+`umStr.founded` is `undefined`, because a string has no `founded` property, however much it looks like it should. Run it through `JSON.parse` and you get a real object whose properties you can read.
+
+The two methods are opposite sides of one coin. Stringify to send or store; parse to use.
+
+## What JSON Cannot Represent
+
+JSON handles objects, arrays, strings, numbers, booleans, and `null`. It does not handle everything:
+
+- **Functions.** A function cannot be stored in a JSON document.
+- **Circular references.** If object A refers to object B and B refers back to A, `JSON.stringify` cannot represent that. You would have to remove one of the references first.
+- **Object instances.** A `Promise`, a `Date`, or another built-in object instance cannot be stored directly. (A `Date` is a partial exception: it converts into a string, and comes back as that string rather than as a `Date`.)
+
+```{javascript autorun}
+const withFunction = {
+  name: 'Ada',
+  greet: () => console.log('hi')
+};
+
+console.log(JSON.stringify(withFunction));
+```
+
+The function did not throw an error; it was silently **dropped**. That is worth knowing, because it means data can quietly go missing on the way out.
+
+## JSON and `fetch`
+
+Most web APIs reply with JSON. We could handle that with what we already know: take the response as text, then parse it.
+
+```javascript
+fetch(url)
+  .then((response) => response.text())
+  .then((text) => {
+    const data = JSON.parse(text);
+    console.log(data);
+  });
+```
+
+That works. And because it is so common, the `Response` object has a method that does both steps for us:
+
+```javascript
+fetch(url)
+  .then((response) => response.json())
+  .then((data) => {
+    console.log(data);
+  });
+```
+
+**`response.json()` calls `JSON.parse` on the response body for you.** The two versions are equivalent, and the second is what you will write.
+
+## A Real Feed
+
+The University of Michigan's Happening @ Michigan page lists events on campus, and it publishes the same information as a JSON feed at `https://events.umich.edu/day/json?v=2`.
+
+```javascript
+const url = 'https://events.umich.edu/day/json?v=2';
+
+fetch(url)
+  .then((response) => response.json())
+  .then((events) => {
+    for (const event of events) {
+      const titleElement = document.createElement('h3');
+      titleElement.textContent = event.combined_title;
+      document.body.append(titleElement);
+
+      const descriptionElement = document.createElement('p');
+      descriptionElement.textContent = event.description;
+      document.body.append(descriptionElement);
+    }
+  });
+```
+
+`events` comes back as an array of objects, one per event, each with properties like `combined_title` and `description`. From there it is ordinary JavaScript: loop over the array, build elements, put them on the page.
+
+Working out **which** properties an object has is the first thing to do with any new feed. Log the parsed data and expand it in the console, or read the API's documentation.
+
+## Exercises
+
+1. Convert the `user` object into a JSON string.
+
+    ```{javascript}
+    const user = { name: 'Ada', role: 'student' };
+
+    const jsonText = /* Your code here */;
+
+    console.log(jsonText);
+    ```
+    ```+solution
+    const user = { name: 'Ada', role: 'student' };
+
+    const jsonText = JSON.stringify(user);
+
+    console.log(jsonText);
+    ```
+    ```+test
+    wrap(jsonText).should('equal', '{"name":"Ada","role":"student"}').run('Use `JSON.stringify(user)`', 'Created the JSON string');
+    wrap(typeof jsonText).should('equal', 'string').run('The result should be a string', 'It is a string');
+    ```
+
+2. Parse this JSON string and read the `city` out of the resulting object.
+
+    ```{javascript}
+    const jsonText = '{"city":"Ann Arbor","population":123851}';
+
+    const data = /* Your code here */;
+    const cityName = /* Your code here */;
+
+    console.log(cityName);
+    ```
+    ```+solution
+    const jsonText = '{"city":"Ann Arbor","population":123851}';
+
+    const data = JSON.parse(jsonText);
+    const cityName = data.city;
+
+    console.log(cityName);
+    ```
+    ```+test
+    wrap(typeof data).should('equal', 'object').run('`data` should be an object. Use `JSON.parse`', 'Parsed the string');
+    wrap(cityName).should('equal', 'Ann Arbor').run('`cityName` should be `Ann Arbor`, read off the parsed object', 'Read the property');
+    wrap(data.population).should('equal', 123851).run('The parsed object should have a `population` of `123851`', 'The whole object parsed correctly');
+    ```
+
+3. Complete the chain so it parses the JSON body and logs the `temperature` from it. Use the stand-in response, and use whichever method reads and parses in one step.
+
+    ```{javascript}
+    function fakeFetch(url) {
+      return Promise.resolve({
+        text: () => Promise.resolve('{"temperature":71,"conditions":"clear"}'),
+        json: () => Promise.resolve({ temperature: 71, conditions: 'clear' })
+      });
+    }
+
+    fakeFetch('weather')
+      // Add your .then calls here
+    ```
+    ```+solution
+    function fakeFetch(url) {
+      return Promise.resolve({
+        text: () => Promise.resolve('{"temperature":71,"conditions":"clear"}'),
+        json: () => Promise.resolve({ temperature: 71, conditions: 'clear' })
+      });
+    }
+
+    fakeFetch('weather')
+      .then((response) => response.json())
+      .then((data) => console.log(data.temperature));
+    ```
+    ```+test
+    wrap(source.includes('.json()')).should('equal', true).run('Use `response.json()`, which parses the body for you, rather than `text()` plus `JSON.parse`', 'Used response.json()');
+    setTimeout(() => {
+      check.consoleLogged(/^71$/).run('The cell should log `71`, read from the parsed object', 'Logged the temperature');
+    }, 200);
+    ```
+
+## Resources
+
+- [MDN: JSON](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON)
+- [MDN: JSON.stringify()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify)
+- [MDN: JSON.parse()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)
+- [MDN: Response.json()](https://developer.mozilla.org/en-US/docs/Web/API/Response/json)

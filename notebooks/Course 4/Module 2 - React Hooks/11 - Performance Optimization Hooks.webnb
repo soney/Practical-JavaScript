@@ -1,0 +1,262 @@
+# Performance Optimization Hooks
+
+React includes hooks that help with performance in larger code bases, and that can also prevent a class of bugs. Reach for them when there is a real reason, not by default.
+
+Common tools include:
+
+- `React.useMemo(...)` to remember an expensive calculated value,
+- `React.useCallback(...)` to remember a function so it keeps the same identity between renders,
+- `React.memo(...)` to skip re-rendering a component when its props have not changed.
+
+## Why New Function Instances Matter
+
+Every time a component renders, the functions you define inside it are created again as brand new function objects. Two functions can have identical code but still be different objects:
+
+```javascript
+function render() {
+  const handleClick = () => console.log('clicked');
+  return handleClick;
+}
+
+render() === render(); // false: a new function object each time
+```
+
+Most of the time this does not matter. It starts to matter when some other piece of code compares functions by identity:
+
+- a `useEffect` dependency array that includes a function will re-run the effect whenever that function is a new object, even if nothing meaningful changed,
+- `window.removeEventListener(event, fn)` only removes a listener if `fn` is the exact same function object that was passed to `addEventListener`.
+
+`useCallback` gives us a way to hold onto the same function object across renders.
+
+## useCallback
+
+`useCallback(fn, deps)` remembers the function `fn` and returns the same function object on every render, until one of the values in `deps` changes. The signature mirrors `useEffect`: a function first, a dependency array second.
+
+Here is the problem it solves. This component toggles a window `click` listener on and off. Without `useCallback`, `handleClick` is a different object every render, so the function passed to `removeEventListener` never matches the one passed to `addEventListener`, and the listener is never actually removed.
+
+```{react}
+function EventToggle() {
+  const [enabled, setEnabled] = React.useState(false);
+
+  const handleClick = React.useCallback(() => {
+    console.log('window clicked --------');
+  }, []);
+
+  function startListening() {
+    setEnabled(true);
+    window.addEventListener('click', handleClick);
+  }
+
+  function stopListening() {
+    setEnabled(false);
+    window.removeEventListener('click', handleClick);
+  }
+
+  return enabled
+    ? <button onClick={stopListening}>Stop listening</button>
+    : <button onClick={startListening}>Start listening</button>;
+}
+
+renderReact(<EventToggle />);
+```
+
+- Because `handleClick` is wrapped in `React.useCallback(..., [])`, it is the same object every render.
+- `startListening` adds that exact object as a listener; `stopListening` removes that same object, so listening really stops.
+- The empty dependency array `[]` means the function never needs to be recreated. If the callback used a state value like `query`, we would list it: `useCallback(fn, [query])`, so the function is rebuilt only when `query` changes.
+
+The transcript's rule of thumb: about 95% of the time you do not need `useCallback`. Overusing it adds complexity for no benefit. Reserve it for cases where you genuinely need the exact same function object, such as removing an event listener or a stable dependency for an effect.
+
+## useMemo
+
+`useCallback` remembers a function; `useMemo` remembers a value. `useMemo(fn, deps)` runs `fn`, caches what it returns, and re-runs it only when one of the `deps` changes.
+
+```{react}
+function ProductList() {
+  const products = [
+    { name: 'Notebook', price: 5 },
+    { name: 'Pencil', price: 1 }
+  ];
+
+  const total = React.useMemo(() => {
+    return products.reduce((sum, product) => sum + product.price, 0);
+  }, [products]);
+
+  return <p>Total: {total}</p>;
+}
+
+renderReact(<ProductList />);
+```
+
+This example is small, so it does not need optimization; the syntax is what matters here. `useMemo` earns its place when the calculation is genuinely expensive and the component re-renders for unrelated reasons.
+
+Consider two independent counters. The `computed` value depends only on `valA`, but without memoization it would be recalculated on every render, including when `valB` changes:
+
+```{react}
+function TwoCounters() {
+  const [valA, setValA] = React.useState(0);
+  const [valB, setValB] = React.useState(0);
+
+  // Pretend this is slow and computationally expensive.
+  const computed = React.useMemo(() => {
+    return valA * 2;
+  }, [valA]);
+
+  return (
+    <div>
+      <button onClick={() => setValA(valA + 1)}>Val A: {valA}</button>
+      <button onClick={() => setValB(valB + 1)}>Val B: {valB}</button>
+      <p>computed = {computed}</p>
+    </div>
+  );
+}
+
+renderReact(<TwoCounters />);
+```
+
+- The memoized function returns the value we want to remember.
+- The dependency list `[valA]` says: recompute only when `valA` changes.
+- Clicking "Val B" re-renders the component but reuses the cached `computed` value, so the expensive work is skipped.
+
+## React.memo
+
+`React.memo` is a related tool that works on whole components rather than a single value or function. It wraps a component so that React skips re-rendering it when its props are the same as last time (compared by identity).
+
+```jsx
+const Greeting = React.memo(function Greeting({ name }) {
+  console.log('rendering Greeting');
+  return <p>Hello, {name}</p>;
+});
+```
+
+If a parent re-renders but passes the same `name` prop, the wrapped `Greeting` does not re-render and its console log does not fire. This is where `useCallback` and `useMemo` pair up with `React.memo`: if you pass a function or object as a prop to a memoized child, wrapping that prop keeps its identity stable so `React.memo` can actually skip the render.
+
+## Measure First
+
+Optimization adds complexity. First make the component correct and readable. Then measure, and add memoization only where there is a real, measured reason. As the transcript puts it: there is no need to use these hooks by default, but if you do, make sure there is a reason for it.
+
+## Exercises
+
+1. Use `React.useMemo` to remember the calculated `total` so it is not recomputed on unrelated re-renders. Keep the same result.
+
+   ```{react}
+   function CartTotal() {
+     const prices = [2, 3, 4];
+     const total = prices.reduce((sum, price) => sum + price, 0);
+
+     return <p>Total: {total}</p>;
+   }
+
+   renderReact(<CartTotal />);
+   ```
+   ```+solution
+   function CartTotal() {
+     const prices = [2, 3, 4];
+     const total = React.useMemo(() => {
+       return prices.reduce((sum, price) => sum + price, 0);
+     }, [prices]);
+
+     return <p>Total: {total}</p>;
+   }
+
+   renderReact(<CartTotal />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('React.useMemo')).should('equal', true).run('Use `React.useMemo` to remember the total', 'Used useMemo');
+     assert('p').should('have.text', 'Total: 9').run('Keep the same calculated total', 'Rendered the total');
+   }, 50);
+   ```
+
+2. Wrap `handleClick` in `React.useCallback` so the function keeps a stable identity. This is what lets `removeEventListener` remove the same object that `addEventListener` added.
+
+   ```{react}
+   function EventToggle() {
+     const [enabled, setEnabled] = React.useState(false);
+
+     const handleClick = () => {
+       console.log('window clicked');
+     };
+
+     function startListening() {
+       setEnabled(true);
+       window.addEventListener('click', handleClick);
+     }
+
+     function stopListening() {
+       setEnabled(false);
+       window.removeEventListener('click', handleClick);
+     }
+
+     return enabled
+       ? <button onClick={stopListening}>Stop listening</button>
+       : <button onClick={startListening}>Start listening</button>;
+   }
+
+   renderReact(<EventToggle />);
+   ```
+   ```+solution
+   function EventToggle() {
+     const [enabled, setEnabled] = React.useState(false);
+
+     const handleClick = React.useCallback(() => {
+       console.log('window clicked');
+     }, []);
+
+     function startListening() {
+       setEnabled(true);
+       window.addEventListener('click', handleClick);
+     }
+
+     function stopListening() {
+       setEnabled(false);
+       window.removeEventListener('click', handleClick);
+     }
+
+     return enabled
+       ? <button onClick={stopListening}>Stop listening</button>
+       : <button onClick={startListening}>Start listening</button>;
+   }
+
+   renderReact(<EventToggle />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('React.useCallback')).should('equal', true).run('Wrap `handleClick` in `React.useCallback`', 'Used useCallback');
+     assert('button').should('have.text', 'Start listening').run('The component should still render its button', 'Rendered the toggle button');
+   }, 50);
+   ```
+
+3. Which problem does `React.useCallback` solve?
+
+   ```{mcq}
+   Which problem does `React.useCallback` solve?
+   correct: Correct. `useCallback` returns the same function object across renders until its dependencies change, which keeps references stable.
+   wrong: Think about what changes every time a component re-renders and why removing an event listener might fail.
+   [x] It keeps a function the same object across renders, so references stay stable (for example, so `removeEventListener` matches).
+   [ ] It makes a function run faster on the CPU.
+   [ ] It converts a function into a memoized CSS value.
+   [ ] It prevents a component from ever rendering.
+   ```
+
+4. When should you usually add performance memoization?
+
+   ```{mcq}
+   When should you usually add performance memoization?
+   correct: Correct. Add it after you have a real, measured performance reason.
+   wrong: Think about avoiding complexity before there is evidence you need it.
+   [x] After you have a real measured performance reason.
+   [ ] Before the component works.
+   [ ] To replace every prop.
+   [ ] To avoid rendering any UI.
+   ```
+
+## Resources
+
+- [React Docs: useCallback](https://react.dev/reference/react/useCallback)
+- [React Docs: useMemo](https://react.dev/reference/react/useMemo)
+- [React Docs: memo](https://react.dev/reference/react/memo)
+- [MDN: EventTarget.removeEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener)

@@ -1,0 +1,206 @@
+# Conditional Rendering Patterns
+
+**Conditional rendering** means showing different UI depending on data: a "Welcome back" message when the user is logged in, a loading indicator while data is being fetched, or a fallback value when something is missing.
+
+We cannot put an `if` statement inside the curly braces of JSX, because the braces expect an *expression* (something that produces a value), not a statement. So React leans on JavaScript operators that *are* expressions. The two most common are the logical AND (`&&`) and logical OR (`||`) operators, which we cover first because they fit directly inside JSX.
+
+## The `&&` Pattern: Show an Element Only When a Condition Is True
+
+Recall that `&&` evaluates its left side first. If the left side is falsy, `&&` returns that falsy value and never evaluates the right side. If the left side is truthy, `&&` returns the right side. In plain JavaScript:
+
+```javascript
+const username = isLoggedIn && getUsername();
+// If isLoggedIn is truthy -> username is getUsername()
+// If isLoggedIn is falsy  -> username is that falsy value (never calls getUsername)
+```
+
+React takes advantage of this. We put a condition on the left and an element on the right:
+
+```{react}
+function Greeting({ isLoggedIn }) {
+  return (
+    <div>
+      <h1>Hello</h1>
+      {isLoggedIn && <p>Welcome back</p>}
+    </div>
+  );
+}
+
+renderReact(<Greeting isLoggedIn={true} />);
+```
+
+- When `isLoggedIn` is `true`, the expression evaluates to `<p>Welcome back</p>`, so the paragraph renders.
+- When `isLoggedIn` is `false`, the whole expression evaluates to `false`. **When React sees `false` (or any of `null`, `undefined`) in JSX, it ignores it and renders nothing** in that spot. So no "Welcome back" message appears.
+
+This is why `&&` is the go-to pattern for "show this element only if the condition holds." Try changing `isLoggedIn` to `false` above and re-running: the heading stays, the paragraph disappears.
+
+You can also chain conditions. `isLoggedIn && isOnline && <p>Welcome back</p>` shows the paragraph only when both are truthy.
+
+## The `||` Pattern: Provide a Fallback Default
+
+The logical OR operator `||` returns the first *truthy* value it encounters. This makes it a concise way to supply a default when a value might be missing, empty, or `undefined`:
+
+```javascript
+const greeting = 'Hello, ' + (username || 'Guest');
+// If username is 'Alice' (truthy) -> 'Hello, Alice'
+// If username is '' or undefined (falsy) -> 'Hello, Guest'
+```
+
+Inside JSX we use the same idea to fall back to a default value:
+
+```{react}
+function Welcome({ username }) {
+  return <p>Hello, {username || 'Guest'}</p>;
+}
+
+renderReact(<Welcome username="" />);
+```
+
+- If `username` is a non-empty string like `Alice`, that value is truthy, so it is used.
+- If `username` is `''` or `undefined` (falsy), `||` falls through to `'Guest'`.
+
+## Combining the Patterns
+
+The two patterns often appear together. Here a component uses `||` to default the greeting and the name, and `&&` to show an extra line only when a name was actually passed in:
+
+```{react}
+function Greeting({ name, greet }) {
+  return (
+    <div>
+      <p>{greet || 'Hello'}, {name || 'viewer'}</p>
+      {name && <p>Glad you are here, {name}</p>}
+    </div>
+  );
+}
+
+renderReact(
+  <div>
+    <Greeting greet="Bonjour" />
+    <Greeting name="Bob" greet="Hi" />
+    <Greeting name="Charlie" />
+  </div>
+);
+```
+
+- The first `Greeting` has no `name`, so `name || 'viewer'` shows `viewer`, and `name && ...` is falsy, so the "Glad you are here" line is skipped.
+- The others pass a `name`, so their fallback is not used and the extra paragraph appears.
+
+## `if` Statements and Ternary Expressions
+
+`&&` and `||` are ideal for small in-JSX decisions. When the two branches produce larger or very different UI, other JavaScript conditionals read more clearly.
+
+An early `return` handles two whole outputs cleanly:
+
+```{react}
+function Status({ isOnline }) {
+  if (isOnline) {
+    return <p>Online</p>;
+  }
+
+  return <p>Offline</p>;
+}
+
+renderReact(<Status isOnline={true} />);
+```
+
+A ternary expression (`condition ? a : b`) *is* an expression, so unlike an `if` statement it can live inside JSX braces. It fits when you need to pick between two values in one spot:
+
+```{react}
+function LoginMessage({ isLoggedIn }) {
+  return <p>{isLoggedIn ? 'Welcome back' : 'Please sign in'}</p>;
+}
+
+renderReact(<LoginMessage isLoggedIn={false} />);
+```
+
+Use whichever pattern keeps the component easiest to read: `&&` to show-or-hide one element, `||` for a fallback value, a ternary to choose between two values inline, and an early `return` when whole branches differ.
+
+## Exercises
+
+1. When a JSX expression evaluates to `false`, what does React render in that spot?
+
+   ```{mcq}
+   When a JSX expression evaluates to `false`, what does React render in that spot?
+   correct: Correct. React ignores false, null, and undefined, so nothing is rendered there. That is what makes the `&&` pattern work.
+   wrong: Recall what happens with `{isLoggedIn && <p>Welcome back</p>}` when `isLoggedIn` is false.
+   [x] Nothing. React ignores `false`, `null`, and `undefined`.
+   [ ] The literal text "false".
+   [ ] An empty `<p>` element.
+   [ ] A runtime error that stops rendering.
+   ```
+
+2. Use the `&&` pattern so the paragraph renders only when `isLoggedIn` is `true`. Right now it always renders.
+
+   ```{react}
+   function Greeting({ isLoggedIn }) {
+     return (
+       <div>
+         <h1>Hello</h1>
+         <p>Welcome back</p>
+       </div>
+     );
+   }
+
+   renderReact(<Greeting isLoggedIn={true} />);
+   ```
+   ```+solution
+   function Greeting({ isLoggedIn }) {
+     return (
+       <div>
+         <h1>Hello</h1>
+         {isLoggedIn && <p>Welcome back</p>}
+       </div>
+     );
+   }
+
+   renderReact(<Greeting isLoggedIn={true} />);
+   ```
+   ```+test
+   // Walk a returned element tree into text, without rendering it.
+   function textOf(n) {
+     if (n === null || n === undefined || n === false || n === true) { return ''; }
+     if (typeof n !== 'object') { return String(n); }
+     if (Array.isArray(n)) { return n.map(textOf).join(''); }
+     if (typeof n.type === 'function') { return textOf(n.type(n.props)); }
+     return textOf(n.props && n.props.children);
+   }
+
+   wrap(textOf(Greeting({ isLoggedIn: true })).includes('Welcome back')).should('equal', true).run('Show `Welcome back` when logged in', 'Shows the message when logged in');
+   wrap(textOf(Greeting({ isLoggedIn: false })).includes('Welcome back')).should('equal', false).run('When `isLoggedIn` is false the paragraph should not render at all. Guard it with `&&`', 'Hides the message when logged out');
+
+   // React commits its render asynchronously, so the DOM check runs on a later tick.
+   setTimeout(function () {
+     assert('p').should('have.text', 'Welcome back').run('The rendered output should show `Welcome back`', 'The rendered output is right');
+   }, 50);
+   ```
+
+3. Use the `||` pattern to fall back to `Guest` when no `username` is passed in. The component is rendered with an empty `username`, so it should display `Hello, Guest`.
+
+   ```{react}
+   function Welcome({ username }) {
+     return <p>Hello, {username}</p>;
+   }
+
+   renderReact(<Welcome username="" />);
+   ```
+   ```+solution
+   function Welcome({ username }) {
+     return <p>Hello, {username || 'Guest'}</p>;
+   }
+
+   renderReact(<Welcome username="" />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('p').should('have.text', 'Hello, Guest').run('Fall back to `Guest` with the `||` operator', 'The `||` pattern supplies the default');
+   }, 50);
+   ```
+
+## Resources
+
+- [React Docs: Conditional rendering](https://react.dev/learn/conditional-rendering)
+- [MDN: Logical AND (&&)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_AND)
+- [MDN: Logical OR (||)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Logical_OR)
+- [MDN: Conditional (ternary) operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Conditional_operator)

@@ -1,0 +1,206 @@
+# Creating Promises
+
+We know what promises are. Now, how do we get one? There are two ways:
+
+1. Call a function that **returns** a promise.
+2. Create one **manually**.
+
+## Calling a Function That Returns a Promise
+
+Plenty of functions hand back promises. The most direct is **`Promise.resolve(value)`**, which gives you a promise that is already fulfilled with whatever you pass in:
+
+```{javascript autorun}
+const myFirstPromise = Promise.resolve('hello');
+
+console.log(myFirstPromise);
+```
+
+The logged object is a `Promise`. In a real browser console you can expand it and see its state, `fulfilled`, and its value, `hello`.
+
+The one you will actually use most is **`fetch`**, the built-in function for requesting data over the network:
+
+```javascript
+const promiseObject = fetch('https://events.umich.edu/day/json?v=2');
+```
+
+`fetch` returns a promise that fulfills with a `Response` object once the server replies. We give it a lesson of its own shortly.
+
+## Creating a Promise Manually
+
+To build one from scratch we use the **`new Promise`** constructor. The `new` keyword creates a new instance of a promise, and we pass in **one argument: a function**.
+
+That function is written by us, and it receives two arguments, both of which are functions provided *to* us:
+
+- **`resolve`**: call it to fulfill the promise, passing the value it should be fulfilled with.
+- **`reject`**: call it when something has gone wrong, passing information about what.
+
+Our job is to decide **when** to call one of them.
+
+```{javascript autorun}
+const mySecondPromise = new Promise((resolve, reject) => {
+  resolve(10);
+});
+
+console.log(mySecondPromise);
+
+mySecondPromise.then((value) => {
+  console.log('fulfilled with ' + value);
+});
+```
+
+The promise starts pending, our function runs immediately, and calling `resolve(10)` fulfills it.
+
+Call `reject` instead and it ends up in the other state:
+
+```{javascript autorun}
+const failing = new Promise((resolve, reject) => {
+  reject('something went wrong');
+});
+
+failing.catch((reason) => {
+  console.log('rejected because: ' + reason);
+});
+```
+
+### Resolving Later
+
+Resolving straight away is not very useful. The point of the constructor is that **we choose the moment**, which means we can resolve from inside a callback:
+
+```{javascript autorun}
+const delayed = new Promise((resolve, reject) => {
+  setTimeout(() => {
+    resolve('done');
+  }, 1500);
+});
+
+console.log(delayed);
+
+delayed.then((value) => {
+  console.log('the promise settled with: ' + value);
+});
+
+console.log('...meanwhile, the rest of the code carries on');
+```
+
+Trace what happens: the promise object exists immediately, in the **pending** state, and we can log it and attach handlers to it right away. A three-second timer runs in the background. When it fires, its callback calls `resolve('done')`, the promise becomes **fulfilled**, and every `.then` handler attached to it runs.
+
+A note about the console. When you log a pending promise, some browsers show `pending` and never update that line, even after the promise settles. Expanding the object usually shows the current state. If it does not, right-click the logged promise, choose "Store as global variable", and evaluate that variable to see its state now.
+
+## Wrapping a Callback Function in a Promise
+
+The most common reason to reach for the constructor is to convert an older callback-style function into a promise-returning one:
+
+```{javascript autorun}
+function fetchNameWithCallback(callback) {
+  setTimeout(() => callback('Ada'), 200);
+}
+
+function fetchName() {
+  return new Promise((resolve, reject) => {
+    fetchNameWithCallback((value) => {
+      resolve(value);
+    });
+  });
+}
+
+fetchName().then((name) => {
+  console.log('got ' + name);
+});
+```
+
+`fetchName` calls the old callback-style function and resolves the promise from inside its callback. Everything above that line can now work with promises, which, as the next lesson shows, is where the real gain is.
+
+## Exercises
+
+1. Create a promise named `readyPromise` that is fulfilled with the string `Ready`, using the `new Promise` constructor rather than `Promise.resolve`.
+
+    ```{javascript}
+    // Write your code here
+
+    readyPromise.then((value) => {
+      console.log(value);
+    });
+    ```
+    ```+solution
+    const readyPromise = new Promise((resolve, reject) => {
+      resolve('Ready');
+    });
+
+    readyPromise.then((value) => {
+      console.log(value);
+    });
+    ```
+    ```+test
+    wrap(readyPromise instanceof Promise).should('equal', true).run('`readyPromise` should be a promise', 'Created a promise');
+    wrap(source.includes('new Promise')).should('equal', true).run('Use the `new Promise` constructor for this one', 'Used the constructor');
+    setTimeout(() => {
+      check.consoleLogged(/^Ready$/).run('The promise should be fulfilled with `Ready`', 'Fulfilled with the right value');
+    }, 200);
+    ```
+
+2. Create `delayedPromise`, which fulfills with the string `later` after a `200` millisecond delay.
+
+    ```{javascript}
+    // Write your code here
+
+    delayedPromise.then((value) => {
+      console.log(value);
+    });
+    ```
+    ```+solution
+    const delayedPromise = new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve('later');
+      }, 200);
+    });
+
+    delayedPromise.then((value) => {
+      console.log(value);
+    });
+    ```
+    ```+test
+    wrap(delayedPromise instanceof Promise).should('equal', true).run('`delayedPromise` should be a promise', 'Created a promise');
+    wrap(console.history().length).should('equal', 0).run('It should still be pending straight after the cell runs, so nothing is logged yet', 'The promise starts pending');
+    setTimeout(() => {
+      check.consoleLogged(/^later$/).run('After the delay it should be fulfilled with `later`. Call `resolve` from inside a `setTimeout` callback', 'Resolved after the delay');
+    }, 400);
+    ```
+
+3. Write `checkAge`, which returns a promise. It should fulfill with `allowed` when `age` is at least `18`, and reject with `too young` otherwise.
+
+    ```{javascript}
+    function checkAge(age) {
+      // Write your code here
+    }
+
+    checkAge(20).then((result) => console.log('20: ' + result));
+    checkAge(12).catch((reason) => console.log('12: ' + reason));
+    ```
+    ```+solution
+    function checkAge(age) {
+      return new Promise((resolve, reject) => {
+        if (age >= 18) {
+          resolve('allowed');
+        } else {
+          reject('too young');
+        }
+      });
+    }
+
+    checkAge(20).then((result) => console.log('20: ' + result));
+    checkAge(12).catch((reason) => console.log('12: ' + reason));
+    ```
+    ```+test
+    wrap(checkAge(20) instanceof Promise).should('equal', true).run('`checkAge` should return a promise', 'Returns a promise');
+    setTimeout(() => {
+      check.consoleLogged('20: allowed').run('`checkAge(20)` should fulfill with `allowed`', 'Fulfils for an adult');
+      check.consoleLogged('12: too young').run('`checkAge(12)` should reject with `too young`', 'Rejects for a child');
+    }, 250);
+    ```
+
+## Resources
+
+- [MDN: Promise() constructor](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise)
+- [MDN: Promise.resolve()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/resolve)
+- [MDN: Promise.reject()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/reject)
+- [MDN: How to use promises](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Promises)

@@ -1,0 +1,187 @@
+# SVG Elements
+
+Last lesson we met the `<svg>` canvas and the `<circle>`. This lesson is the rest of the basic shapes, and the attributes they share.
+
+SVG is good for graphics made of **concrete shapes**: logos, icons, diagrams, charts. It is a poor fit for photographs, which is exactly what raster formats like JPEG are for.
+
+## The Canvas
+
+The `<svg>` element creates a drawing area. `width` and `height` set its size, and if you leave them out you get a default of 300 by 150, which is easy to mistake for "nothing happened".
+
+A border helps while you are learning, so you can see where the canvas actually is:
+
+```{html autorun}
+<svg width="400" height="200"></svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+An empty canvas. Everything from here goes inside it.
+
+## The Shapes
+
+**`<circle>`** takes a center (`cx`, `cy`) and a radius (`r`).
+
+**`<rect>`** takes a top-left corner (`x`, `y`) plus `width` and `height`. Note the difference: a circle is positioned by its center, a rectangle by its corner.
+
+**`<line>`** takes a start point (`x1`, `y1`) and an end point (`x2`, `y2`). A line has no inside, so it needs a **`stroke`** to be visible at all; `fill` does nothing to it.
+
+**`<ellipse>`** is like a circle with two radii, `rx` and `ry`.
+
+**`<text>`** takes an `x` and `y` position, and its content is the text itself. By default `x` is the left edge of the text and `y` is its baseline.
+
+```{html autorun}
+<svg width="400" height="360">
+  <circle cx="100" cy="60" r="50" fill="red"></circle>
+  <rect x="220" y="20" width="140" height="80" fill="blue"></rect>
+  <line x1="40" y1="150" x2="360" y2="150" stroke="green" stroke-width="5"></line>
+  <ellipse cx="120" cy="240" rx="90" ry="45" fill="purple"></ellipse>
+  <text x="250" y="245" font-size="24" fill="black">Hello SVG</text>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Try changing numbers in that cell and rerunning it. Move the line's `y2` to `250` and watch it slope. Give the `<line>` a `fill` and notice that nothing changes.
+
+## Shared Attributes
+
+Several attributes work on any shape.
+
+- **`fill`** is the inside color.
+- **`stroke`** is the outline color.
+- **`stroke-width`** is how thick that outline is.
+- **`stroke-dasharray`** makes the outline dashed. It takes a list of numbers: the length of a dash, then the length of a gap, alternating.
+- **`opacity`** is how transparent the shape is, from `0` (invisible) to `1` (solid).
+
+```{html autorun}
+<svg width="400" height="140">
+  <circle cx="60"  cy="70" r="45" fill="lightskyblue"></circle>
+  <circle cx="170" cy="70" r="45" fill="lightskyblue" stroke="crimson" stroke-width="10"></circle>
+  <circle cx="280" cy="70" r="45" fill="lightskyblue" stroke="crimson" stroke-width="10" stroke-dasharray="12 6"></circle>
+  <circle cx="360" cy="70" r="30" fill="crimson" opacity="0.4"></circle>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Left to right: fill only, then an outline, then a dashed outline, then a shape at 40% opacity.
+
+## Later Shapes Draw on Top
+
+This one catches people out, because SVG has no `z-index` in the usual sense.
+
+**Shapes are painted in document order, so a shape written later appears in front of one written earlier.**
+
+```{html autorun}
+<svg width="400" height="140">
+  <rect x="20" y="20" width="120" height="100" fill="purple"></rect>
+  <circle cx="110" cy="70" r="45" fill="orange"></circle>
+
+  <circle cx="290" cy="70" r="45" fill="orange"></circle>
+  <rect x="250" y="20" width="120" height="100" fill="purple"></rect>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+The two pairs contain the same shapes in the same places. On the left the circle is in front; on the right the rectangle is. The only difference is the order they were written in.
+
+Combine that with `opacity` and you can see through the top shape to the one behind:
+
+```{html autorun}
+<svg width="220" height="140">
+  <circle cx="110" cy="70" r="45" fill="orange"></circle>
+  <rect x="50" y="20" width="120" height="100" fill="purple" opacity="0.6"></rect>
+</svg>
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+## Exercises
+
+1. Draw a rectangle `100` wide and `60` tall, with its top-left corner at `(20, 20)`, filled blue.
+
+    ```{html}
+    <svg width="200" height="120">
+      <!-- Write your rect here -->
+    </svg>
+    ```
+    ```+solution
+    <svg width="200" height="120">
+      <rect x="20" y="20" width="100" height="60" fill="blue"></rect>
+    </svg>
+    ```
+    ```+test
+    assert('rect').should('exist').run('Create a `rect` element inside the svg', 'Created the rectangle');
+    wrap(document.querySelector('rect').getAttribute('x')).should('equal', '20').run('Its top-left corner should be at `x="20"`', 'Positioned horizontally');
+    wrap(document.querySelector('rect').getAttribute('width')).should('equal', '100').run('It should be `100` wide', 'Set the width');
+    wrap(document.querySelector('rect').getAttribute('height')).should('equal', '60').run('It should be `60` tall', 'Set the height');
+    wrap(document.querySelector('rect').getAttribute('fill')).should('equal', 'blue').run('Fill it `blue`', 'Filled it blue');
+    ```
+
+2. Draw a diagonal red line from `(0, 0)` to `(150, 100)`, `4` units thick. Remember which attribute makes a line visible.
+
+    ```{html}
+    <svg width="150" height="100">
+      <!-- Write your line here -->
+    </svg>
+    ```
+    ```+solution
+    <svg width="150" height="100">
+      <line x1="0" y1="0" x2="150" y2="100" stroke="red" stroke-width="4"></line>
+    </svg>
+    ```
+    ```+test
+    assert('line').should('exist').run('Create a `line` element', 'Created the line');
+    wrap(document.querySelector('line').getAttribute('x2')).should('equal', '150').run('It should end at `x2="150"`', 'Set the end point');
+    wrap(document.querySelector('line').getAttribute('y2')).should('equal', '100').run('It should end at `y2="100"`', 'Set the end point');
+    wrap(document.querySelector('line').getAttribute('stroke')).should('equal', 'red').run('A line has no inside, so it needs `stroke` rather than `fill` to be visible', 'Used stroke');
+    wrap(document.querySelector('line').getAttribute('stroke-width')).should('equal', '4').run('Set `stroke-width` to `4`', 'Set the thickness');
+    ```
+
+3. Draw a green circle of radius `40` at the center of this canvas, with a black outline `6` thick, at half opacity.
+
+    ```{html}
+    <svg width="200" height="200">
+      <!-- Write your circle here -->
+    </svg>
+    ```
+    ```+solution
+    <svg width="200" height="200">
+      <circle cx="100" cy="100" r="40" fill="green" stroke="black" stroke-width="6" opacity="0.5"></circle>
+    </svg>
+    ```
+    ```+test
+    assert('circle').should('exist').run('Create a `circle` element', 'Created the circle');
+    wrap(document.querySelector('circle').getAttribute('cx')).should('equal', '100').run('The center of a 200 by 200 canvas is `cx="100"`', 'Centered horizontally');
+    wrap(document.querySelector('circle').getAttribute('cy')).should('equal', '100').run('The center of a 200 by 200 canvas is `cy="100"`', 'Centered vertically');
+    wrap(document.querySelector('circle').getAttribute('stroke')).should('equal', 'black').run('Give it a black `stroke`', 'Added the outline');
+    wrap(document.querySelector('circle').getAttribute('stroke-width')).should('equal', '6').run('Set `stroke-width` to `6`', 'Set the outline thickness');
+    wrap(document.querySelector('circle').getAttribute('opacity')).should('equal', '0.5').run('Set `opacity` to `0.5` for half transparency', 'Made it half transparent');
+    ```
+
+4. Two shapes overlap in an SVG. Which one appears in front?
+
+    ```{mcq}
+    A `rect` and a `circle` overlap. What decides which is drawn on top?
+    correct: Correct! SVG paints in document order, so whichever element is written later ends up in front. Reordering the elements is how you change the stacking.
+    wrong: Look back at "Later Shapes Draw on Top" and the two pairs of shapes there.
+    [x] Whichever element appears later in the markup
+    [ ] Whichever element is larger
+    [ ] Whichever element has a `fill`, since `stroke` is drawn behind
+    [ ] Whichever element was given the higher `opacity`
+    ```
+
+## Resources
+
+- [MDN: SVG element reference](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element)
+- [MDN: The rect element](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/rect)
+- [MDN: The line element](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Element/line)
+- [MDN: fill](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/fill)
+- [MDN: stroke-dasharray](https://developer.mozilla.org/en-US/docs/Web/SVG/Reference/Attribute/stroke-dasharray)

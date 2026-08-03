@@ -1,0 +1,254 @@
+# ShareDB OT Types
+
+ShareDB is **type-agnostic**. It will synchronize almost any kind of data, provided you tell it how to transform operations for that kind of data. That flexibility is the reason for a concept that otherwise looks like bureaucracy: the **OT type**.
+
+An OT type is a set of rules answering three questions about a kind of document:
+
+- which operations are legal,
+- how to apply one,
+- and how to transform one against another.
+
+The project for this reading is `sharedb-demo/03-ot-types/` in your workspace: the counter again, with a handful of lines added so you can watch its operations and see where a type gets chosen.
+
+## The Default: `json0`
+
+ShareDB ships with one type built in, **`json0`**, which is what the counter has been using without saying so. Its documents are JSON, and its operations are the `p`/`od`/`oi`/`na` objects from earlier in this lesson.
+
+The video opens `json0`'s source code on GitHub (`lib/json0.js`), because a look inside demystifies the whole business. Two pieces of it:
+
+**Applying an operation.** For `na`, the code walks the `p` path in a `for` loop to find the element and key being changed, and then the operation itself is one line: `element[key] = element[key] + c.na`. That is all "number add" is.
+
+**Inverting an operation.** Every OT type must also be able to **undo** an operation, so `json0` has an `invert` function that builds the reverse. For `na`, inverting means negating the number: the opposite of adding five is adding minus five. For `ld`, list delete, the inverse is `li`, list insert, putting the deleted item back.
+
+Why inversion matters: when the server decides on a different order than the one a client assumed, that client may have to **take back** an operation it already applied, apply somebody else's, and reapply its own transformed. Undo is not a user-facing feature here; it is machinery for keeping clients in step.
+
+Here is the shape of both pieces, small enough to run:
+
+```{javascript autorun}
+function applyNa(data, op) {
+  data[op.p[0]] = data[op.p[0]] + op.na;
+
+  return data;
+}
+
+function invert(op) {
+  if (op.na !== undefined) {
+    return { p: op.p, na: -op.na };
+  }
+
+  // A list delete is undone by inserting the item back.
+  if (op.ld !== undefined) {
+    return { p: op.p, li: op.ld };
+  }
+
+  return op;
+}
+
+const data = { numClicks: 10 };
+const op = { p: ['numClicks'], na: 5 };
+
+console.log('before:   ' + JSON.stringify(data));
+console.log('after op: ' + JSON.stringify(applyNa(data, op)));
+console.log('undone:   ' + JSON.stringify(applyNa(data, invert(op))));
+
+console.log('inverse of a list delete: ' + JSON.stringify(invert({ p: ['items', 2], ld: 'gone' })));
+```
+
+Applying an operation and then its inverse returns the document to where it started, which is the property `invert` has to guarantee. Try changing `na: 5` to another number, or inverting an `ld` of your own, and run it again.
+
+## Watching Operations Arrive
+
+The counter's `op` listener has been ignoring an argument this whole time: the operation itself. Stage 3's client picks it up and logs it, along with a second listener the video mentions:
+
+```{walkthrough}
+title: What the client gained since stage 2
+step: The op listeners
+file: sharedb-demo/03-ot-types/src/client.js
+region: ops
+Everything else in the file is stage 2 unchanged; only this block grew.
+@"doc.on('before op'": The second hook, for completeness: it fires with the same operations but **before** `doc.data` is updated, so it is the place to look at the old value. We log the counter here to prove it.
+@"before op: numClicks is": With the log two lines below, this prints the value straddling the change: the same click logs `9` here and `10` there.
+@"doc.on('op',": The listener we have had all along, now taking its argument.
+@"console.log(ops)": Press the button once and this logs `[{ p: ['numClicks'], na: 1 }]`: an **array** holding the operation that was applied, in exactly the format we submit.
+@"updateCounter();": Our rendering still ignores the operation and re-reads `doc.data`, a correct approach with nothing to get wrong: throw the rendering away and rebuild it from the current data.
+```
+
+With one client, what arrives is exactly what you submitted, which makes the argument look pointless. With several clients it need not be: what arrives may be somebody else's operation, or your own **transformed**, and inverses may have been applied along the way. The `op` listener tells you what actually happened to your copy.
+
+And that argument is what makes precise updating possible. Re-rendering everything from `doc.data` stops being adequate when rebuilding is expensive: with a list of ten thousand items and one new arrival, you would rather insert one row than rebuild the list, and to do that you have to read the operation to find out **which** item is new. Small documents: re-read `doc.data`. Large ones: read the operation. The next reading does exactly that.
+
+## Registering Another Type
+
+`json0` is the default, not the only option.
+
+- **`rich-text`** represents formatted text: bold, italics, lists, headings. It is what a Google Docs-style editor needs, and we will use it at the end of this lesson.
+- **`json1`** is a newer replacement for `json0`. It is not bundled with ShareDB either, and we will stay with `json0` for JSON documents.
+
+Using a type that is not built in takes two steps: install it, and register it.
+
+    $ npm install rich-text
+
+```{walkthrough}
+title: What the server gained since stage 2
+step: Requiring the type
+file: sharedb-demo/03-ot-types/server.js
+region: modules
+@"require('rich-text')": The one new require: the `rich-text` OT type, installed with npm like any other package.
+
+step: Registering it
+file: sharedb-demo/03-ot-types/server.js
+region: register
+@"ShareDB.types.register(richText.type)": Tells this ShareDB how to apply, transform, and invert `rich-text` operations. Registration is per process: when we actually use this type in the last reading of this lesson, the browser side will have to register it too.
+
+step: Naming a document's type
+file: sharedb-demo/03-ot-types/server.js
+region: doc
+The fetch-and-create dance is stage 2 unchanged. The difference is one argument on the create line.
+@"{ numClicks: 0 }, 'json0'": `create`'s optional second argument names the document's OT type. Leaving it out means `'json0'`, which is why the counter never mentioned one; writing `'rich-text'` here instead is how the collaborative editor will start. Choosing a type is choosing what kind of thing your document *is*.
+```
+
+## Running It Yourself
+
+From `sharedb-demo/` (stop any other stage first with Ctrl+C):
+
+    $ cd "03-ot-types"
+    $ npx webpack
+    $ node server.js
+    Document created!
+    Listening on http://localhost:8000
+
+Open `http://localhost:8000`, open the browser console (F12 or Cmd+Option+I), and click the button a few times. Each click logs three lines: the counter's value *before* the operation, the operation array itself, and the value *after*. Open a second window and click there instead: the first window logs the same three lines for an operation it never submitted, which is the `op` listener doing its real job.
+
+## Exercises
+
+1. Complete `invert` so that applying an operation and then its inverse leaves the document unchanged.
+
+    ```{javascript}
+    function applyNa(data, op) {
+      data[op.p[0]] = data[op.p[0]] + op.na;
+
+      return data;
+    }
+
+    function invert(op) {
+      // TODO: the inverse of adding a number is adding its negative.
+      // The inverse of a list delete (ld) is a list insert (li) of the
+      // same value, at the same path.
+      return op;
+    }
+
+    console.log(invert({ p: ['numClicks'], na: 5 }));
+    console.log(invert({ p: ['items', 2], ld: 'gone' }));
+    ```
+    ```+solution
+    function applyNa(data, op) {
+      data[op.p[0]] = data[op.p[0]] + op.na;
+
+      return data;
+    }
+
+    function invert(op) {
+      if (op.na !== undefined) {
+        return { p: op.p, na: -op.na };
+      }
+
+      if (op.ld !== undefined) {
+        return { p: op.p, li: op.ld };
+      }
+
+      return op;
+    }
+
+    console.log(invert({ p: ['numClicks'], na: 5 }));
+    console.log(invert({ p: ['items', 2], ld: 'gone' }));
+    ```
+    ```+test
+    wrap(invert({ p: ['numClicks'], na: 5 })).should('equal', { p: ['numClicks'], na: -5 }).run('The inverse of `na: 5` is `na: -5`, at the same path', 'Inverted a number add');
+    wrap(invert({ p: ['numClicks'], na: -3 })).should('equal', { p: ['numClicks'], na: 3 }).run('It should work in both directions, so `na: -3` inverts to `na: 3`', 'Inverted a negative add');
+    wrap(invert({ p: ['items', 2], ld: 'gone' })).should('equal', { p: ['items', 2], li: 'gone' }).run('The inverse of a list delete is a list insert of the same value: `ld` becomes `li`', 'Inverted a list delete');
+    wrap((function () { const data = { numClicks: 10 }; const op = { p: ['numClicks'], na: 5 }; applyNa(data, op); applyNa(data, invert(op)); return data.numClicks; })()).should('equal', 10).run('Applying an operation and then its inverse has to leave the document exactly as it was', 'The round trip is lossless');
+    ```
+
+2. Register the rich-text type and create a rich-text document.
+
+    ```{javascript}
+    // Stand-ins for the library.
+    const ShareDB = { types: { registered: [] } };
+
+    ShareDB.types.register = function (type) {
+      ShareDB.types.registered.push(type.name);
+    };
+
+    const richText = { type: { name: 'rich-text' } };
+
+    const doc = { created: null, createdType: null };
+
+    doc.create = function (data, typeName) {
+      doc.created = data;
+      doc.createdType = typeName;
+    };
+
+    // TODO: register the rich-text type, then create the document with the
+    // contents [{ insert: 'Hello' }] as a rich-text document.
+
+    console.log(ShareDB.types.registered, doc.createdType);
+    ```
+    ```+solution
+    // Stand-ins for the library.
+    const ShareDB = { types: { registered: [] } };
+
+    ShareDB.types.register = function (type) {
+      ShareDB.types.registered.push(type.name);
+    };
+
+    const richText = { type: { name: 'rich-text' } };
+
+    const doc = { created: null, createdType: null };
+
+    doc.create = function (data, typeName) {
+      doc.created = data;
+      doc.createdType = typeName;
+    };
+
+    ShareDB.types.register(richText.type);
+
+    doc.create([{ insert: 'Hello' }], 'rich-text');
+
+    console.log(ShareDB.types.registered, doc.createdType);
+    ```
+    ```+test
+    wrap(ShareDB.types.registered).should('equal', ['rich-text']).run('Register the type with `ShareDB.types.register(richText.type)` before using it', 'Registered the type');
+    wrap(doc.created).should('equal', [{ insert: 'Hello' }]).run('Create the document with the contents `[{ insert: \'Hello\' }]`', 'Created the document');
+    wrap(doc.createdType).should('equal', 'rich-text').run('Pass `\'rich-text\'` as the second argument to `create`, or the document is a `json0` document', 'Chose the type');
+    ```
+
+3. Why every type has an `invert`
+
+    ```{mcq}
+    Every OT type implementation includes an `invert` function that builds the reverse of an operation, such as turning `na: 5` into `na: -5`. Why does ShareDB need that?
+    correct: Correct! When the server settles on an order different from what a client assumed, that client may have to take back an operation it already applied before applying the others. Inversion is how it takes it back.
+    wrong: This is not a user-facing undo button. Think about a client that applied its own edit and then learns the agreed order was different.
+    [x] It lets ShareDB undo an operation, which is needed to roll a client back while resolving conflicts
+    [ ] It converts the JSON into HTML for the browser
+    [ ] It speeds up the connection
+    [ ] It switches the application into dark mode
+    ```
+
+4. Choosing a type
+
+    ```{mcq}
+    You are building a Google Docs-style editor where text can be bold and italic. Which OT type do you need to install and register?
+    correct: Correct! `rich-text` is the type for documents with formatting. It has to be installed and registered, since only `json0` is built in.
+    wrong: The built-in type handles plain JSON. Formatting needs something that understands it.
+    [x] `rich-text`
+    [ ] `json0`
+    [ ] `binary-sync`
+    [ ] `simple-string`
+    ```
+
+## Resources
+
+- [ShareDB: OT types](https://share.github.io/sharedb/types)
+- [ottypes/json0](https://github.com/ottypes/json0)
+- [ottypes/rich-text](https://github.com/ottypes/rich-text)
+- [ShareDB: the Doc class](https://share.github.io/sharedb/api/doc)

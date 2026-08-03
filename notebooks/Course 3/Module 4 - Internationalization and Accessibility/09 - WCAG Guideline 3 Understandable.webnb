@@ -1,0 +1,143 @@
+# WCAG Guideline 3: Understandable
+
+The third WCAG principle says that both the **information** your UI presents and the **operation** of the interface must be understandable. Users should be able to read the content, know what each control does, and predict what will happen when they use it.
+
+For web applications, this includes:
+
+- clear labels on form controls,
+- helpful error messages that say what went wrong and how to fix it,
+- predictable navigation,
+- consistent controls (both within your own app and compared to other apps),
+- the page language identified in the HTML (`<html lang="en">`).
+
+## Labels Help Everyone
+
+Form controls should have labels.
+
+```{html}
+<label for="email">Email</label>
+<input id="email" type="email">
+```
+
+The `for` attribute on the `<label>` matches the `id` on the `<input>`, which ties the two together. The label tells sighted users what the field is for, gives assistive technology text to announce when the field gains focus, and enlarges the click target (clicking the label focuses the input).
+
+## Clear Errors Users Can Fix
+
+When a user makes a mistake in a form, a vague message like "Invalid" is not enough. To be understandable, an error message should do three things:
+
+- **Identify the field** it belongs to, ideally shown right next to that field instead of collected at the bottom of the page.
+- **Explain what is wrong** in specific terms ("The passcode must be exactly 6 digits") rather than a generic label.
+- **Let the user correct it in place**, without forcing them to re-enter everything they already typed.
+
+Consider a form asking for a 6-digit secret passcode where the user typed seven digits. A specific inline message next to that field is far more usable than a generic "Invalid" note somewhere else:
+
+```{html}
+<label for="passcode">Secret passcode (6 digits)</label>
+<input id="passcode" type="text" value="1234567" aria-describedby="passcode-error">
+<p id="passcode-error" class="error">The passcode must be exactly 6 digits. You entered 7.</p>
+```
+
+The `aria-describedby` attribute points at the ID of the error paragraph, so assistive technology reads the error together with the field. The user can then edit only the passcode field instead of retyping the whole form.
+
+## Prevent Costly Mistakes
+
+WCAG's error-prevention guidance (Success Criterion 3.3.4) says that when a form submission has legal, financial, or data consequences, at least one of these should be true:
+
+- **Reversible** - the submission can be undone.
+- **Checked** - the data is validated for input errors and the user gets a chance to correct them.
+- **Confirmed** - the user can review, confirm, and correct the information before finalizing.
+
+Any one of these gives the user a safety net so a single typo does not cause permanent harm.
+
+## Be Consistent and Predictable
+
+Understandable also means consistent: consistent within your own UI across pages and widgets, and consistent with the conventions users know from other sites. Fighting those conventions confuses people.
+
+A real example: a site for uploading a recommendation letter asked "Do you decline to provide a referral for this candidate?" To agree to write the letter, the user had to select **No**. That wording is counterintuitive and it is inconsistent with nearly every similar site, which asks the question the expected way. Predictable, consistently worded controls let users act correctly without stopping to decode them.
+
+## Exercises
+
+1. What does the "understandable" principle focus on?
+
+   ```{mcq}
+   What is this principle about?
+   correct: Correct. Users need to make sense of the content, the controls, and the feedback the interface gives them.
+   wrong: Think about labels, clear errors, and predictable, consistent behavior.
+   [x] Clear content, controls, and feedback that users can make sense of.
+   [ ] Hiding every label so the page looks cleaner.
+   [ ] Making navigation change on every page.
+   [ ] Removing the page language from the HTML.
+   ```
+
+2. Add a label for the email input and connect it to the field.
+
+   ```{html}
+   <input id="email" type="email">
+   ```
+   ```+solution
+   <label for="email">Email</label>
+   <input id="email" type="email">
+   ```
+   ```+test
+   assert('label').should('have.text', 'Email').run('Add a label with the text `Email`', 'Added the Email label');
+   wrap(source.includes('for="email"') || source.includes("for='email'")).should('equal', true).run('Connect the label to the email input with `for="email"`', 'Connected the label to the input');
+   ```
+
+3. The passcode field below rejected the value but gives no useful feedback. Add an error paragraph right after the input that names what is wrong specifically. Give the paragraph `class="error"` and mention that the passcode must be `6 digits`.
+
+   ```{html}
+   <label for="passcode">Secret passcode (6 digits)</label>
+   <input id="passcode" type="text" value="1234567">
+   ```
+   ```+solution
+   <label for="passcode">Secret passcode (6 digits)</label>
+   <input id="passcode" type="text" value="1234567">
+   <p class="error">The passcode must be exactly 6 digits. You entered 7.</p>
+   ```
+   ```+test
+   assert('p.error').should('exist').run('Add a `<p class="error">` message after the input', 'Added an inline error message');
+   wrap(source.includes('6 digits')).should('equal', true).run('The message should say the passcode must be `6 digits`', 'The message explains the rule specifically');
+   ```
+
+4. A checkout form charges a credit card when the user submits. Which approach satisfies WCAG's error-prevention guidance?
+
+   ```{mcq}
+   Which approach gives the user a chance to catch the mistake?
+   correct: Correct. Reversible, checked, or confirmed each give the user a chance to catch or undo a mistake before harm is done.
+   wrong: The goal is to let the user catch or undo a mistake before it becomes permanent.
+   [x] Let the user review and confirm the order before the charge is finalized.
+   [ ] Charge immediately with no confirmation and no way to undo it.
+   [ ] Show a generic "Error" message with no field named.
+   [ ] Word the confirm button opposite to what users expect.
+   ```
+
+5. A form asks "Do you decline to provide a referral for this candidate?", and answering **No** is how you agree to write it. What is wrong with that?
+
+   ```{mcq}
+   Why is that question a problem?
+   correct: Correct! It is a double negative, so the user has to decode the question before answering, and it is worded opposite to nearly every comparable site. Both make it easy to answer the reverse of what you meant.
+   wrong: Read the question and work out which answer means "yes, I will write the letter". How long did that take?
+   [x] It uses double-negative logic that is counterintuitive and inconsistent with how comparable sites ask the same thing
+   [ ] The text is too small for users with low vision
+   [ ] Screen readers cannot pronounce the word "decline"
+   [ ] Nothing, as long as the submit button works
+   ```
+
+6. A form with 20 fields rejects one of them. What should it do?
+
+   ```{mcq}
+   What is the right response to a single invalid field?
+   correct: Correct! Name the field, say exactly what is wrong with it, and keep everything else the user already typed. Making someone refill nineteen correct fields to fix one mistake is the failure this criterion is about.
+   wrong: Think about what the user has to do next under each option, and how much of their work each one throws away.
+   [x] Highlight the field, explain the specific rule it broke, and keep the other 19 values
+   [ ] Clear every field and show a generic "form invalid" message
+   [ ] Submit it anyway and let someone fix the data later
+   [ ] Disable the submit button without explaining why
+   ```
+
+## Resources
+
+- [W3C: WCAG Principle 3 Understandable](https://www.w3.org/WAI/WCAG22/Understanding/understandable)
+- [W3C: Understanding SC 3.3.4 Error Prevention](https://www.w3.org/WAI/WCAG22/Understanding/error-prevention-legal-financial-data.html)
+- [MDN: The Label element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/label)
+- [MDN: aria-describedby](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-describedby)

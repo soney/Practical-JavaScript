@@ -1,0 +1,225 @@
+# Updating and Uninstalling Packages
+
+Installing a dependency is the start of a relationship. Libraries release fixes, projects stop needing things, and sometimes a new version is the reason your code broke. npm has a command for each of those.
+
+## Updating
+
+```
+$ npm update
+```
+
+This updates every dependency to **the newest version still allowed by the range in `package.json`**. It respects the caret and tilde rules from the previous reading rather than ignoring them, so it will not pull in a major version behind your back.
+
+Say `package.json` asks for `"lodash": "^4.17.0"` and `4.17.0` is what is installed. Running `npm update` gets you `4.17.21`, because that is the newest release beginning with `4`.
+
+Here is the part that confuses people. Look in `package.json` afterwards and **nothing has changed**:
+
+```json
+"dependencies": {
+  "lodash": "^4.17.0"
+}
+```
+
+That is correct behavior. `package.json` records what you will *accept*, and you still accept the same range. What changed is `package-lock.json`, which records what you actually *have*:
+
+```json
+"node_modules/lodash": {
+  "version": "4.17.21"
+}
+```
+
+So if you want to see what an update did, look at the lock file, not `package.json`.
+
+## Uninstalling
+
+```
+$ npm uninstall lodash
+```
+
+This does both halves of the job: it deletes the package from `node_modules/`, and it removes the entry from `dependencies` in `package.json`. Afterwards there is no trace of it in your project, and code that still imports it will fail with a module-not-found error.
+
+## Installing a Particular Version
+
+Add `@` and a version to any install:
+
+```
+$ npm install lodash@2.0.1
+```
+
+That is the command for "the newest version broke my code and I need to go back". Note that you do this with `npm install` and not `npm update`, since you are choosing a version rather than asking for the newest allowed one.
+
+The part after `@` does not have to be an exact version. It can be any range:
+
+```
+$ npm install lodash@4        the newest 4.x
+$ npm install lodash@^3       the newest release compatible with 3, such as 3.10.1
+$ npm install lodash@2.0.1    that version specifically
+```
+
+Installing this way also rewrites the dependency entry in `package.json`, so the range recorded there matches what you just asked for.
+
+One related command worth knowing: `npm install` with **no** package name installs everything already listed in `package.json`. That is how you set up a project you have just downloaded, and it is why `node_modules/` does not need to be shared.
+
+## What npm Update Is Doing
+
+The logic is not mysterious. Given a range and the list of versions the registry has, pick the newest one the range allows:
+
+```{javascript autorun}
+function isNewer(candidate, best) {
+  const a = candidate.split('.');
+  const b = best.split('.');
+
+  for (let i = 0; i < 3; i++) {
+    if (Number(a[i]) > Number(b[i])) {
+      return true;
+    }
+
+    if (Number(a[i]) < Number(b[i])) {
+      return false;
+    }
+  }
+
+  return false;
+}
+
+const available = ['4.17.0', '4.17.21', '4.18.0', '5.0.0', '3.10.1'];
+
+let best = '';
+
+for (const version of available) {
+  if (version.split('.')[0] === '4') {
+    if (best === '' || isNewer(version, best)) {
+      best = version;
+    }
+  }
+}
+
+console.log('^4.17.0 updates to ' + best);
+```
+
+`5.0.0` is newer than everything in that list and is not chosen, which is the whole point of the caret.
+
+## Exercises
+
+1. Update your dependencies, then go back to a specific older version of Lodash, then remove it entirely.
+
+    ```{external}
+    title: Updating, pinning, and removing
+    interval: off
+    - command: npm update | Update every dependency to the newest allowed version
+    - command: npm install lodash@2.0.1 | Install one specific older version instead
+    - command: npm uninstall lodash | Remove the package from the project
+    ```
+    ```+terminal
+    welcome: Run the three commands in order, then run the cell to check them.
+    prompt: $
+    ```
+
+2. Finish the loop so `latestAllowed` returns the newest version a caret range accepts. `isNewer` is written for you.
+
+    ```{javascript}
+    function isNewer(candidate, best) {
+      const a = candidate.split('.');
+      const b = best.split('.');
+
+      for (let i = 0; i < 3; i++) {
+        if (Number(a[i]) > Number(b[i])) {
+          return true;
+        }
+
+        if (Number(a[i]) < Number(b[i])) {
+          return false;
+        }
+      }
+
+      return false;
+    }
+
+    function latestAllowed(range, available) {
+      const wantedMajor = range.replace('^', '').split('.')[0];
+
+      let best = '';
+
+      for (const version of available) {
+        // TODO: keep this version only if its major matches wantedMajor
+        // and it is newer than the best one found so far
+      }
+
+      return best;
+    }
+
+    console.log(latestAllowed('^4.17.0', ['4.17.0', '4.18.0', '5.0.0']));
+    ```
+    ```+solution
+    function isNewer(candidate, best) {
+      const a = candidate.split('.');
+      const b = best.split('.');
+
+      for (let i = 0; i < 3; i++) {
+        if (Number(a[i]) > Number(b[i])) {
+          return true;
+        }
+
+        if (Number(a[i]) < Number(b[i])) {
+          return false;
+        }
+      }
+
+      return false;
+    }
+
+    function latestAllowed(range, available) {
+      const wantedMajor = range.replace('^', '').split('.')[0];
+
+      let best = '';
+
+      for (const version of available) {
+        if (version.split('.')[0] === wantedMajor) {
+          if (best === '' || isNewer(version, best)) {
+            best = version;
+          }
+        }
+      }
+
+      return best;
+    }
+
+    console.log(latestAllowed('^4.17.0', ['4.17.0', '4.18.0', '5.0.0']));
+    ```
+    ```+test
+    wrap(latestAllowed('^4.17.0', ['4.17.0', '4.18.0', '5.0.0'])).should('equal', '4.18.0').run('It should pick `4.18.0`: the newest version whose major number is still `4`', 'Picked the newest allowed version');
+    wrap(latestAllowed('^4.17.0', ['4.17.0', '4.17.21', '4.17.9'])).should('equal', '4.17.21').run('`4.17.21` is newer than `4.17.9`, since these are numbers rather than text', 'Compared patch numbers numerically');
+    wrap(latestAllowed('^3.1.0', ['3.10.1', '4.18.0', '5.0.0'])).should('equal', '3.10.1').run('With a `^3` range, only versions beginning with `3` are allowed', 'Respected a different major version');
+    wrap(latestAllowed('^2.0.0', ['3.10.1', '4.18.0'])).should('equal', '').run('If nothing matches, `best` should stay as the empty string it started as', 'Handled having no match');
+    ```
+
+3. You run `npm update`. What changes in your configuration files?
+
+    ```{mcq}
+    Which file records the result of an update?
+    correct: Correct! The range in `package.json` is what you accept, and it has not changed. `package-lock.json` records what is actually installed, so that is where the new version number appears.
+    wrong: One file describes what versions are acceptable; the other records exactly which ones you have. Which one did updating change?
+    [x] `package-lock.json` is updated, and `package.json` shows no visible change
+    [ ] `package.json` changes, and `package-lock.json` stays the same
+    [ ] Both change, to the same version string
+    [ ] A new configuration file is created
+    ```
+
+4. The latest version of a library is causing bugs, and you want version `2.0.1` specifically. Which command?
+
+    ```{mcq}
+    How do you move to one particular older version?
+    correct: Correct! `npm install package@2.0.1` installs that version and records it in `package.json`. Downgrading is an install, not an update, because `update` only ever moves forward within the range you already allow.
+    wrong: `update` asks for the newest allowed version. You want a specific one instead.
+    [x] `npm install [package-name]@2.0.1`
+    [ ] `npm update @2.0.1`
+    [ ] `npm uninstall` and then `npm install`, with no version given
+    [ ] `npm remove [package-name]`, then restart the computer
+    ```
+
+## Resources
+
+- [npm: npm update](https://docs.npmjs.com/cli/v10/commands/npm-update)
+- [npm: npm uninstall](https://docs.npmjs.com/cli/v10/commands/npm-uninstall)
+- [npm: npm install](https://docs.npmjs.com/cli/v10/commands/npm-install)
+- [npm: package-lock.json](https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json)

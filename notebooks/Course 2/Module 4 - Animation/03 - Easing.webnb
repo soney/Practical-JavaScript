@@ -1,0 +1,303 @@
+# Easing
+
+One of the things I like about writing animation code is that it blends ideas from programming with ideas from art and design. This lesson is the design half.
+
+The animation we built [last lesson](<02 - Manual Animations.webnb>) works, and it feels robotic. It starts instantly at full speed, holds that speed exactly, and stops dead. Nothing in the physical world moves like that, and our eyes know it.
+
+Before we fix that, one loose end from the last lesson.
+
+## Letting the Browser Choose the Frame Rate
+
+We had a variable for frames per second, and we picked its value ourselves. That is guesswork, because the right answer depends on things our code cannot see: how fast the machine is, how loaded it is right now, whether it is trying to save battery, and whether the user is even looking at the page or has moved to another tab.
+
+The browser knows all of that. **`requestAnimationFrame(callback)`** hands the decision over: it runs our callback at the **next available frame**, and the browser picks when that is.
+
+Unlike `setTimeout`, we pass **no timing at all**:
+
+```javascript
+// before: we chose the rate
+setTimeout(step, 1000 / fps);
+
+// after: the browser chooses
+requestAnimationFrame(step);
+```
+
+The `fps` variable disappears entirely. The browser matches the display's refresh rate, and it can deprioritize or pause our animation when nobody can see it, which is both smoother and kinder to the battery.
+
+## Slow In, Slow Out
+
+In the book *The Illusion of Life*, two of the early Disney animators set out the principles they used to bring drawings to life.
+
+![The cover of the book The Illusion of Life: Disney Animation, by Frank Thomas and Ollie Johnston](images/illusion_of_life.jpeg =x220)
+
+One of those principles is **slow in, slow out**. A real object does not go from standing still to full speed instantly, and it does not stop dead either. It accelerates, travels, and decelerates.
+
+This drawing from the book shows the same idea applied to a hand movement, easing into and out of each held position:
+
+![A page of animation drawings showing a character's hand moving between three held positions, with the in-between frames bunched up near each hold to show slowing in and out](images/easing_animation.png =x300)
+
+Here is the clearest illustration of all. A coin is moved across the page in one second, 24 frames, twice. The **timing** is identical both times; only the **spacing** changes.
+
+![Two rows of coin positions. In the top row the coin images are evenly spaced across the page; in the bottom row they are bunched together at both ends and spread out in the middle, marked "ease out of number 1" and "ease in to number 25"](images/moving_penny.jpeg =x420)
+
+In the top row the frames are evenly spaced, which is what our animation does. In the bottom row they bunch up at both ends: many frames close together while the coin is slow, fewer and further apart while it is fast. Same start, same finish, same duration, completely different feel.
+
+## The Same Idea as a Graph
+
+Put time on the horizontal axis and position on the vertical axis. So far our animations look like the left-hand graph: a straight line, position increasing at a constant rate.
+
+![Two graphs of position against time. The left, labeled Linear, is a straight diagonal line. The right, labeled easeInOutQuad, is an S-shaped curve that starts shallow, steepens in the middle, and flattens again at the end. Both start and end at the same points](images/linearandease.jpeg =x260)
+
+The right-hand graph is what we want. The line starts shallow, meaning slow, steepens in the middle, meaning fast, and flattens out at the end, meaning slow again. **Both curves start and end at the same place at the same time.** They only differ in the route.
+
+Imagine two blocks racing, one on each curve. They start together and finish together. The linear one pulls ahead early, the eased one overtakes it in the middle, and the linear one catches back up right at the end.
+
+## Easing in Code
+
+The change to our code is remarkably small. Our loop already computes a fraction `pct`, from `0` at the start to `1` at the end, and feeds it into the interpolation. All we do is **bend that fraction** on the way through.
+
+An **easing function** takes a number from 0 to 1 and returns another number from 0 to 1. That is the whole job: it maps "how far through the time" to "how far through the distance".
+
+```{javascript autorun}
+function easeInOutQuad(pct) {
+  if (pct < 0.5) {
+    return 2 * pct * pct;
+  }
+
+  return -1 + (4 - 2 * pct) * pct;
+}
+
+console.log(easeInOutQuad(0));
+console.log(easeInOutQuad(0.25));
+console.log(easeInOutQuad(0.5));
+console.log(easeInOutQuad(0.75));
+console.log(easeInOutQuad(1));
+```
+
+**You can ignore the formula.** What matters is the shape of the numbers: at a quarter of the way through the *time*, we are only an eighth of the way through the *distance*. At three quarters of the time we are already seven eighths of the distance. It still gives exactly `0` at the start and `1` at the end, which is what keeps the start and finish honest.
+
+Now the animation. Two changed lines:
+
+```html id=page1
+<button>Race them</button>
+<div class="track"><div id="green" class="racer"></div></div>
+<div class="track"><div id="blue" class="racer"></div></div>
+```
+
+```{javascript autorun}
+function setX(id, x) {
+  document.querySelector(id).style.setProperty('left', x + 'px');
+}
+
+function easeInOutQuad(pct) {
+  if (pct < 0.5) {
+    return 2 * pct * pct;
+  }
+  return -1 + (4 - 2 * pct) * pct;
+}
+
+function linear(pct) {
+  return pct;
+}
+
+function animate(id, duration, fromX, toX, easing) {
+  const animationStarted = Date.now();
+
+  const step = () => {
+    const now = Date.now();
+    const pct = (now - animationStarted) / duration;
+
+    if (now < animationStarted + duration) {
+      const pos = easing(pct);
+      setX(id, fromX + pos * (toX - fromX));
+      requestAnimationFrame(step);
+    } else {
+      setX(id, toX);
+    }
+  };
+
+  requestAnimationFrame(step);
+}
+
+document.querySelector('button').addEventListener('click', () => {
+  animate('#green', 2000, 0, 300, linear);
+  animate('#blue', 2000, 0, 300, easeInOutQuad);
+});
+```
+```+id=page1
+```
+```+css
+.track {
+  position: relative;
+  height: 40px;
+  width: 340px;
+  margin-top: 8px;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+}
+.racer { position: absolute; width: 40px; height: 40px; border-radius: 6px; }
+#green { background-color: #4a9; }
+#blue { background-color: #00274c; }
+```
+
+Click "Race them" and watch. The green block moves linearly; the blue one eases. Green pulls ahead, blue overtakes in the middle, and they arrive together. Exactly the graph, in motion.
+
+The only additions to last lesson's loop were a function passed in as `easing`, and running `pct` through it before the interpolation. That is all easing is.
+
+## Other Easing Functions
+
+`easeInOutQuad` is slow at both ends, which is the most generally useful. There are other shapes, and the names are worth knowing because CSS uses the same vocabulary:
+
+- **ease-in** starts slowly and ends abruptly.
+- **ease-out** starts abruptly and ends slowly.
+- **ease-in-out** is slow at both ends, as above.
+- **linear** is no easing at all.
+
+And easing functions are not limited to staying between 0 and 1 in the middle. One that overshoots past `1` and comes back produces a **bounce**:
+
+```html id=page2
+<button>Bounce</button>
+<div class="track"><div id="ball" class="racer"></div></div>
+```
+
+```{javascript autorun}
+function setX(id, x) {
+  document.querySelector(id).style.setProperty('left', x + 'px');
+}
+
+function easeOutBounce(pct) {
+  const n1 = 7.5625;
+  const d1 = 2.75;
+
+  if (pct < 1 / d1) {
+    return n1 * pct * pct;
+  } else if (pct < 2 / d1) {
+    const p = pct - 1.5 / d1;
+    return n1 * p * p + 0.75;
+  } else if (pct < 2.5 / d1) {
+    const p = pct - 2.25 / d1;
+    return n1 * p * p + 0.9375;
+  }
+
+  const p = pct - 2.625 / d1;
+  return n1 * p * p + 0.984375;
+}
+
+function animate(id, duration, fromX, toX, easing) {
+  const animationStarted = Date.now();
+
+  const step = () => {
+    const now = Date.now();
+    const pct = (now - animationStarted) / duration;
+
+    if (now < animationStarted + duration) {
+      setX(id, fromX + easing(pct) * (toX - fromX));
+      requestAnimationFrame(step);
+    } else {
+      setX(id, toX);
+    }
+  };
+
+  requestAnimationFrame(step);
+}
+
+document.querySelector('button').addEventListener('click', () => {
+  animate('#ball', 1500, 0, 300, easeOutBounce);
+});
+```
+```+id=page2
+```
+```+css
+.track {
+  position: relative;
+  height: 40px;
+  width: 340px;
+  margin-top: 8px;
+  border: 2px dashed #999;
+  border-radius: 6px;
+  background-color: #f7f7f7;
+}
+.racer { position: absolute; width: 40px; height: 40px; border-radius: 20px; background-color: #b00; }
+```
+
+Again, ignore the arithmetic. The point is that **the entire character of the motion lives in that one function**, and the animation loop did not change at all.
+
+There is no need to invent these yourself. Collections of ready-made easing functions are widely available, and CSS has several built in, which is the next lesson.
+
+## Exercises
+
+1. What does an easing function change about an animation?
+
+    ```{mcq}
+    An animation is given an easing function instead of using its fraction directly. What changes?
+    correct: Correct! Easing changes how the distance is distributed across the time. The start point, the end point, and the duration are all unchanged.
+    wrong: Look back at the two graphs, and at what the coin illustration says about timing versus spacing.
+    [x] How the distance is spread across the duration, and so how the motion feels
+    [ ] How long the animation takes overall
+    [ ] Where the animation finishes
+    [ ] How many pixels the element is wide
+    ```
+
+2. Write `easeIn`, an easing function that starts slowly and speeds up, using the formula `pct * pct`.
+
+    ```{javascript}
+    function easeIn(pct) {
+      // Write your code here
+    }
+
+    console.log(easeIn(0.5));
+    ```
+    ```+solution
+    function easeIn(pct) {
+      return pct * pct;
+    }
+
+    console.log(easeIn(0.5));
+    ```
+    ```+test
+    wrap(easeIn(0)).should('equal', 0).run('`easeIn(0)` should be `0`, so the animation still starts at the beginning', 'Starts at zero');
+    wrap(easeIn(1)).should('equal', 1).run('`easeIn(1)` should be `1`, so the animation still ends at the end', 'Ends at one');
+    wrap(easeIn(0.5)).should('equal', 0.25).run('`easeIn(0.5)` should be `0.25`: halfway through the time, only a quarter of the distance', 'Slow at the start');
+    ```
+
+3. Write `easeOut`, which starts abruptly and slows down. At the halfway point it should already have covered three quarters of the distance. Use `1 - (1 - pct) * (1 - pct)`.
+
+    ```{javascript}
+    function easeOut(pct) {
+      // Write your code here
+    }
+
+    console.log(easeOut(0.5));
+    ```
+    ```+solution
+    function easeOut(pct) {
+      return 1 - (1 - pct) * (1 - pct);
+    }
+
+    console.log(easeOut(0.5));
+    ```
+    ```+test
+    wrap(easeOut(0)).should('equal', 0).run('`easeOut(0)` should be `0`', 'Starts at zero');
+    wrap(easeOut(1)).should('equal', 1).run('`easeOut(1)` should be `1`', 'Ends at one');
+    wrap(easeOut(0.5)).should('equal', 0.75).run('`easeOut(0.5)` should be `0.75`: halfway through the time, three quarters of the distance already covered', 'Fast at the start, slow at the end');
+    ```
+
+4. Why does `requestAnimationFrame` take no delay argument?
+
+    ```{mcq}
+    `setTimeout` needs to be told how long to wait. Why does `requestAnimationFrame` not?
+    correct: Correct! The whole point is that the browser decides. It knows the refresh rate, the current load, the power state, and whether the tab is even visible, none of which your code can see.
+    wrong: Look back at "Letting the Browser Choose the Frame Rate".
+    [x] Because the browser decides the timing, based on things your code cannot know
+    [ ] Because it always waits exactly 16 milliseconds
+    [ ] Because it runs the callback immediately, with no wait
+    [ ] Because the delay is taken from the animation's duration instead
+    ```
+
+## Resources
+
+- [MDN: Window.requestAnimationFrame()](https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame)
+- [MDN: CSS easing functions](https://developer.mozilla.org/en-US/docs/Web/CSS/easing-function)
+- [A collection of easing functions](https://easings.net/)
+- [Easing function snippets](https://gist.github.com/gre/1650294)

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>freact stage 4: state</title>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <!-- Our fake React. It loads first: the compiled JSX below calls
+         React.createElement, and this file is what points React at freact. -->
+    <script src="freact.js"></script>
+
+    <!-- The in-browser JSX compiler. In the video, Babel and webpack did this
+         job before the page was ever loaded. -->
+    <script src="../jsx.min.js"></script>
+
+    <script type="text/babel" data-presets="react" src="App.jsx"></script>
+  </body>
+</html>

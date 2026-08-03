@@ -1,0 +1,242 @@
+# Logging Out with Sessions
+
+Logging in hands out a badge. Logging out has to take it back, and there are **two copies** of the arrangement to undo:
+
+1. The server's record of the session.
+2. The cookie in the browser.
+
+Doing only one of them leaves a mess, so we will do both. This reading's snapshot is `auth-demo/05-logout/`: stage 4 plus one endpoint and one button.
+
+## The Button
+
+```{walkthrough}
+title: The client side of leaving
+step: A button in the welcome block
+file: auth-demo/05-logout/static/index.html
+region: user-info
+The welcome block from the last reading grows a Log out button. It lives inside `user-info`, so it only ever appears to someone who is logged in.
+
+step: The click handler
+file: auth-demo/05-logout/static/index.html
+region: script
+`checkSession` is unchanged from stage 4 except for its `else` branch, which the last section of this reading comes back to. The new part is at the bottom.
+@"logoutButton.addEventListener": The callback is `async` so it can `await` the fetch: do not reload until the server has actually heard the request.
+@"fetch('/logout'": `POST`, not `GET`. Either would work, and logging out changes something on the server, which is what `POST` is for. It also leaves room to send data with the request some day.
+@"window.location.reload": Reload regardless of the answer: there is no check of `response.ok` here. There is very little a failed logout could mean that a reload does not sort out, and leaving someone looking at a logged-in page when they asked to leave is the worse failure.
+```
+
+## The Endpoint
+
+```{walkthrough}
+title: POST /logout
+file: auth-demo/05-logout/server.js
+region: logout
+The shortest endpoint on the server, and it does both halves of the undoing.
+@"cookies.sessionId": Identify the badge the same way `/me` does: parse the cookies, take the session ID.
+@"delete sessions[sessionId]": `delete` removes the key from the object. After this the ID means nothing: a request carrying it fails the `sessions[sessionId]` check in `/me` exactly like a made-up one.
+@"Max-Age=0": The cookie-deletion technique from the cookies reading: an empty value, expiring immediately. The browser is told the cookie is already dead, and discards it. Note the response is still a `200`; asking to leave and succeeding is not an error.
+```
+
+## Why Both
+
+It is tempting to think that clearing the cookie is enough, since without the cookie the browser cannot identify itself. Two reasons that is not enough.
+
+**A session that is not deleted stays valid.** If anyone captured that session ID earlier, through a shared machine, a logged proxy, or a script that got at it, they can keep using it. The user believes they logged out; the badge is still live. Deleting the server record is what actually ends the session:
+
+```{node autorun}
+const sessions = {
+  'badge-1': { email: 'soney@umich.edu' },
+  'badge-2': { email: 'grace@example.com' }
+};
+
+// Suppose someone copied this ID off a shared machine earlier today.
+const stolenId = 'badge-1';
+
+// The real user logs out: the server deletes its half of the arrangement.
+delete sessions[stolenId];
+
+console.log('what the stolen ID is worth now: ' + sessions[stolenId]);
+console.log('sessions the server still holds: ' + Object.keys(sessions).length);
+```
+
+Comment out the `delete` line and run the cell again: the stolen badge stays usable forever, whatever the real user's browser did with its cookie.
+
+**And the entry would never go away.** Every login adds to `sessions` and nothing would remove anything, so a long-running server accumulates dead sessions for as long as it runs.
+
+Deleting the cookie is a courtesy to the browser. Deleting the session is the logout.
+
+## Showing the Right Navigation
+
+One loose end from the previous reading: the home page showed the Register and Log In links even to someone already logged in. The fix is to wrap them:
+
+```{walkthrough}
+title: Two navigations, one shown
+file: auth-demo/05-logout/static/index.html
+region: guest-nav
+The links from stage 4, now inside a wrapper that starts hidden, exactly like `user-info` below it.
+@"display:none": Both blocks start hidden, and `checkSession` reveals exactly one: `user-info` in the `if`, this block in the `else`. Starting both hidden is deliberate: whichever way the answer from `/me` goes, the page never flashes the wrong navigation while it waits.
+```
+
+## That Is the Whole Thing
+
+Registration, login, hashed passwords, sessions, and logout, built by hand across five stages. It is worth knowing what each piece does, and worth repeating the recommendation from every video in this run: **in production, use a library.** The next reading does exactly that, rebuilding this same server on Express and Passport, and the pages in `static/` will not change at all.
+
+## Running It Yourself
+
+From the `auth-demo` folder (stop the previous stage with `Ctrl+C` first):
+
+```
+$ node 05-logout/server.js
+Listening on port 3000
+```
+
+1. Fresh stage, fresh `users.json`: register, then log in. The home page now greets you, shows a Log out button, and the Register and Log In links are gone.
+2. Check the cookies in the developer tools (Application > Cookies): there is the `sessionId`.
+3. Click Log out. The page reloads as a guest, with the links back. Look at the cookies again: `sessionId` is gone, expired by `Max-Age=0`.
+4. For the other half of the story, log in again, but this time restart the *server* instead of clicking the button. Same visible result, opposite mechanism: the button deletes the server's record and expires the cookie; the restart wiped the records while the cookie survived, uselessly.
+
+## Exercises
+
+1. Complete the logout handler.
+
+    ```{node}
+    const sessions = {
+      'abc-123': { email: 'grace@example.com' },
+      'xyz-987': { email: 'ada@example.com' }
+    };
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleLogout(cookies, response) {
+      // TODO: remove this session from the server's records, then answer 200
+      // with a Set-Cookie header that expires the sessionId cookie
+      // immediately, and the body 'Logged out'.
+    }
+
+    const response = makeFakeResponse();
+    handleLogout({ sessionId: 'abc-123' }, response);
+
+    console.log(response.statusCode + ' ' + response.body);
+    console.log(sessions);
+    ```
+    ```+solution
+    const sessions = {
+      'abc-123': { email: 'grace@example.com' },
+      'xyz-987': { email: 'ada@example.com' }
+    };
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleLogout(cookies, response) {
+      const sessionId = cookies.sessionId;
+
+      if (sessions[sessionId]) {
+        delete sessions[sessionId];
+      }
+
+      response.writeHead(200, {
+        'Set-Cookie': 'sessionId=; HttpOnly; SameSite=Strict; Max-Age=0'
+      });
+      response.end('Logged out');
+    }
+
+    const response = makeFakeResponse();
+    handleLogout({ sessionId: 'abc-123' }, response);
+
+    console.log(response.statusCode + ' ' + response.body);
+    console.log(sessions);
+    ```
+    ```+test
+    wrap('abc-123' in sessions).should('equal', false).run('Remove the session from `sessions` with `delete`', 'Deleted the session');
+    wrap('xyz-987' in sessions).should('equal', true).run('Only the session being logged out should be removed, not the others', 'Left other sessions alone');
+    wrap(response.statusCode + '|' + response.body).should('equal', '200|Logged out').run('Answer `200` with the body `Logged out`', 'Answered the request');
+    wrap(/Max-Age=0/.test(response.headers && response.headers['Set-Cookie'])).should('equal', true).run('Send a `Set-Cookie` header with `Max-Age=0`, which tells the browser the cookie has expired', 'Expired the cookie');
+    wrap((function () { const r = makeFakeResponse(); handleLogout({}, r); return r.statusCode; })()).should('equal', 200).run('A logout request with no session cookie should still succeed rather than throwing', 'Handled a request with no session');
+    ```
+
+2. Show the right navigation for a visitor who is **not** logged in. Both blocks start hidden.
+
+    ```html id=page1
+    <div id="guest-navigation" style="display: none">Register or log in</div>
+    <div id="user-info" style="display: none">Welcome back</div>
+    ```
+
+    ```{javascript}
+    const loggedIn = false;
+
+    // TODO: show '#guest-navigation' when loggedIn is false,
+    // and '#user-info' when it is true, by setting style.display to 'block'
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const loggedIn = false;
+
+    if (loggedIn) {
+      document.querySelector('#user-info').style.display = 'block';
+    } else {
+      document.querySelector('#guest-navigation').style.display = 'block';
+    }
+    ```
+    ```+test
+    wrap(document.querySelector('#guest-navigation').style.display).should('equal', 'block').run('A visitor who is not logged in should see the guest navigation', 'Showed the guest navigation');
+    wrap(document.querySelector('#user-info').style.display).should('equal', 'none').run('The welcome block should stay hidden for a visitor who is not logged in', 'Kept the welcome block hidden');
+    wrap(/style\.display/.test(source)).should('equal', true).run('Reveal a block by setting its `style.display` to `block`', 'Used style.display');
+    ```
+
+3. Why does the logout response set `Max-Age=0` on the cookie?
+
+    ```{mcq}
+    What does that achieve?
+    correct: Correct! It tells the browser the cookie has already expired, so the browser deletes it and stops sending the session ID.
+    wrong: `Max-Age` controls how long a cookie lives. What does a lifetime of zero mean?
+    [x] It makes the browser expire and delete the cookie immediately
+    [ ] It keeps the cookie forever but hides it
+    [ ] It raises the cookie's security level for the next login
+    [ ] It is the default value for session cookies
+    ```
+
+4. Why delete the server's session as well as clearing the cookie? (Select all that apply)
+
+    ```{mcq}
+    What does deleting the server-side session accomplish? (Select all that apply)
+    correct: Correct! Both. The session ID stops working even for someone who captured it earlier, and the server does not accumulate dead sessions for as long as it runs.
+    wrong: Think about someone who copied the session ID before the logout, and separately about what happens to `sessions` over a week of logins.
+    [x] An ID captured before the logout can no longer be used
+    [x] The server stops holding session data it no longer needs
+    [ ] It encrypts the database
+    [ ] It logs the user out of other websites too
+    ```
+
+## Resources
+
+- [MDN: Set-Cookie](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie)
+- [MDN: delete operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/delete)
+- [MDN: Location.reload()](https://developer.mozilla.org/en-US/docs/Web/API/Location/reload)
+- [OWASP: session management cheat sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)

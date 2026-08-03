@@ -1,0 +1,178 @@
+# useEffect and Dependencies
+
+Now that we can run an effect, the next question is how to control *when* that effect runs. That is the job of the **dependency array**, the optional second argument to `useEffect`.
+
+```jsx
+React.useEffect(() => {
+  document.title = 'Count: ' + count;
+}, [count]);
+```
+
+An effect always runs once after the component mounts. After that, React re-runs it whenever any value in the dependency array changes. The effect above depends on `count`, so React runs it again every time `count` changes.
+
+## The Three Dependency Patterns
+
+The second argument controls re-runs, and there are three distinct cases depending on what you pass.
+
+**1. No dependency array.** If you leave the second argument out entirely, the effect runs after *every* render.
+
+```jsx
+React.useEffect(() => {
+  console.log('runs after every render');
+});
+```
+
+**2. An empty array, `[]`.** The effect runs once after the first render (the mount) and never re-runs because of state or prop changes. This is the pattern to use when you want to do something a single time, such as fetching a config file when the component appears.
+
+```jsx
+React.useEffect(() => {
+  // fetch a config file once when the component mounts
+}, []);
+```
+
+**3. An array with values, `[a, b]`.** The effect runs after the first render, and again whenever any listed value changes. React compares each value to its previous value by identity, the same way it compares state.
+
+```jsx
+React.useEffect(() => {
+  // runs on mount, then whenever `a` or `b` changes
+}, [a, b]);
+```
+
+### The Rule of Thumb
+
+As a general rule of thumb, include every reactive value referenced inside the effect in the dependency array. A reactive value is one that can change between renders, such as a state variable, a prop, or something derived from them. If your effect reads `count`, `count` belongs in the array; if it reads a `user` prop, that prop belongs in the array. As with state, we do not mutate dependency values, because React decides whether they changed by comparing object identity.
+
+## A Runnable Example
+
+This counter updates the browser tab title whenever `count` changes, because `count` is listed as a dependency.
+
+```{react}
+function CounterTitle() {
+  const [count, setCount] = React.useState(0);
+
+  React.useEffect(() => {
+    document.title = 'Count: ' + count;
+  }, [count]);
+
+  return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+}
+
+renderReact(<CounterTitle />);
+```
+
+- The effect writes to `document.title`, which is a side effect on the page outside of React.
+- `count` is referenced inside the effect, so it appears in the dependency array `[count]`.
+- Each click updates `count`, which triggers a re-render, and because `count` changed, React runs the effect again with the new value.
+
+## Two Effects, Two Dependencies
+
+When a component has more than one piece of state, giving each effect the right dependencies keeps them independent. Here the title effect only reacts to `name`, and the dark-mode effect only reacts to `dark`. Typing in the input does not run the dark-mode effect, and toggling dark mode does not run the title effect.
+
+```{react}
+function Settings() {
+  const [name, setName] = React.useState('');
+  const [dark, setDark] = React.useState(false);
+
+  React.useEffect(() => {
+    document.title = 'Welcome ' + (name || 'guest');
+  }, [name]);
+
+  React.useEffect(() => {
+    if (dark) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+  }, [dark]);
+
+  return (
+    <div>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" />
+      <label>
+        <input type="checkbox" checked={dark} onChange={(e) => setDark(e.target.checked)} /> Dark mode
+      </label>
+      <p>Hello {name || 'guest'}</p>
+    </div>
+  );
+}
+
+renderReact(<Settings />);
+```
+
+- The first effect depends on `[name]`, so it only re-runs when the typed name changes.
+- The second effect depends on `[dark]`, so it only re-runs when the checkbox toggles.
+- If we had omitted both dependency arrays, each effect would run after every render, no matter which value changed.
+
+## Exercises
+
+1. If you leave the dependency array out of a `useEffect` call entirely, how often does the effect run?
+
+   ```{mcq}
+   If you omit the dependency array entirely (pass no second argument), how often does the effect run?
+   correct: Correct. With no dependency array, the effect runs after every render.
+   wrong: Compare the three patterns: no array, an empty array, and an array with values.
+   [x] After every render.
+   [ ] Once after the first render only.
+   [ ] Never, because the effect is disabled.
+   [ ] Only when the browser tab regains focus.
+   ```
+
+2. This effect reads `count` but the dependency array is empty, so the title stops matching the count after the first render. Add `count` to the dependency array so the effect re-runs on every change.
+
+   ```{react}
+   function CounterTitle() {
+     const [count, setCount] = React.useState(0);
+
+     React.useEffect(() => {
+       document.title = 'Count: ' + count;
+     }, []);
+
+     return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+   }
+
+   renderReact(<CounterTitle />);
+   ```
+   ```+solution
+   function CounterTitle() {
+     const [count, setCount] = React.useState(0);
+
+     React.useEffect(() => {
+       document.title = 'Count: ' + count;
+     }, [count]);
+
+     return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+   }
+
+   renderReact(<CounterTitle />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('[count]')).should('equal', true).run('Add `count` to the dependency array', 'Added the dependency');
+     assert('button').click().run('Click the counter', 'Clicked the counter');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('button').should('have.text', 'Count: 1').run('The counter should still update', 'Counter updated');
+     }, 50);
+   }, 50);
+   ```
+
+3. An effect reads a `user` prop and a `page` state variable inside its callback. According to the rule of thumb, what should its dependency array contain?
+
+   ```{mcq}
+   An effect's callback references both a `user` prop and a `page` state variable. What should its dependency array be?
+   correct: Correct. Include every reactive value the effect references, so both `user` and `page` belong in the array.
+   wrong: The rule of thumb is to include every reactive value (state or props) referenced inside the effect.
+   [x] `[user, page]`
+   [ ] `[]`, because effects should run only once.
+   [ ] `[user]` only, because props never change.
+   [ ] No array at all, so it always stays in sync.
+   ```
+
+## Resources
+
+- [React Docs: Lifecycle of Reactive Effects](https://react.dev/learn/lifecycle-of-reactive-effects)
+- [React Docs: Removing Effect Dependencies](https://react.dev/learn/removing-effect-dependencies)
+- [React Docs: useEffect](https://react.dev/reference/react/useEffect)
+- [MDN: Document.title](https://developer.mozilla.org/en-US/docs/Web/API/Document/title)

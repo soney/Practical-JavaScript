@@ -1,0 +1,142 @@
+# External CSS
+
+We have seen how to use inline CSS (where we add CSS in a `style` attribute in an HTML element) and internal CSS (where we add CSS in a `<style>` element in the `<head>` of the document). But sometimes, it makes sense to put our CSS in a separate file. For example, if we have multiple HTML files that all need the same CSS, it would be better to put the CSS in a separate file and link to it from each HTML file. This is called **external CSS**.
+
+To use external CSS, we need to create a separate file with a `.css` extension. For example, we could create a file called `styles.css` and put it in the same directory as our HTML file (though it's often better to put it in a separate `css` or `styles` directory). Then, we can add a `<link>` element in the `<head>` of our HTML file to link to the CSS file.
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <p>Hello, world!</p>
+  </body>
+</html>
+```
+
+The `href` attribute specifies the path to the CSS file. In this case, the CSS file is in the same directory as the HTML file, so the name of the file is enough. If the CSS file was in a different directory, we would need to specify the path to the file.
+
+`styles.css`:
+```css
+p { color: red; }
+```
+
+## Example: `sample.html`
+
+For example, the files `sample.html` and `sample-style.css` sit next to this notebook. Neither file repeats what the other one says: the `<link>` element is the only thing that connects them. Click a file name or a line number to open the real file beside the notebook.
+
+```{walkthrough}
+title: How sample.html loads sample-style.css
+step: The link element
+file: sample.html
+The `<link>` element goes in the `<head>`, so the browser loads the stylesheet before it draws the page.
+@"link": `rel="stylesheet"` says what kind of file we are linking to, and `href` says where to find it. The `href` here is a bare file name, so the browser looks for `sample-style.css` in the same directory as `sample.html`.
+@"h1": Nothing in the body has a `style` attribute, so every color on this page comes from the linked file.
+
+step: The stylesheet
+file: sample-style.css
+The stylesheet is only CSS. It needs no `<style>` element, because everything in a `.css` file is already treated as CSS. It also never mentions `sample.html`, so any other page that links to it gets these same rules.
+@"h1": This rule colors the heading, and the `p` rule below it colors both paragraphs.
+```
+
+
+## Sharing CSS Across Pages
+
+External CSS can also make it easier to share CSS between multiple HTML files. For example, let's say we have four HTML files: `index.html`, `about.html`, `contact.html`, and `faq.html`. We want all of them to have the same CSS. Then, we can create a single file (e.g., `rules.css`) and link to it in all of the HTML files.
+
+![An illustration where multiple HTML files are linked to a single CSS file](images/css-linking.png)
+
+## Using Third-Party CSS
+
+We can also include CSS files that other people wrote. For example, let's say we want to use [Bootstrap](https://getbootstrap.com/). Bootstrap is a CSS framework that provides ready-made styling for responsive websites. If you look at the Bootstrap documentation, you'll see that Bootstrap gives us class names to put on our elements, like `btn` and `btn-primary` for buttons. On their own, those class names do nothing:
+
+```{html autorun}
+<html>
+<head>
+</head>
+<body>
+  <button type="button" class="btn btn-primary">Primary</button>
+  <button type="button" class="btn btn-secondary">Secondary</button>
+  <button type="button" class="btn btn-success">Success</button>
+</body>
+</html>
+```
+
+The Bootstrap website tells us how to include Bootstrap in our HTML file. It is the same `<link>` element we have been using, except the `href` is a web address instead of a file in our own project:
+
+```{html autorun}
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+</head>
+<body>
+  <button type="button" class="btn btn-primary">Primary</button>
+  <button type="button" class="btn btn-secondary">Secondary</button>
+  <button type="button" class="btn btn-success">Success</button>
+</body>
+</html>
+```
+
+That one line changes how the buttons look. The `href` points to a CSS file that is written and hosted by someone else at `https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css`, so the browser downloads that file and applies Bootstrap's rules for `btn`, `btn-primary`, `btn-secondary`, and `btn-success` to our buttons. Because the file lives on the web, this example only works when you are connected to the internet.
+
+The `<link>` element works the same way in both cases: it points at a stylesheet, whether we wrote that stylesheet or somebody else did.
+
+## Exercises
+
+1. Linking a stylesheet
+
+    ```{mcq}
+    What does the `<link rel="stylesheet" href="styles.css">` element do?
+    correct: Correct! It tells the browser to load an external CSS file.
+    wrong: Think about how the browser finds a separate stylesheet.
+    [x] It connects the HTML file to an external CSS file.
+    [ ] It writes CSS rules directly into the page.
+    [ ] It creates a new HTML page.
+    [ ] It runs JavaScript from a separate file.
+    ```
+
+2. Add a `<link>` element in the `<head>` that loads `styles.css`.
+
+    ```{html}
+    <html>
+      <head>
+      </head>
+      <body>
+        <p>Hello, world!</p>
+      </body>
+    </html>
+    ```
+    ```+solution
+    <html>
+      <head>
+        <link rel="stylesheet" href="styles.css">
+      </head>
+      <body>
+        <p>Hello, world!</p>
+      </body>
+    </html>
+    ```
+    ```+test
+    assert('link').should('exist').should('have.attr', 'rel', 'stylesheet').run('Failed to find a stylesheet link element', 'Added a stylesheet link element');
+    assert('link').should('have.attr', 'href', 'styles.css').run('Failed to link to styles.css', 'Linked to styles.css');
+    ```
+
+3. Why is external CSS especially useful when a site has multiple pages?
+
+    ```{mcq}
+    Why is external CSS helpful for multi-page sites?
+    correct: Correct! One stylesheet can be reused across many pages.
+    wrong: Think about how often you would need to copy the same rules otherwise.
+    [x] You can share one stylesheet across multiple HTML files.
+    [ ] It prevents HTML from using classes.
+    [ ] It only works when a page has one paragraph.
+    [ ] It automatically adds Bootstrap to the page.
+    ```
+
+## Resources
+
+- [MDN: The link element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/link)
+- [MDN: Applying CSS to HTML](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics/Getting_started#applying_css_to_html)
+- [MDN: CSS reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference)

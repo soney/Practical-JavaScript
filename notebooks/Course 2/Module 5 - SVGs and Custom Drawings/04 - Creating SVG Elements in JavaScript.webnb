@@ -1,0 +1,294 @@
+# Creating SVG Elements in JavaScript
+
+We can write SVG in HTML. Now let's create it **dynamically**, from JavaScript, which is what makes a drawing respond to data or to the user.
+
+Almost everything transfers from Module 1. There is exactly one new wrinkle, and it is the reason this lesson exists.
+
+## Namespaces
+
+A **namespace** is a scope: a context in which a given name has a particular meaning.
+
+Every HTML element we have made lives in the default HTML namespace, identified by `http://www.w3.org/1999/xhtml`. SVG has **its own** namespace, `http://www.w3.org/2000/svg`. Those identifiers look like web addresses, and they are; visiting them gives you the relevant specification. Their job here is purely to be unique names.
+
+This matters because a name like `circle` means different things in the two namespaces. `document.createElement` always creates elements in the **HTML** namespace, so it cannot make an SVG circle.
+
+The method that can is **`document.createElementNS(namespace, tagName)`**, which takes the namespace as its first argument.
+
+### A Note About These Cells
+
+As in Course 2 Module 1, `document` inside a notebook cell refers to that cell's own output area rather than the whole page, so it can find elements but it has no `createElementNS`. The cells below reach the real one as `window.document` for that single call:
+
+```javascript
+const rect = window.document.createElementNS(svgNS, 'rect');
+```
+
+**In a real page you write `document.createElementNS(...)`.** Everything else in these cells is exactly what you would type.
+
+## Creating a Shape
+
+We start with an empty canvas and put a rectangle on it:
+
+```html id=page1
+<svg id="canvas" width="200" height="120"></svg>
+```
+
+```{javascript autorun}
+const svgNS = 'http://www.w3.org/2000/svg';
+
+const canvas = document.querySelector('#canvas');
+
+const rect = window.document.createElementNS(svgNS, 'rect');
+rect.setAttribute('x', 20);
+rect.setAttribute('y', 20);
+rect.setAttribute('width', 100);
+rect.setAttribute('height', 60);
+rect.setAttribute('fill', 'blue');
+
+canvas.append(rect);
+```
+```+id=page1
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Two steps, exactly as in Module 1: create the element, then append it. And once the element exists, everything is familiar. `setAttribute` and `append` are the same methods you already know; SVG elements need no special treatment.
+
+### What Happens If You Forget
+
+This is worth seeing, because the failure is silent:
+
+```{javascript autorun}
+const canvas = document.querySelector('#canvas');
+
+const wrong = window.document.createElement('circle');
+wrong.setAttribute('cx', 60);
+wrong.setAttribute('cy', 60);
+wrong.setAttribute('r', 40);
+wrong.setAttribute('fill', 'red');
+
+canvas.append(wrong);
+
+console.log('children in the svg: ' + canvas.children.length);
+console.log('shapes visible: 0');
+```
+```+id=page1
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+The element was created and appended, the SVG really does contain a child, and **nothing appears**. No error, no warning. `createElement` made an HTML element that happens to be named `circle`, and HTML has no idea what a circle is.
+
+If you ever build SVG from JavaScript and get a blank canvas, this is the first thing to check.
+
+## Building From Data
+
+Once shapes are just elements, a chart is a loop:
+
+```html id=page2
+<svg id="chart" width="300" height="150"></svg>
+```
+
+```{javascript autorun}
+const svgNS = 'http://www.w3.org/2000/svg';
+const chart = document.querySelector('#chart');
+
+const values = [40, 90, 55, 120, 70];
+
+let x = 15;
+
+for (const value of values) {
+  const bar = window.document.createElementNS(svgNS, 'rect');
+
+  bar.setAttribute('x', x);
+  bar.setAttribute('y', 140 - value);
+  bar.setAttribute('width', 40);
+  bar.setAttribute('height', value);
+  bar.setAttribute('fill', '#00274c');
+
+  chart.append(bar);
+
+  x = x + 55;
+}
+```
+```+id=page2
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Change a number in the array and rerun the cell. This is what SVG is for: the markup did not have to know how many bars there would be or how tall they were.
+
+Note the `y` calculation. Because `y` grows downward, a taller bar needs a *smaller* `y` to keep its bottom edge on the baseline.
+
+## A Worked Example: Drawing Circles
+
+Here is the video's example, which pulls in most of this course so far. Press the mouse down to set a circle's center, drag to set its radius, release to finish it.
+
+```html id=page3
+<svg id="pad" width="400" height="240"></svg>
+```
+
+```{javascript autorun}
+const svgNS = 'http://www.w3.org/2000/svg';
+const pad = document.querySelector('#pad');
+
+function distance(x1, y1, x2, y2) {
+  return Math.sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+}
+
+pad.addEventListener('mousedown', (downEvent) => {
+  const cx = downEvent.offsetX;
+  const cy = downEvent.offsetY;
+
+  const circle = window.document.createElementNS(svgNS, 'circle');
+  circle.setAttribute('cx', cx);
+  circle.setAttribute('cy', cy);
+  circle.setAttribute('r', 0);
+  circle.setAttribute('fill', 'none');
+  circle.setAttribute('stroke', 'blue');
+  circle.setAttribute('stroke-width', 3);
+
+  pad.append(circle);
+
+  function onMouseMove(moveEvent) {
+    const r = distance(cx, cy, moveEvent.offsetX, moveEvent.offsetY);
+    circle.setAttribute('r', r);
+  }
+
+  function onMouseUp() {
+    pad.removeEventListener('mousemove', onMouseMove);
+    pad.removeEventListener('mouseup', onMouseUp);
+  }
+
+  pad.addEventListener('mousemove', onMouseMove);
+  pad.addEventListener('mouseup', onMouseUp);
+});
+```
+```+id=page3
+```
+```+css
+svg { border: 1px solid #999; }
+```
+
+Press, drag, release. Then do it again to add another circle.
+
+Three things in there are worth calling out.
+
+**`offsetX` and `offsetY`** on a mouse event give the position **relative to the element the listener is on**, which is exactly what we want for coordinates inside the SVG. `clientX` and `clientY` would be measured from the corner of the window instead.
+
+**`removeEventListener` on mouse up** is essential. Without it the `mousemove` listener stays attached, and the circle keeps resizing after you let go, growing and shrinking whenever the pointer crosses the canvas. It would never be finished. This is the same pattern as the drag example in Module 2, and here it is again for a real reason.
+
+**The listeners are added inside `mousedown`**, so `onMouseMove` can see `cx`, `cy`, and `circle` in the scope around it. That is the scoping from Module 2 doing quiet work: each drag gets its own set of those variables.
+
+## Exercises
+
+1. Create a blue rectangle and append it to the canvas. It should sit at `(20, 20)`, `80` wide and `40` tall.
+
+    ```html id=page4
+    <svg id="canvas" width="160" height="100"></svg>
+    ```
+
+    ```{javascript}
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const canvas = document.querySelector('#canvas');
+
+    // Write your code here. Remember: window.document.createElementNS in a notebook cell.
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const canvas = document.querySelector('#canvas');
+
+    const rect = window.document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('x', 20);
+    rect.setAttribute('y', 20);
+    rect.setAttribute('width', 80);
+    rect.setAttribute('height', 40);
+    rect.setAttribute('fill', 'blue');
+
+    canvas.append(rect);
+    ```
+    ```+test
+    wrap(source.includes('createElementNS')).should('equal', true).run('Use `createElementNS` with the SVG namespace, not `createElement`, or the shape will not render', 'Used createElementNS');
+    assert('#canvas rect').should('exist').run('Create a `rect` and append it inside `#canvas`', 'Appended the rectangle');
+    wrap(document.querySelector('#canvas rect').getAttribute('width')).should('equal', '80').run('It should be `80` wide', 'Set the width');
+    wrap(document.querySelector('#canvas rect').getAttribute('height')).should('equal', '40').run('It should be `40` tall', 'Set the height');
+    wrap(document.querySelector('#canvas rect').getAttribute('fill')).should('equal', 'blue').run('Fill it `blue`', 'Filled it blue');
+    ```
+
+2. Draw one circle for each radius in the array, spacing them out so they do not overlap.
+
+    ```html id=page5
+    <svg id="canvas" width="300" height="100"></svg>
+    ```
+
+    ```{javascript}
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const canvas = document.querySelector('#canvas');
+
+    const radii = [10, 20, 30];
+
+    // Write your loop here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const svgNS = 'http://www.w3.org/2000/svg';
+    const canvas = document.querySelector('#canvas');
+
+    const radii = [10, 20, 30];
+
+    let cx = 50;
+
+    for (const r of radii) {
+      const circle = window.document.createElementNS(svgNS, 'circle');
+      circle.setAttribute('cx', cx);
+      circle.setAttribute('cy', 50);
+      circle.setAttribute('r', r);
+      circle.setAttribute('fill', 'purple');
+
+      canvas.append(circle);
+
+      cx = cx + 90;
+    }
+    ```
+    ```+test
+    assert('#canvas circle').should('have.length', 3).run('There should be one circle for each of the three radii', 'Created three circles');
+    wrap(document.querySelectorAll('#canvas circle')[0].getAttribute('r')).should('equal', '10').run('The first circle should have a radius of `10`, taken from the array', 'Used the array values');
+    wrap(document.querySelectorAll('#canvas circle')[2].getAttribute('r')).should('equal', '30').run('The third circle should have a radius of `30`', 'Used every array value');
+    wrap(document.querySelectorAll('#canvas circle')[0].getAttribute('cx') === document.querySelectorAll('#canvas circle')[1].getAttribute('cx')).should('equal', false).run('Give each circle a different `cx` so they do not sit on top of each other', 'Spaced them out');
+    ```
+
+3. You build an SVG shape in JavaScript and append it, the console shows no error, and the canvas stays blank. What is the most likely cause?
+
+    ```{mcq}
+    The element is in the DOM, and nothing is drawn. Why?
+    correct: Correct! `createElement` puts the element in the HTML namespace, where `circle` means nothing. The element is real and appended, and the browser has no idea it is meant to be a shape. `createElementNS` with the SVG namespace fixes it.
+    wrong: Look back at "What Happens If You Forget".
+    [x] It was made with `createElement` instead of `createElementNS`
+    [ ] SVG shapes cannot be appended after the page has loaded
+    [ ] `setAttribute` does not work on SVG elements
+    [ ] The shape needs a `z-index` before it becomes visible
+    ```
+
+4. Why does the circle-drawing example call `removeEventListener` on mouse up?
+
+    ```{mcq}
+    What goes wrong if the `mousemove` listener is never removed?
+    correct: Correct! The listener would stay attached after the mouse is released, so the circle would keep resizing whenever the pointer moved over the canvas, and it would never be finished.
+    wrong: Revisit the three notes after the circle-drawing example.
+    [x] The circle would keep resizing after the mouse is released
+    [ ] The circle would be deleted when the mouse is released
+    [ ] The `mousedown` listener would stop firing
+    [ ] The namespace would be released along with the listener
+    ```
+
+## Resources
+
+- [MDN: document.createElementNS()](https://developer.mozilla.org/en-US/docs/Web/API/Document/createElementNS)
+- [MDN: Namespaces crash course](https://developer.mozilla.org/en-US/docs/Web/SVG/Guides/Namespaces_crash_course)
+- [MDN: MouseEvent.offsetX](https://developer.mozilla.org/en-US/docs/Web/API/MouseEvent/offsetX)
+- [MDN: SVGElement](https://developer.mozilla.org/en-US/docs/Web/API/SVGElement)

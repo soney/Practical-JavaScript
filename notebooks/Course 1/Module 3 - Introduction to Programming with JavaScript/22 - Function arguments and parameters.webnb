@@ -1,0 +1,160 @@
+# Function Arguments and Parameters
+
+We can define functions and we can call them, but so far every call to a given function does exactly the same thing. **Arguments** and **parameters** are what let us customize how a function runs.
+
+## Arguments We Have Already Been Passing
+
+Look at a call we have written a hundred times:
+
+```{javascript autorun}
+console.log(1 + 1);
+```
+
+`console.log` is the function. The expression `1 + 1` is evaluated first, giving `2`, and that `2` is the **argument** passed in to the function. `console.log` then logs whatever it was handed. The argument is what tells the function *what* to log; without one it would have nothing to say.
+
+## Adding Parameters to Our Own Functions
+
+A function definition has a list of **parameters** between its parentheses. Up to now we have left that list empty. Filling it in is how we say what inputs the function accepts.
+
+The two words are worth keeping straight:
+
+- **Parameters** are the named inputs in the function *definition*.
+- **Arguments** are the actual values supplied when the function is *called*.
+
+When the function is called, the arguments are handed to the parameters, in order.
+
+```{javascript autorun}
+function addOne(arg1) {
+  console.log(arg1 + 1);
+}
+
+addOne(5);
+addOne(100);
+```
+
+`addOne` declares one parameter, `arg1`. The first call passes the argument `5`, so during that call `arg1` is `5`. The second call passes `100`, so during that call `arg1` is `100`. The parameter is a variable that exists for the length of one call and holds whatever was passed in for it.
+
+## Several Parameters
+
+To accept more than one input, list more parameter names, separated by commas. Arguments at the call site are separated by commas too, and they are matched up by position.
+
+```{javascript autorun}
+function add(x, y) {
+  console.log(x + y);
+}
+
+add(4, 5);
+add(1, 2);
+```
+
+Calling `add(4, 5)` gives `x` the value `4` and `y` the value `5`. It is very much as though the function body began with `let x = 4;` and `let y = 5;`. So the first call logs `9` and the second logs `3`.
+
+You can have as many parameters as you need:
+
+```{javascript autorun}
+function addThree(x, y, z) {
+  console.log(x + y + z);
+}
+
+addThree(4, 5, 6);
+```
+
+Parameters are not only for numbers. Here is one that builds a greeting:
+
+```{javascript autorun}
+function greet(name) {
+  console.log('Hello ' + name);
+}
+
+greet('Steve');
+greet('Alice');
+```
+
+## What If the Counts Do Not Match?
+
+JavaScript is unusually relaxed about this, which is worth knowing before it surprises you.
+
+**Too few arguments** is not an error. Any parameter that was not given a value gets the special value `undefined`:
+
+```{javascript autorun}
+function greet(firstName, lastName) {
+  console.log('Hello ' + firstName + ' ' + lastName);
+}
+
+greet('Steve');
+greet('Steve', 'Oney');
+```
+
+The first call prints `Hello Steve undefined`. Nothing crashed; `lastName` simply had no value, and `undefined` is what that looks like when it is glued into a string. Seeing `undefined` in your output is usually a sign that an argument is missing.
+
+**Too many arguments** is also not an error. The extras are quietly ignored:
+
+```{javascript autorun}
+function greet(firstName, lastName) {
+  console.log('Hello ' + firstName + ' ' + lastName);
+}
+
+greet('Alice', 'Smith', 'extra', 'ignored');
+```
+
+The function still uses `Alice` and `Smith` and pays no attention to the rest.
+
+So parameters and arguments are what customize the way a function runs. For `console.log`, the argument specifies what to log. For `add`, the arguments specify which numbers to add.
+
+One thing these examples all have in common is that they *log* their result rather than handing it back to the code that called them. Making a function produce an output is the subject of the next lesson.
+
+## Exercises
+
+1. Define a function named `multiply` that takes two parameters, `a` and `b`, and logs their product. Then call it with `6` and `7`.
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+solution
+    function multiply(a, b) {
+      console.log(a * b);
+    }
+
+    multiply(6, 7);
+    ```
+    ```+test
+    wrap(typeof multiply).should('equal', 'function').run('Define a function named `multiply`', 'Defined the multiply function');
+    wrap(multiply.length).should('equal', 2).run('`multiply` should take two parameters', 'It takes two parameters');
+    check.consoleLogged(/^42$/).run('Call `multiply(6, 7)` so that it logs `42`', 'Called multiply with 6 and 7');
+    ```
+
+2. Define a function named `describeCity` that takes two parameters, `city` and `state`, and logs them in the form `Ann Arbor, Michigan`. Then call it with `Ann Arbor` and `Michigan`.
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+solution
+    function describeCity(city, state) {
+      console.log(city + ', ' + state);
+    }
+
+    describeCity('Ann Arbor', 'Michigan');
+    ```
+    ```+test
+    wrap(typeof describeCity).should('equal', 'function').run('Define a function named `describeCity`', 'Defined the function');
+    wrap(describeCity.length).should('equal', 2).run('`describeCity` should take two parameters, `city` and `state`', 'It takes two parameters');
+    check.consoleLogged('Ann Arbor, Michigan').run('Call the function so that it logs `Ann Arbor, Michigan`', 'Logged the city and state');
+    ```
+
+3. What happens when a function is called with fewer arguments than it has parameters?
+
+    ```{mcq}
+    A function declares two parameters, but it is called with only one argument. What happens?
+    correct: Correct! JavaScript does not treat this as an error. The parameter that was given no argument holds the special value `undefined`.
+    wrong: Look back at "What If the Counts Do Not Match?" and at what `greet('Steve')` printed.
+    [x] The call runs, and the missing parameter is `undefined`
+    [ ] An error stops the script
+    [ ] The missing parameter is set to `0`
+    [ ] The function is skipped entirely
+    ```
+
+## Resources
+
+- [MDN: Function parameters](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions#function_parameters)
+- [MDN: undefined](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/undefined)
+- [MDN: Default parameters](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Default_parameters)

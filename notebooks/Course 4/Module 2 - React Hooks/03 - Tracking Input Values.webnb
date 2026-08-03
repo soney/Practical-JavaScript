@@ -1,0 +1,263 @@
+# Tracking Input Values
+
+So far we have mostly displayed information as output. Now we need to read input from users through things like text boxes, checkboxes, and radio buttons. React gives us two general approaches for tracking an input's value, and they have names worth learning:
+
+- **Uncontrolled inputs**: the DOM keeps the value, and our code reads it on demand with a ref (or from `event.target`). This is what we saw with [`useRef`](<02 - useRef - Storing Values without Rerendering.webnb>).
+- **Controlled inputs**: React keeps the value in state, and the DOM reflects React's current state. We create a state variable with `useState`, set the input's `value` attribute from it, and use `onChange` to update it.
+
+Both let us work with user input; they give us different levels of control over where the value lives.
+
+## Controlled Inputs
+
+With a controlled input, React is the single source of truth. The state variable holds the current value, the `value` attribute renders that state back into the input, and `onChange` updates the state on every change.
+
+```{react}
+function NameForm() {
+  const [name, setName] = React.useState('');
+
+  return (
+    <section>
+      <input aria-label="Name" value={name} onChange={(event) => setName(event.target.value)} />
+      <p>Hello, {name}</p>
+    </section>
+  );
+}
+
+renderReact(<NameForm />);
+```
+
+- `value={name}` ties the rendered input to state, so the input always shows the state's current value.
+- `onChange={(event) => setName(event.target.value)}` reads what the user typed from `event.target.value` and stores it in state.
+- To read the current value elsewhere, we read the state variable `name` directly.
+
+Use controlled inputs when the UI should update as the user types, or when you want React to keep everything in sync automatically. For larger applications, keeping the input's value in React state is often easier to manage.
+
+### Controlled Inputs Re-render on Every Keystroke
+
+Because `onChange` calls the state setter for every change, the component re-renders on every character the user types. We can see this if we log inside the component:
+
+```jsx
+function Message() {
+  const [value, setValue] = React.useState('');
+  console.log('render', value);
+
+  return (
+    <input value={value} onChange={(event) => setValue(event.target.value)} />
+  );
+}
+```
+
+Typing `wxyz` logs `render` four times, once per character. This is normal and expected for controlled inputs; each keystroke updates state, and updating state re-renders the component so the input reflects the new value.
+
+## Uncontrolled Inputs
+
+With an uncontrolled input, the DOM holds the value and we read it only when we need it. We attach a ref to the input, set an optional starting value with `defaultValue`, and read `inputRef.current.value` on demand.
+
+```{react}
+function SearchForm() {
+  const inputRef = React.useRef(null);
+  const [query, setQuery] = React.useState('');
+
+  function handleSearch() {
+    setQuery(inputRef.current.value);
+  }
+
+  return (
+    <section>
+      <input aria-label="Search" ref={inputRef} defaultValue="" />
+      <button onClick={handleSearch}>Search</button>
+      <p>{query}</p>
+    </section>
+  );
+}
+
+renderReact(<SearchForm />);
+```
+
+- The input is uncontrolled because we do not set its `value` from state; the DOM keeps track of what the user typed.
+- We read the value only when the button is clicked, via `inputRef.current.value`.
+- Because we never set state on every keystroke, an uncontrolled input does not re-render as the user types.
+
+When the handler lives on the input element itself, we do not even need a ref: we can read `event.target.value` directly, since the event target is the input element. Uncontrolled inputs are closer to standard JavaScript and are suitable when we do not need live value updates.
+
+## Controlled Checkboxes
+
+Other input types are analogous to a controlled text box. For a checkbox we track a boolean in state, set the `checked` attribute from it, and update state in `onChange` using `event.target.checked`.
+
+```{react}
+function Terms() {
+  const [isChecked, setIsChecked] = React.useState(false);
+
+  return (
+    <section>
+      <label>
+        <input
+          type="checkbox"
+          checked={isChecked}
+          onChange={(event) => setIsChecked(event.target.checked)}
+        />
+        I accept the terms
+      </label>
+      <p>{isChecked ? 'Accepted' : 'Not accepted'}</p>
+    </section>
+  );
+}
+
+renderReact(<Terms />);
+```
+
+Note that we read `event.target.checked` (a boolean) instead of `event.target.value`, and we bind the `checked` attribute instead of `value`.
+
+## Controlled Radio Buttons
+
+A radio group shares one state variable that holds the selected value. Each radio button is `checked` when the state variable equals that button's `value`. Rather than writing each button by hand, we can keep the options in an array and `map` over them to create a labeled radio button for each one.
+
+```{react}
+function ColorPicker() {
+  const options = ['red', 'blue', 'green'];
+  const [color, setColor] = React.useState('red');
+
+  return (
+    <section>
+      {options.map((option) => (
+        <label key={option}>
+          <input
+            type="radio"
+            name="color"
+            value={option}
+            checked={color === option}
+            onChange={(event) => setColor(event.target.value)}
+          />
+          {option}
+        </label>
+      ))}
+      <p>Selected: {color}</p>
+    </section>
+  );
+}
+
+renderReact(<ColorPicker />);
+```
+
+- All buttons share the `color` state variable, so only one can be selected at a time.
+- `checked={color === option}` selects a button when the state matches its value.
+- `onChange` updates `color` to the value of whichever button changed.
+
+## Exercises
+
+1. Which statement describes the difference between controlled and uncontrolled inputs?
+
+   ```{mcq}
+   Which statement describes the difference between controlled and uncontrolled inputs?
+   correct: Correct. A controlled input stores its value in React state; an uncontrolled input leaves the value in the DOM and is read on demand with a ref or event.target.
+   wrong: Think about where the value lives: React state versus the DOM.
+   [x] A controlled input keeps its value in React state, while an uncontrolled input keeps it in the DOM and is read on demand.
+   [ ] A controlled input cannot be typed into, while an uncontrolled input can.
+   [ ] A controlled input is styled with CSS, while an uncontrolled input is styled with JavaScript.
+   [ ] There is no difference; the terms mean the same thing.
+   ```
+
+2. Make this a controlled text input so the preview updates as the user types. The `onChange` handler is not storing what was typed.
+
+   ```{react}
+   function Preview() {
+     const [text, setText] = React.useState('');
+
+     return (
+       <section>
+         <input aria-label="Preview" value={text} onChange={(event) => setText('')} />
+         <p>{text}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Preview />);
+   ```
+   ```+solution
+   function Preview() {
+     const [text, setText] = React.useState('');
+
+     return (
+       <section>
+         <input aria-label="Preview" value={text} onChange={(event) => setText(event.target.value)} />
+         <p>{text}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Preview />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('input').should('exist').run('The input should render', 'The input renders');
+     // lite-cy's type() assigns the value directly, which React's value tracker
+     // ignores for a controlled input, so the wiring is checked by shape.
+     wrap(/value\s*=\s*\{\s*text\s*\}/.test(source)).should('equal', true).run('Drive the input from state with `value={text}`', 'Made the input controlled');
+     wrap(/setText\s*\(\s*event\.target\.value\s*\)/.test(source)).should('equal', true).run('In the handler, pass `event.target.value` to `setText`', 'Stored the typed value');
+   }, 50);
+   ```
+
+3. Make this a controlled checkbox so the message reflects whether it is checked. Update the `onChange` handler to store the checkbox's state.
+
+   ```{react}
+   function Agree() {
+     const [isChecked, setIsChecked] = React.useState(false);
+
+     return (
+       <section>
+         <label>
+           <input
+             type="checkbox"
+             checked={isChecked}
+             onChange={(event) => setIsChecked(false)}
+           />
+           I agree
+         </label>
+         <p>{isChecked ? 'Agreed' : 'Not agreed'}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Agree />);
+   ```
+   ```+solution
+   function Agree() {
+     const [isChecked, setIsChecked] = React.useState(false);
+
+     return (
+       <section>
+         <label>
+           <input
+             type="checkbox"
+             checked={isChecked}
+             onChange={(event) => setIsChecked(event.target.checked)}
+           />
+           I agree
+         </label>
+         <p>{isChecked ? 'Agreed' : 'Not agreed'}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Agree />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('input[type="checkbox"]').click().run('Click the checkbox', 'Clicked the checkbox');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('p').should('have.text', 'Agreed').run('Reflect the checkbox state', 'Reflected the checkbox state');
+     }, 50);
+   }, 50);
+   ```
+
+## Resources
+
+- [React Docs: Reacting to input with state](https://react.dev/learn/reacting-to-input-with-state)
+- [React Docs: `<input>` component](https://react.dev/reference/react-dom/components/input)
+- [MDN: HTMLInputElement.checked](https://developer.mozilla.org/en-US/docs/Web/API/HTMLInputElement)
+- [React Docs: Manipulating the DOM with refs](https://react.dev/learn/manipulating-the-dom-with-refs)

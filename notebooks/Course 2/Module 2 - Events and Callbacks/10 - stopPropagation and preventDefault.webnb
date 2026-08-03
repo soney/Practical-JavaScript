@@ -1,0 +1,263 @@
+# `stopPropagation` and `preventDefault`
+
+[Last lesson](<09 - Event Bubbling and Propagation.webnb>) we saw how an event travels: down through the capture phase to the target, then back up through the bubbling phase. This lesson is about two methods that let us interfere with that.
+
+Both are methods on the **event object**, the one passed into our callback.
+
+## `event.stopPropagation()`
+
+`stopPropagation` **prevents the event from advancing any further**. Whatever stage it is in, it stops there, and no listener further along the route runs at all.
+
+Here is the six-listener setup from last lesson, with one addition: the button's bubbling listener stops the event.
+
+```html id=nestboxes2
+<div id="outer">Outer
+  <div id="inner">Inner
+    <button>Click me</button>
+  </div>
+</div>
+```
+
+```{javascript autorun}
+const outer = document.querySelector('#outer');
+const inner = document.querySelector('#inner');
+const button = document.querySelector('button');
+
+outer.addEventListener('click', () => console.log('outer capture'), true);
+inner.addEventListener('click', () => console.log('inner capture'), true);
+button.addEventListener('click', () => console.log('button capture'), true);
+
+button.addEventListener('click', (event) => {
+  console.log('button bubbling');
+  event.stopPropagation();
+});
+
+inner.addEventListener('click', () => console.log('inner bubbling'));
+outer.addEventListener('click', () => console.log('outer bubbling'));
+```
+```+id=nestboxes2
+```
+```+css
+#outer { background-color: #aaa; padding: 20px; }
+#inner { background-color: #ccc; padding: 20px; }
+```
+
+Click the button. The first four listeners run, and then the event stops: `inner bubbling` and `outer bubbling` never happen.
+
+It works in the capture phase too, and there it is more dramatic, because the event never even reaches the target:
+
+```{javascript autorun}
+const outer = document.querySelector('#outer');
+const inner = document.querySelector('#inner');
+const button = document.querySelector('button');
+
+outer.addEventListener('click', () => console.log('outer capture'), true);
+
+inner.addEventListener('click', (event) => {
+  console.log('inner capture');
+  event.stopPropagation();
+}, true);
+
+button.addEventListener('click', () => console.log('button capture'), true);
+button.addEventListener('click', () => console.log('button bubbling'));
+inner.addEventListener('click', () => console.log('inner bubbling'));
+outer.addEventListener('click', () => console.log('outer bubbling'));
+```
+```+id=nestboxes2
+```
+```+css
+#outer { background-color: #aaa; padding: 20px; }
+#inner { background-color: #ccc; padding: 20px; }
+```
+
+Only `outer capture` and `inner capture` run. The button was clicked, and the button's own listeners never fired, because the event was stopped on the way down.
+
+Note that the order in which the listeners were *added* makes no difference to any of this. Only the phase and the position in the tree matter.
+
+## `event.preventDefault()`
+
+`preventDefault` does something completely different: it **prevents the browser's built-in behavior** for that interaction.
+
+Plenty of elements do something on their own when you interact with them, with no JavaScript involved:
+
+- Clicking a link navigates to its `href`.
+- Clicking a checkbox toggles it.
+- Submitting a form reloads the page with the form's data.
+- Pressing Enter in a form submits it.
+
+`preventDefault` cancels that.
+
+```html id=page1
+<p><a href="https://mgoblue.com/">Michigan Athletics</a></p>
+<p><input type="checkbox"> Try to check me</p>
+<p id="log">Try the link and the checkbox.</p>
+```
+
+```{javascript autorun}
+const link = document.querySelector('a');
+const box = document.querySelector('input');
+const log = document.querySelector('#log');
+
+link.addEventListener('click', (event) => {
+  event.preventDefault();
+  log.textContent = 'the link did not navigate';
+});
+
+box.addEventListener('click', (event) => {
+  event.preventDefault();
+  log.textContent = 'the checkbox did not toggle';
+});
+```
+```+id=page1
+```
+
+Click the link: the callback runs, and the browser stays put. Click the checkbox: the callback runs, and the box refuses to tick.
+
+## They Are Independent
+
+This is the distinction to hold on to, and the two names do not help:
+
+- **`stopPropagation`** controls **where the event goes**. It says nothing about default behavior.
+- **`preventDefault`** controls **what the browser does**. It says nothing about propagation.
+
+Calling `preventDefault` does *not* stop the event traveling: ancestors' listeners still run. And calling `stopPropagation` does *not* stop the browser doing its usual thing: a link with `stopPropagation` and no `preventDefault` still navigates.
+
+If you want both, call both.
+
+```html id=page2
+<div id="wrap" style="background-color: #eee; padding: 16px;">
+  <a href="https://mgoblue.com/">Michigan Athletics</a>
+</div>
+```
+
+```{javascript autorun}
+const outer = document.querySelector('#wrap');
+const link = document.querySelector('a');
+
+outer.addEventListener('click', () => {
+  console.log('the wrapper still heard the click');
+});
+
+link.addEventListener('click', (event) => {
+  event.preventDefault();
+  console.log('default prevented, but the event carries on');
+});
+```
+```+id=page2
+```
+
+Click the link. The page does not navigate, and the wrapper's listener runs anyway.
+
+## Exercises
+
+1. Stop the button's click from reaching its parent, so that clicking logs `child` and nothing else.
+
+    ```html id=page3
+    <div id="parent" style="background-color: #eee; padding: 16px;">
+      <button id="child">Click</button>
+    </div>
+    ```
+
+    ```{javascript}
+    const parent = document.querySelector('#parent');
+    const button = document.querySelector('#child');
+
+    parent.addEventListener('click', () => {
+      console.log('parent');
+    });
+
+    button.addEventListener('click', (event) => {
+      // Write your code here
+      console.log('child');
+    });
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const parent = document.querySelector('#parent');
+    const button = document.querySelector('#child');
+
+    parent.addEventListener('click', () => {
+      console.log('parent');
+    });
+
+    button.addEventListener('click', (event) => {
+      event.stopPropagation();
+      console.log('child');
+    });
+    ```
+    ```+test
+    assert('#child').click().run('Could not find the `#child` button', 'Clicked the button');
+    check.consoleLogged('child').run('The button\'s own listener should still run', 'The child listener ran');
+    wrap(console.didLog('parent')).should('equal', false).run('The parent listener should not run. Call `event.stopPropagation()` in the button\'s listener', 'Stopped the event from bubbling');
+    ```
+
+2. Stop the event during the **capture** phase, on the parent, so that the button's own listener never runs at all.
+
+    ```{javascript}
+    const parent = document.querySelector('#parent');
+    const button = document.querySelector('#child');
+
+    // Write your capture listener here
+
+    button.addEventListener('click', () => {
+      console.log('button');
+    });
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const parent = document.querySelector('#parent');
+    const button = document.querySelector('#child');
+
+    parent.addEventListener('click', (event) => {
+      console.log('stopped on the way down');
+      event.stopPropagation();
+    }, true);
+
+    button.addEventListener('click', () => {
+      console.log('button');
+    });
+    ```
+    ```+test
+    assert('#child').click().run('Could not find the `#child` button', 'Clicked the button');
+    wrap(console.didLog('button')).should('equal', false).run('The button\'s listener should never run. Add a listener on the parent with `true` as the third argument, and call `event.stopPropagation()` in it', 'The event was stopped before it reached the button');
+    wrap(console.history().length > 0).should('equal', true).run('Log something from your capture listener so you can see it ran', 'The capture listener ran');
+    ```
+
+3. Stop the checkbox from ticking when it is clicked, while still logging `blocked`.
+
+    ```html id=page4
+    <input id="agree" type="checkbox"> <label for="agree">I agree</label>
+    ```
+
+    ```{javascript}
+    const box = document.querySelector('#agree');
+
+    box.addEventListener('click', (event) => {
+      // Write your code here
+      console.log('blocked');
+    });
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const box = document.querySelector('#agree');
+
+    box.addEventListener('click', (event) => {
+      event.preventDefault();
+      console.log('blocked');
+    });
+    ```
+    ```+test
+    wrap(box.checked).should('equal', false).run('The checkbox should start unchecked', 'The checkbox starts unchecked');
+    assert('#agree').click().run('Could not find the `#agree` checkbox', 'Clicked the checkbox');
+    check.consoleLogged('blocked').run('The listener should still log `blocked`', 'The listener ran');
+    wrap(box.checked).should('equal', false).run('The checkbox should still be unchecked. Call `event.preventDefault()` to cancel the browser\'s built-in toggling', 'The default toggle was prevented');
+    ```
+
+## Resources
+
+- [MDN: Event.stopPropagation()](https://developer.mozilla.org/en-US/docs/Web/API/Event/stopPropagation)
+- [MDN: Event.preventDefault()](https://developer.mozilla.org/en-US/docs/Web/API/Event/preventDefault)
+- [MDN: Event bubbling and capture](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Event_bubbling)

@@ -1,0 +1,245 @@
+# Using npm to Manage Packages
+
+Downloading a library [by hand](<06 - Downloading Library Code.webnb>), as we did in Lesson 2, works for one file. It does not scale: you have to find the right version, remember where you put it, and repeat the whole thing every time it is updated. npm does that work instead.
+
+## Starting a Project
+
+Make a directory for the project and move into it. The commands are the ones from earlier in this lesson:
+
+```
+$ mkdir my-first-npm-project
+$ cd my-first-npm-project
+$ pwd
+/home/alice/code/my-first-npm-project
+```
+
+That `pwd` is worth the keystrokes. Everything npm does happens in the working directory, and the most common beginner problem in this lesson is running a command one directory too high.
+
+Now turn the directory into an npm project:
+
+```
+$ npm init -y
+```
+
+`npm init` on its own asks a series of questions about the project. The `-y` flag answers yes to all of them, taking the defaults, which is what you want while learning.
+
+It creates one file, **`package.json`**, which is the description of your project:
+
+```json
+{
+  "name": "my-first-npm-project",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
+```
+
+Recognizable pieces: a name, a `version` in the [semantic-versioning format](<10 - Semantic Versioning.webnb>) from Lesson 2, an empty `description` you can fill in, and a `license`, defaulting to ISC, the permissive license we met in [the licensing reading](<11 - Licensing.webnb#permissive-licenses>).
+
+## Installing a Package
+
+```
+$ npm install lodash
+```
+
+That one command does three separate things, and it is worth knowing all three.
+
+**One, it adds the package to `package.json`** under a new `dependencies` field:
+
+```json
+{
+  "name": "my-first-npm-project",
+  "version": "1.0.0",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}
+```
+
+`dependencies` is the list of libraries your code needs in order to run. It is the part a person, or another computer, reads to understand what your project depends on.
+
+**Two, it creates a `node_modules/` directory** and downloads the actual library into it:
+
+```
+my-first-npm-project/
+  node_modules/
+    lodash/
+      lodash.js
+      package.json
+      ... many more files
+  package.json
+  package-lock.json
+```
+
+That directory is the real code. It gets large quickly, because your dependencies have dependencies of their own, and it is not usually kept in version control: anyone can rebuild it by running `npm install` with your `package.json`.
+
+**Three, it creates `package-lock.json`**, which records the *exact* version of Lodash that was installed, and the exact version of everything Lodash itself depends on. `package.json` says what you asked for; `package-lock.json` says what you got. That is what makes another person's `npm install` produce the same files as yours.
+
+`npm i` is a shorter spelling of `npm install`, if you see it in someone's instructions.
+
+## Version Ranges
+
+Look again at what went into `package.json`:
+
+```json
+"lodash": "^4.17.21"
+```
+
+That is not "version 4.17.21". It is a *range*, and the symbol in front decides how much drift you are willing to accept, using the [semantic versioning rules](<10 - Semantic Versioning.webnb>) from Lesson 2.
+
+- **`^4.17.21`** matches any version with the same **major** number: `4.17.22`, `4.18.0`, and so on up to but not including `5.0.0`. You accept bug fixes and new features, and refuse breaking changes. This is npm's default.
+- **`~4.17.21`** matches any version with the same major *and* minor: `4.17.22`, `4.17.30`, but not `4.18.0`. Bug fixes only.
+- **`4.17.21`** with no symbol means exactly that version and nothing else.
+
+The caret is the default because of what the major number promises: a `4.x` release is not supposed to break code that worked on an earlier `4.x`.
+
+```{javascript autorun}
+function sameMajor(range, version) {
+  const wanted = range.replace('^', '').split('.');
+  const got = version.split('.');
+
+  return wanted[0] === got[0];
+}
+
+console.log('^4.17.21 allows 4.18.0?  ' + sameMajor('^4.17.21', '4.18.0'));
+console.log('^4.17.21 allows 5.0.0?   ' + sameMajor('^4.17.21', '5.0.0'));
+```
+
+## Using What You Installed
+
+Two details trip people up here.
+
+First, Node treats `.js` files as CommonJS unless told otherwise, so to use `import` you add one field to `package.json`:
+
+```json
+{
+  "type": "module",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  }
+}
+```
+
+Second, your file has to be in the project directory, next to `package.json`. Creating a file in an editor's sidebar does not always put it where you expect, so check:
+
+```
+$ ls
+index.js  node_modules  package.json  package-lock.json
+```
+
+Then import the package by **name**, with no path and no `./`, because it is not your file, it is an installed package:
+
+```javascript
+// index.js
+import _ from 'lodash';
+
+console.log(_.shuffle([1, 2, 3, 4, 5]));
+```
+
+```
+$ node index.js
+[ 3, 1, 5, 2, 4 ]
+$ node index.js
+[ 5, 4, 1, 3, 2 ]
+```
+
+A different order each run, from a library you never downloaded by hand and never linked with a script tag.
+
+## Exercises
+
+1. Set up a project from nothing: make a directory, move into it, initialize it, and install Lodash.
+
+    ```{external}
+    title: A project from scratch
+    interval: off
+    - command: mkdir my-first-npm-project | Create the project directory
+    - command: cd my-first-npm-project | Move into it, so npm works in the right place
+    - command: npm init -y | Initialize the project, taking all the defaults
+    - command: npm install lodash | Install Lodash as a dependency
+    - command: ls | Check what appeared: package.json, package-lock.json, node_modules
+    ```
+    ```+terminal
+    welcome: Run the commands in order, then run the cell to check them.
+    prompt: $
+    ```
+
+2. Write `satisfies`, which decides whether an installed version is allowed by a range. Handle `^` (same major) and `~` (same major and minor).
+
+    ```{javascript}
+    function satisfies(range, version) {
+      const symbol = range[0];
+      const wanted = range.slice(1).split('.');
+      const got = version.split('.');
+
+      // TODO: for '^', the major must match
+      //       for '~', the major and the minor must match
+      return false;
+    }
+
+    console.log(satisfies('^4.17.21', '4.18.0'));
+    console.log(satisfies('~4.17.21', '4.18.0'));
+    ```
+    ```+solution
+    function satisfies(range, version) {
+      const symbol = range[0];
+      const wanted = range.slice(1).split('.');
+      const got = version.split('.');
+
+      if (symbol === '^') {
+        return wanted[0] === got[0];
+      }
+
+      if (symbol === '~') {
+        return wanted[0] === got[0] && wanted[1] === got[1];
+      }
+
+      return false;
+    }
+
+    console.log(satisfies('^4.17.21', '4.18.0'));
+    console.log(satisfies('~4.17.21', '4.18.0'));
+    ```
+    ```+test
+    wrap(satisfies('^4.17.21', '4.18.0')).should('equal', true).run('A caret accepts a new minor version, since the major number is unchanged', 'Caret allows a new minor version');
+    wrap(satisfies('^4.17.21', '5.0.0')).should('equal', false).run('A caret must refuse a new major version, because that is where breaking changes go', 'Caret refuses a new major version');
+    wrap(satisfies('~4.17.21', '4.17.30')).should('equal', true).run('A tilde accepts a new patch version', 'Tilde allows a new patch');
+    wrap(satisfies('~4.17.21', '4.18.0')).should('equal', false).run('A tilde must refuse a new minor version; it pins the major and the minor', 'Tilde refuses a new minor version');
+    ```
+
+3. In an empty directory you run `npm init -y` and then `npm install lodash`. What do you have afterwards?
+
+    ```{mcq}
+    What did those two commands produce?
+    correct: Correct! `package.json` records the project and its dependencies, and `node_modules/` holds the library code itself. A `package-lock.json` appears as well, pinning the exact versions installed.
+    wrong: One command describes the project, the other downloads code. Where does each result end up?
+    [x] A `package.json` tracking the project and its dependencies, and a `node_modules/` folder holding the Lodash code
+    [ ] A `lodash.js` file in the project root, and nothing else
+    [ ] Lodash installed globally on the computer, with no files added to the project
+    [ ] Your own JavaScript files replaced by Lodash's
+    ```
+
+4. Your `package.json` lists `"lodash": "^4.17.21"`. Which updates will npm accept?
+
+    ```{mcq}
+    What does the caret allow?
+    correct: Correct! The caret pins the major version and accepts anything above the listed version within it, so `4.18.0` is fine and `5.0.0` is not.
+    wrong: Which of the three numbers is the caret protecting, and why that one?
+    [x] New minor and patch versions, such as `4.18.0`, but not a new major version
+    [ ] Only exactly `4.17.21`, with no updates at all
+    [ ] Any version at all, including `5.0.0`
+    [ ] It removes the package when a newer version appears
+    ```
+
+## Resources
+
+- [npm: npm install](https://docs.npmjs.com/cli/v10/commands/npm-install)
+- [npm: package.json](https://docs.npmjs.com/cli/v10/configuring-npm/package-json)
+- [npm: about semantic versioning](https://docs.npmjs.com/about-semantic-versioning)
+- [npm: package-lock.json](https://docs.npmjs.com/cli/v10/configuring-npm/package-lock-json)

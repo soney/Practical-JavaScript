@@ -1,0 +1,227 @@
+# Source Maps
+
+Bundling and minifying are good for the browser and bad for you. The code that runs is no longer the code you wrote, and the first time something goes wrong you find out how much that matters.
+
+## The Problem
+
+Here is an error from a minified bundle:
+
+```
+Uncaught TypeError: o.split is not a function
+    at main.js:1:450
+```
+
+Three separate things have gone wrong with this message.
+
+**`o` is not a variable you wrote.** The minifier renamed everything to single letters, so the name in the error corresponds to nothing you can search for.
+
+**Line 1 is every line.** Minification put the whole bundle on one line, so every error in the entire application reports line 1. The column number is the only clue, and 450 characters into a line of 200,000 is not a location a person can use.
+
+**`main.js` is not one of your files.** Your code was `main.js`, `api.js`, `utils.js`, and Lodash; the bundle is all of them at once. The error does not say which.
+
+Even without an error the problem shows up. Three `console.log` calls in three different source files all report as coming from `main.js:2`, because as far as the browser is concerned, that is the truth.
+
+## The Fix
+
+Ask the bundler for a second file: a **source map**. Alongside `bundle.min.js` it writes `bundle.min.js.map`, which records, for each position in the generated file, which file and which line it came from.
+
+The browser knows to look for it. So the same error becomes:
+
+```
+Uncaught ReferenceError: y is not defined
+    at src/index.js:5
+```
+
+That is a file you have open and a line you can go to.
+
+## Turning It On
+
+One field in the Webpack configuration:
+
+```javascript
+// webpack.config.js
+const path = require('path');
+
+module.exports = {
+  entry: './src/index.js',
+  output: {
+    filename: 'main.js',
+    path: path.resolve(__dirname, 'dist')
+  },
+  mode: 'development',
+  devtool: 'source-map'
+};
+```
+
+Run `npx webpack` and `dist/` now holds a third file:
+
+```
+dist/
+  main.js
+  main.js.LICENSE.txt
+  main.js.map
+```
+
+## What Is Inside a Map
+
+Open one and you find JSON:
+
+```json
+{
+  "version": 3,
+  "file": "main.js",
+  "sources": ["webpack://my-project/./src/index.js", "webpack://my-project/./src/util.js"],
+  "mappings": "AAAA,SAASA,EAAT,GAAsB;AAAA..."
+}
+```
+
+`version` and `file` are straightforward. **`mappings`** is the actual data, compressed into a format built for size rather than for reading. You are not meant to read it, and you do not have to; the browser decodes it.
+
+Webpack's creator, Tobias Koppers, and Paul Irish built a visualizer for exactly this. It shows the generated file on one side and the original sources on the other, and clicking a line in the bundle highlights where it came from. It is a good way to see that a source map is nothing more mysterious than a lookup table.
+
+## How the Lookup Works
+
+The idea is small enough to demonstrate. A mapping is a list of positions in the generated file, each tagged with where it came from. To resolve an error position, find the last mapping at or before it:
+
+```{javascript autorun}
+const mappings = [
+  { generatedColumn: 0, source: 'src/index.js', originalLine: 1 },
+  { generatedColumn: 210, source: 'src/util.js', originalLine: 2 },
+  { generatedColumn: 430, source: 'src/index.js', originalLine: 5 },
+  { generatedColumn: 980, source: 'src/api.js', originalLine: 12 }
+];
+
+function findOriginal(column) {
+  let best = mappings[0];
+
+  for (const mapping of mappings) {
+    if (mapping.generatedColumn <= column) {
+      best = mapping;
+    }
+  }
+
+  return best.source + ':' + best.originalLine;
+}
+
+console.log('main.js:1:450 came from ' + findOriginal(450));
+console.log('main.js:1:1000 came from ' + findOriginal(1000));
+```
+
+A real source map holds thousands of these entries and encodes them far more compactly, and it answers the same question.
+
+One practical note: a source map contains your original code, so publishing one publishes your source. That is fine for plenty of projects and not for all of them, and Webpack's `devtool` option has a range of values for exactly that reason.
+
+## Exercises
+
+1. Complete `findOriginal` so it reports the source file and line for a position in the bundle.
+
+    ```{javascript}
+    const mappings = [
+      { generatedColumn: 0, source: 'src/index.js', originalLine: 1 },
+      { generatedColumn: 210, source: 'src/util.js', originalLine: 2 },
+      { generatedColumn: 430, source: 'src/index.js', originalLine: 5 }
+    ];
+
+    function findOriginal(column) {
+      let best = mappings[0];
+
+      // TODO: keep the last mapping whose generatedColumn is at or before column
+
+      return best.source + ':' + best.originalLine;
+    }
+
+    console.log(findOriginal(450));
+    ```
+    ```+solution
+    const mappings = [
+      { generatedColumn: 0, source: 'src/index.js', originalLine: 1 },
+      { generatedColumn: 210, source: 'src/util.js', originalLine: 2 },
+      { generatedColumn: 430, source: 'src/index.js', originalLine: 5 }
+    ];
+
+    function findOriginal(column) {
+      let best = mappings[0];
+
+      for (const mapping of mappings) {
+        if (mapping.generatedColumn <= column) {
+          best = mapping;
+        }
+      }
+
+      return best.source + ':' + best.originalLine;
+    }
+
+    console.log(findOriginal(450));
+    ```
+    ```+test
+    wrap(findOriginal(450)).should('equal', 'src/index.js:5').run('Column 450 falls in the mapping that starts at 430, so it comes from `src/index.js:5`', 'Resolved a position in the last mapping');
+    wrap(findOriginal(300)).should('equal', 'src/util.js:2').run('Column 300 falls in the mapping that starts at 210', 'Resolved a position in the middle');
+    wrap(findOriginal(5)).should('equal', 'src/index.js:1').run('Column 5 falls in the first mapping', 'Resolved a position in the first mapping');
+    ```
+
+2. Add source maps to this configuration.
+
+    ```{node}
+    // webpack.config.js
+
+    module.exports = {
+      entry: './src/index.js',
+      output: {
+        filename: 'main.js',
+        path: __dirname + '/dist'
+      },
+      mode: 'development'
+    };
+
+    console.log(module.exports);
+    ```
+    ```+solution
+    // webpack.config.js
+
+    module.exports = {
+      entry: './src/index.js',
+      output: {
+        filename: 'main.js',
+        path: __dirname + '/dist'
+      },
+      mode: 'development',
+      devtool: 'source-map'
+    };
+
+    console.log(module.exports);
+    ```
+    ```+test
+    wrap(module.exports.devtool).should('equal', 'source-map').run('Add a `devtool` field set to `source-map`', 'Enabled source maps');
+    wrap(module.exports.entry).should('equal', './src/index.js').run('Leave the rest of the configuration as it was', 'Kept the existing configuration');
+    wrap(module.exports.mode).should('equal', 'development').run('Leave the rest of the configuration as it was', 'Kept the mode');
+    ```
+
+3. An error reads `Uncaught TypeError: n.split is not a function at main.js:1:450`, and you have no source maps. Which of these make it hard to act on? (Select all that apply)
+
+    ```{mcq}
+    Why is this message so unhelpful? (Select all that apply)
+    correct: Correct! Both are true, and together they leave you with nothing to search for and nowhere to look. That is exactly the gap a source map closes.
+    wrong: Look at each part of the message and ask whether it corresponds to anything in the code you wrote.
+    [x] Everything is on line 1, because minification collapsed the whole bundle onto one line
+    [x] `n` is a name the minifier invented, so it matches no variable in your source
+    [ ] The browser reports minified code inaccurately on purpose
+    [ ] `split` does not exist in minified code
+    ```
+
+4. Which field turns on source maps in `webpack.config.js`?
+
+    ```{mcq}
+    Pick the field that generates a `.map` file.
+    correct: Correct! `devtool: 'source-map'` tells Webpack to emit the mapping file alongside the bundle.
+    wrong: Only one of these is a real Webpack option.
+    [x] `devtool: 'source-map'`
+    [ ] `debug: true`
+    [ ] `mode: 'development'`
+    [ ] `map: './dist/main.js.map'`
+    ```
+
+## Resources
+
+- [Webpack: devtool](https://webpack.js.org/configuration/devtool/)
+- [MDN: how to use a source map](https://firefox-source-docs.mozilla.org/devtools-user/debugger/how_to/use_a_source_map/)
+- [Chrome DevTools: source maps](https://developer.chrome.com/docs/devtools/javascript/source-maps)

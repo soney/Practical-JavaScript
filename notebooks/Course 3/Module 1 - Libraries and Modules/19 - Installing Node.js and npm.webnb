@@ -1,0 +1,149 @@
+# Installing Node.js and npm
+
+A **package manager** installs and manages the dependencies of your code: the libraries you did not write but your project needs. The one we will use is **npm**, and npm arrives with **Node.js**, so Node comes first.
+
+## What Node.js Is
+
+The Chrome browser is made of parts. **V8** is the JavaScript engine, the part that actually runs your JavaScript. **Blink** is the rendering engine that turns HTML into pixels. There is networking code, and a good deal more besides.
+
+**Node.js** is what you get when you take V8 out of Chrome, add a set of libraries for things a browser deliberately will not do, such as reading files, and ship it as a plain desktop application.
+
+The consequence is the important part: **JavaScript is no longer confined to a page.** The same language you have been writing runs at a command prompt, on a server, in a build tool. Every tool in the rest of this module is a JavaScript program run by Node.
+
+## Installing It
+
+If you are working in the Coursera environment, Node and npm are already installed and there is nothing to do.
+
+To install it on your own machine, go to [nodejs.org](https://nodejs.org) and use **Get Node.js**. It gives you instructions for your platform, in the form of a few commands to paste into a console. Choose the **LTS** version, which stands for long term support: it is the one that will keep receiving fixes for a good while, and the one most tools expect.
+
+Then check that it worked:
+
+```
+$ node --version
+v22.19.0
+```
+
+Your number will differ, and that is fine. What matters is that you get a version rather than an error.
+
+If you type just `node` with no arguments, you land somewhere unexpected:
+
+```
+$ node
+Welcome to Node.js v22.19.0.
+>
+```
+
+That `>` is an interactive prompt where you can type JavaScript a line at a time. It is useful for quick experiments, and it is not where you want to be when you meant to run a file. Get out with **Ctrl+D**, or **Ctrl+C twice**, or by typing `.exit`.
+
+## Running a File
+
+This is the part that changes how you work. Put some JavaScript in a file:
+
+```javascript
+// index.js
+console.log('Hello Node');
+```
+
+Then, from the directory that file is in, run it:
+
+```
+$ pwd
+/home/alice/code/hello
+$ ls
+index.js
+$ node index.js
+Hello Node
+```
+
+No HTML, no browser, no page. Note the `pwd` and `ls` first: `node index.js` looks for `index.js` in the working directory, so being in the wrong directory is the usual reason for a "cannot find module" complaint.
+
+Cells marked `node` in these notebooks run with Node-style globals in place of browser ones, standing in for a real `node index.js`:
+
+```{node autorun}
+console.log('Hello Node');
+
+console.log('this file is running in ' + process.cwd());
+```
+
+`process` is one of the globals Node provides and a browser does not. There is no `document` here and no page to touch, because there is no page.
+
+## npm Comes With It
+
+Installing Node also installs **npm**. Check it the same way:
+
+```
+$ npm --version
+10.9.3
+```
+
+npm is a package manager: it installs libraries into your project, keeps track of which versions you are using, and lets you publish libraries of your own.
+
+The name is a small joke. It originally stood for "node package manager", and officially it now stands for **"npm is not an acronym"**. The reason is probably that npm long ago stopped being only about Node: most of the browser libraries in this course, Lodash included, are distributed through npm too.
+
+That is the setup done. The next readings are about using it.
+
+## Exercises
+
+1. Check that both tools are installed, then run a file with Node.
+
+    ```{external}
+    title: Node and npm setup checks
+    interval: off
+    - command: node --version | Print the Node.js version
+    - command: npm --version | Print the npm version, which came bundled with Node
+    - command: node index.js | Run a JavaScript file with Node
+    ```
+    ```+terminal
+    welcome: Type each command and press Enter, then run the cell to check.
+    prompt: $
+    ```
+
+2. Write the contents of an `index.js` that logs `Hello from Node` and then logs the working directory it was run from.
+
+    ```{node}
+    // index.js
+
+    // Write your code here
+    ```
+    ```+solution
+    // index.js
+
+    console.log('Hello from Node');
+    console.log(process.cwd());
+    ```
+    ```+test
+    check.consoleLogged('Hello from Node').run('Log the exact text `Hello from Node`', 'Logged the greeting');
+    check.consoleLogged('/workspace').run('Log the working directory as well, using `process.cwd()`', 'Logged the working directory');
+    wrap(console.history().length).should('equal', 2).run('Two lines of output, the greeting and the directory', 'Logged both lines');
+    ```
+
+3. What is Node.js?
+
+    ```{mcq}
+    Which description fits Node.js?
+    correct: Correct! It is Chrome's V8 engine, plus extra libraries, packaged so that JavaScript runs on your computer rather than only inside a page.
+    wrong: Think about which part of the browser Node.js reuses, and where the code ends up running.
+    [x] An environment that uses Chrome's V8 engine to run JavaScript on your computer
+    [ ] A new programming language that replaces JavaScript
+    [ ] A web browser built specifically for developers
+    [ ] A tool for designing HTML and CSS layouts
+    ```
+
+4. You install Node.js and find you also have npm. What is npm for?
+
+    ```{mcq}
+    What job does npm do?
+    correct: Correct! It is a package manager: it installs third-party libraries into your project, tracks their versions, and can publish your own.
+    wrong: The clue is in the phrase "package manager". What is a package, and what would managing it involve?
+    [x] Installing, sharing, and managing the third-party libraries your project depends on
+    [ ] Compiling your JavaScript into another language so the computer can read it
+    [ ] Providing a window where you drag and drop files
+    [ ] Removing the need to use a console at all
+    ```
+
+## Resources
+
+- [Node.js downloads](https://nodejs.org/en/download)
+- [Node.js: introduction](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs)
+- [npm documentation](https://docs.npmjs.com/)
+- [MDN: server-side JavaScript with Node](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Server-side/Express_Nodejs/Introduction)

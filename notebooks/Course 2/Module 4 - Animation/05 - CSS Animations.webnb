@@ -1,0 +1,302 @@
+# CSS Animations
+
+A transition animates a change from one value to another: a straight line from A to B. **CSS animations** give us much more control, because we can describe as many points along the way as we like.
+
+## Keyframes
+
+A CSS animation is defined by **keyframes**. A keyframe says what the element should look like at a particular point in the animation, given as a **percentage**: `0%` is the start and `100%` is the end.
+
+Two keyframes behave much like a transition. Red at the start, blue at the end, and the browser works out everything in between:
+
+```{html autorun}
+<div class="two-frames"></div>
+```
+```+css
+@keyframes redToBlue {
+  0%   { background-color: red; }
+  100% { background-color: blue; }
+}
+.two-frames {
+  width: 200px; height: 60px;
+  animation: redToBlue 3s linear infinite;
+}
+```
+
+Add a keyframe in the middle and it becomes something a transition cannot do:
+
+```{html autorun}
+<div class="three-frames"></div>
+```
+```+css
+@keyframes redYellowBlue {
+  0%   { background-color: red; }
+  50%  { background-color: yellow; }
+  100% { background-color: blue; }
+}
+.three-frames {
+  width: 200px; height: 60px;
+  animation: redYellowBlue 3s linear infinite;
+}
+```
+
+**Keyframes do not have to be evenly spaced.** Move the middle one to `10%` and the animation rushes from red to yellow and then crawls from yellow to blue:
+
+```{html autorun}
+<div class="uneven"></div>
+```
+```+css
+@keyframes uneven {
+  0%   { background-color: red; }
+  10%  { background-color: yellow; }
+  100% { background-color: blue; }
+}
+.uneven {
+  width: 200px; height: 60px;
+  animation: uneven 3s linear infinite;
+}
+```
+
+And you can have as many as you like:
+
+```{html autorun}
+<div class="rainbow"></div>
+```
+```+css
+@keyframes rainbow {
+  0%   { background-color: red; }
+  14%  { background-color: orange; }
+  28%  { background-color: yellow; }
+  42%  { background-color: green; }
+  57%  { background-color: blue; }
+  71%  { background-color: indigo; }
+  85%  { background-color: violet; }
+  100% { background-color: red; }
+}
+.rainbow {
+  width: 200px; height: 60px;
+  animation: rainbow 5s linear infinite;
+}
+```
+
+### Several Properties at Once
+
+A keyframe can set as many properties as you want, and all of them animate together:
+
+```{html autorun}
+<div class="grow"></div>
+```
+```+css
+@keyframes grow {
+  0%   { background-color: red;  width: 60px;  height: 60px; }
+  100% { background-color: blue; width: 240px; height: 30px; }
+}
+.grow {
+  animation: grow 3s ease-in-out infinite alternate;
+}
+```
+
+### The Same Start and End, Different Journeys
+
+Here is something worth noticing about keyframes. Two animations can begin and end identically and get there in completely different ways.
+
+Both boxes below start as a wide rectangle and finish as a tall one. The first one changes its width and height; the second one rotates a quarter turn:
+
+```{html autorun}
+<div class="scaler"></div>
+<div class="rotator"></div>
+```
+```+css
+@keyframes byScaling {
+  0%   { width: 160px; height: 40px; }
+  100% { width: 40px;  height: 160px; }
+}
+@keyframes byRotating {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(90deg); }
+}
+.scaler, .rotator {
+  width: 160px; height: 40px;
+  background-color: #b00;
+  margin: 30px 60px;
+}
+.scaler   { animation: byScaling 2s ease-in-out infinite alternate; }
+.rotator  { animation: byRotating 2s ease-in-out infinite alternate; }
+```
+
+Same endpoints, very different motion. Describing the middle of an animation, not just its ends, is what keyframes are for.
+
+(`transform` is a CSS property for moving, rotating, and scaling an element. `rotate(90deg)` is one of its functions; there are others such as `translateX` and `scale`.)
+
+## Writing It Out
+
+Defining an animation uses an **at-rule**, so called because it begins with `@`:
+
+```css
+@keyframes animationName {
+  0%   { /* styles at the start */ }
+  50%  { /* styles halfway */ }
+  100% { /* styles at the end */ }
+}
+```
+
+`0%` and `100%` can also be written **`from`** and **`to`**, which reads better when there are only two:
+
+```css
+@keyframes fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+```
+
+Defining an animation does not apply it to anything. To use it, set the **`animation`** property on a selector:
+
+```text
+animation: <name> <duration> <timing-function> <delay> <iteration-count> <direction> <fill-mode>
+```
+
+- **`name`** is the name from the `@keyframes` rule.
+- **`duration`** in seconds, such as `2s`.
+- **`timing-function`** is the same set as transitions: `ease` (the default), `linear`, `ease-in`, `ease-out`, `ease-in-out`, or a custom `cubic-bezier`.
+- **`delay`** before it starts.
+- **`iteration-count`** is how many times to run: `1` (the default), any number such as `4`, a fraction such as `1.5`, or **`infinite`**.
+- **`direction`** is which way to play: `normal` (start to end), `reverse` (end to start), or `alternate` (forwards, then backwards, then forwards).
+- **`fill-mode`** is what happens outside the animation's run: `forwards` keeps the last keyframe's styles after it ends, `backwards` applies the first keyframe's styles before it starts, and `both` does both.
+
+`fill-mode` is the one that catches people out. Without it, an element **snaps back** to its original styles the moment the animation finishes:
+
+```{html autorun}
+<div class="no-fill">no fill-mode</div>
+<div class="with-fill">fill-mode: forwards</div>
+```
+```+css
+@keyframes slide {
+  from { margin-left: 0; background-color: #b00; }
+  to   { margin-left: 200px; background-color: #4a9; }
+}
+.no-fill, .with-fill {
+  width: 160px; padding: 8px; color: white; margin-bottom: 8px;
+  background-color: #b00;
+}
+.no-fill   { animation: slide 2s ease-in-out; }
+.with-fill { animation: slide 2s ease-in-out forwards; }
+```
+
+Both slide across. The first jumps back to the start when it finishes; the second stays where it landed.
+
+## Transitions or Animations?
+
+Use a **transition** when a change is triggered by something (a hover, a class being added) and goes straight from one value to another. Use an **animation** when you need intermediate steps, when it should repeat, or when it should run without anything triggering it.
+
+## Exercises
+
+1. Write a `@keyframes` rule named `fade` that goes from an `opacity` of `0` to an `opacity` of `1`, then apply it to `.message` so it runs once over `1s` and **stays visible afterwards**.
+
+    ```html id=page1
+    <p class="message">Hello</p>
+    ```
+
+    ```{css}
+    /* Write your keyframes here */
+
+    .message {
+      padding: 10px;
+      background-color: #00274c;
+      color: white;
+      /* Apply your animation here */
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    @keyframes fade {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    .message {
+      padding: 10px;
+      background-color: #00274c;
+      color: white;
+      animation: fade 1s forwards;
+    }
+    ```
+    ```+test
+    wrap(/@keyframes\s+fade/.test(source)).should('equal', true).run('Define a `@keyframes` rule named `fade`', 'Defined the keyframes');
+    assertRule('.message').should('have.css', 'animation-name: fade').run('Apply the `fade` animation to `.message`', 'Applied the animation');
+    assertRule('.message').should('have.css', 'animation-duration: 1s').run('The animation should last `1s`', 'Set the duration');
+    assertRule('.message').should('have.css', 'animation-fill-mode: forwards').run('Add `forwards` so the element keeps the final keyframe\'s styles instead of snapping back', 'Kept the final styles');
+    ```
+
+2. Write a three-keyframe animation named `pulse` that takes `.dot` from an `opacity` of `1`, to `0.2` at the halfway point, and back to `1`. Apply it so it runs forever over `1.5s`.
+
+    ```html id=page2
+    <div class="dot"></div>
+    ```
+
+    ```{css}
+    /* Write your keyframes here */
+
+    .dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      background-color: #b00;
+      /* Apply your animation here */
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    @keyframes pulse {
+      0%   { opacity: 1; }
+      50%  { opacity: 0.2; }
+      100% { opacity: 1; }
+    }
+
+    .dot {
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      background-color: #b00;
+      animation: pulse 1.5s infinite;
+    }
+    ```
+    ```+test
+    wrap(/@keyframes\s+pulse/.test(source)).should('equal', true).run('Define a `@keyframes` rule named `pulse`', 'Defined the keyframes');
+    wrap(/50%/.test(source)).should('equal', true).run('Include a keyframe at `50%` for the dimmed state', 'Added a middle keyframe');
+    assertRule('.dot').should('have.css', 'animation-name: pulse').run('Apply the `pulse` animation to `.dot`', 'Applied the animation');
+    assertRule('.dot').should('have.css', 'animation-iteration-count: infinite').run('It should repeat forever, so use `infinite`', 'Set it to repeat forever');
+    assertRule('.dot').should('have.css', 'animation-duration: 1.5s').run('Each cycle should take `1.5s`', 'Set the duration');
+    ```
+
+3. An animation moves an element across the screen, and the moment it finishes the element jumps back to where it started. Which property fixes that?
+
+    ```{mcq}
+    You want the element to stay where the animation left it. What do you set?
+    correct: Correct! `animation-fill-mode: forwards` keeps the styles from the final keyframe after the animation ends. Without it, the element reverts to its normal styles as soon as the animation is over.
+    wrong: Look back at the two sliding boxes and what distinguished them.
+    [x] `animation-fill-mode: forwards`
+    [ ] `animation-direction: normal`
+    [ ] `animation-iteration-count: infinite`
+    [ ] `animation-timing-function: ease-out`
+    ```
+
+4. When is a keyframe animation the right choice over a transition?
+
+    ```{mcq}
+    Which of these need a CSS animation rather than a transition? (Select all that apply)
+    correct: Correct! Transitions go directly from one value to another in response to a change. Animations are for anything with intermediate steps, anything that repeats, and anything that should run without being triggered.
+    wrong: Revisit "Transitions or Animations?".
+    [x] A color that cycles through red, yellow, and blue in order
+    [x] A loading spinner that repeats forever
+    [x] Something that starts moving as soon as the page loads, with nothing triggering it
+    [ ] A button that darkens when the pointer is over it
+    ```
+
+## Resources
+
+- [MDN: @keyframes](https://developer.mozilla.org/en-US/docs/Web/CSS/@keyframes)
+- [MDN: animation](https://developer.mozilla.org/en-US/docs/Web/CSS/animation)
+- [MDN: animation-fill-mode](https://developer.mozilla.org/en-US/docs/Web/CSS/animation-fill-mode)
+- [MDN: Using CSS animations](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_animations/Using_CSS_animations)
+- [MDN: transform](https://developer.mozilla.org/en-US/docs/Web/CSS/transform)

@@ -1,0 +1,216 @@
+# React State and useState
+
+We can render components and respond to clicks, and nothing we have built yet **changes over time**. A button that counts its own clicks needs one more idea: state.
+
+**State** is the status of a system at a moment. A microwave's state includes whether the door is open, whether it is running, how much time is left, and what power level is set. Which of those are true right now decides what the machine shows and what it will let you do. A component's state is the same thing on a smaller scale.
+
+## Two Ways That Do Not Work
+
+Both are worth seeing, because they fail differently, and the difference is the whole lesson.
+
+**A local variable inside the component.** It resets:
+
+```{react autorun}
+function BrokenWithLocal() {
+  let clickCount = 0;
+
+  function handleClick() {
+    clickCount = clickCount + 1;
+
+    console.log('clickCount is now ' + clickCount);
+  }
+
+  return <button onClick={handleClick}>Clicked {clickCount} times</button>;
+}
+
+renderReact(<BrokenWithLocal />);
+```
+
+Click it. The console shows the count rising, and the button always says **0**. Every render calls the component function again, and every call runs `let clickCount = 0` again. Anything a component wants to remember cannot live in a variable that is recreated on each render.
+
+**A variable outside the component.** It survives, and nothing updates:
+
+```{react autorun}
+let outerCount = 0;
+
+function BrokenWithGlobal() {
+  function handleClick() {
+    outerCount = outerCount + 1;
+
+    console.log('outerCount is now ' + outerCount);
+  }
+
+  return <button onClick={handleClick}>Clicked {outerCount} times</button>;
+}
+
+renderReact(<BrokenWithGlobal />);
+```
+
+Same symptom, different cause. The value really is going up, and it is remembered. What is missing is that **React has no idea anything happened**, so it never calls the component again, and the screen keeps showing what it showed before.
+
+Put those together and the requirement is clear. Remembering a value is not enough, and neither is telling React to re-render. State has to do both.
+
+## `useState`
+
+```javascript
+const stateArray = React.useState(0);
+const clickCount = stateArray[0];
+const setClickCount = stateArray[1];
+```
+
+**`React.useState(initialValue)`** returns an array of exactly two things:
+
+1. **The current value** of the state variable. On the first render it is the initial value you passed.
+2. **A function to update it.** Calling it changes the value *and* tells React to render the component again.
+
+Nobody writes those three lines. Array destructuring collapses them into one:
+
+```javascript
+const [clickCount, setClickCount] = React.useState(0);
+```
+
+The square brackets pull the first and second elements out into two names. The convention is `something` and `setSomething`.
+
+```{react autorun}
+function ClickTrackingButton() {
+  const [clickCount, setClickCount] = React.useState(0);
+
+  function handleClick() {
+    setClickCount(clickCount + 1);
+  }
+
+  console.log('rendered, clickCount is ' + clickCount);
+
+  return <button onClick={handleClick}>Clicked {clickCount} times</button>;
+}
+
+renderReact(<ClickTrackingButton />);
+```
+
+Click a few times and watch both the button and the console. Each click calls `setClickCount`, React calls the component again, and the log line prints once per render with the new value. Change the `0` to `50` and rerun: the button starts at 50, because that is what "initial value" means.
+
+## Which Import, Which Name
+
+You will see the hook written two ways, and the difference is only in the import:
+
+```javascript
+import React from 'react';        // then: React.useState(0)
+import { useState } from 'react'; // then: useState(0)
+```
+
+Importing the whole library means reaching for `useState` through it. Importing the function by name means calling it directly. They are the same function. These notebooks write `React.useState` because the notebook runtime provides `React` as a global.
+
+## Exercises
+
+1. Give `Status` a state variable whose starting value is `Ready`, and render it.
+
+   ```{react}
+   function Status() {
+     const text = 'Waiting';
+
+     return <p>{text}</p>;
+   }
+
+   renderReact(<Status />);
+   ```
+   ```+solution
+   function Status() {
+     const [text, setText] = React.useState('Ready');
+
+     return <p>{text}</p>;
+   }
+
+   renderReact(<Status />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(/React\.useState\s*\(/.test(source)).should('equal', true).run('Create the state with `React.useState(...)`', 'Used useState');
+     wrap(/\[\s*text\s*,\s*set[A-Za-z]*\s*\]/.test(source)).should('equal', true).run('Destructure the two returned values, as in `const [text, setText] = ...`', 'Destructured the pair');
+     assert('p').should('have.text', 'Ready').run('Render the initial state value `Ready`', 'Rendered the state value');
+   }, 50);
+   ```
+
+2. Build a counter. Start at `0`, show `Count: 0`, and add one to it on each click.
+
+   ```{react}
+   function Counter() {
+     // TODO: create a count state variable starting at 0
+
+     function handleClick() {
+       // TODO: set the count to one more than it is now
+     }
+
+     return (
+       <section>
+         <p>Count: 0</p>
+         <button onClick={handleClick}>Add</button>
+       </section>
+     );
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+solution
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     function handleClick() {
+       setCount(count + 1);
+     }
+
+     return (
+       <section>
+         <p>Count: {count}</p>
+         <button onClick={handleClick}>Add</button>
+       </section>
+     );
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('p').should('have.text', 'Count: 0').run('Show the count, starting at `0`', 'Rendered the starting count');
+     assert('button').click().run('Click the button', 'Clicked the button');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('p').should('have.text', 'Count: 1').run('Clicking should add one. Call the setter rather than assigning to the variable', 'The count went up');
+       assert('button').click().run('Click again', 'Clicked again');
+       setTimeout(function () {
+         assert('p').should('have.text', 'Count: 2').run('Each click should add one more', 'The count keeps going up');
+       }, 50);
+     }, 50);
+   }, 50);
+   ```
+
+3. Why does a local variable fail to track state?
+
+   ```{mcq}
+   A component does `let count = 0;` and increments it in a click handler. The screen never changes. Why?
+   correct: Correct! Every render calls the component function again, which runs `let count = 0` again. The value from the previous render is gone before the new output is produced.
+   wrong: Think about what happens to a variable declared inside a function every time that function is called. Look back at "Two Ways That Do Not Work".
+   [x] The variable is recreated at `0` on every render, so the old value is lost
+   [ ] React blocks assignments to variables inside components
+   [ ] `let` variables cannot be used inside JSX
+   [ ] The handler runs before the variable is declared
+   ```
+
+4. Why does a variable outside the component fail too?
+
+   ```{mcq}
+   Moving `count` outside the component keeps the value, and the screen still never changes. What is missing?
+   correct: Correct! The value persists, and nothing tells React to render again, so the component is never called and the screen keeps showing the old output. A state setter does both jobs: it stores the value and it schedules the re-render.
+   wrong: This version does remember the number. Ask what else has to happen before you would see it.
+   [x] Nothing tells React to call the component again, so the output is never updated
+   [ ] The value is reset to zero on every render
+   [ ] Variables outside a component cannot be changed
+   [ ] React renders again, but reads a different copy of the variable
+   ```
+
+## Resources
+
+- [React Docs: State: a component's memory](https://react.dev/learn/state-a-components-memory)
+- [React Docs: useState](https://react.dev/reference/react/useState)
+- [MDN: Destructuring assignment](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring)

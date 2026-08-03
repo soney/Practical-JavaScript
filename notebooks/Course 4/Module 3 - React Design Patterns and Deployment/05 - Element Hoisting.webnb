@@ -1,0 +1,161 @@
+# Element Hoisting
+
+So far, our components have rendered elements that live inside the page, under our `#root` mount. But sometimes we want to control parts of the page that sit outside the component tree, like the document title (the text shown on the browser tab) or `<meta>` tags in the document `<head>`.
+
+In earlier lessons we set the tab title imperatively, writing `document.title = '...'` inside a `useEffect`. React version 19 and later give us a declarative option: a component can render a `<title>` or `<meta>` element directly in its JSX, and React automatically moves ("hoists") that element up into the document `<head>` where it belongs. This automatic move is what we mean by **element hoisting**.
+
+## Setting the Document Title from a Component
+
+```{react}
+function HomePage() {
+  return (
+    <div>
+      <title>My Homepage</title>
+      <h1>Welcome</h1>
+      <p>This is the home page.</p>
+    </div>
+  );
+}
+
+renderReact(<HomePage />);
+```
+
+- The `<title>` element is written right next to the heading and paragraph, inside the component's JSX.
+- React knows that `<title>` belongs in the document `<head>`, so it does not render it in place. It hoists the element into the head, and the text becomes the browser tab title.
+- `<meta>` tags work the same way. Rendering `<meta name="description" content="A demo homepage" />` inside a component moves that meta tag up into the head.
+- This is the declarative version of the effect approach from the `useEffect` lessons: instead of running `document.title = '...'` as a side effect, we describe the title as an element and let React place it correctly.
+
+## Changing the Title Dynamically
+
+Because the title is an element in your JSX, it can depend on state. Here the app shows either a home page or an about page based on a `page` state variable, and the `<title>` follows along.
+
+```{react}
+function App() {
+  const [page, setPage] = React.useState('home');
+
+  return (
+    <div>
+      <button onClick={() => setPage('home')}>Home</button>
+      <button onClick={() => setPage('about')}>About</button>
+
+      {page === 'home' && (
+        <div>
+          <title>My Homepage</title>
+          <h1>Home</h1>
+          <p>Welcome to my site.</p>
+        </div>
+      )}
+
+      {page === 'about' && (
+        <div>
+          <title>My About Page</title>
+          <h1>About</h1>
+          <p>This is the about page.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+- The `page` state decides which block renders, and each block carries its own `<title>`.
+- Clicking Home or About re-renders the component with a different `<title>`, so the tab title updates from `My Homepage` to `My About Page` automatically. We never touch `document.title` ourselves.
+
+## Watch Out for Multiple Title Elements
+
+There is one gotcha to keep in mind. If more than one rendered component sets a `<title>`, React hoists all of them into the head, and you end up with multiple `<title>` elements at once. When that happens, the browser uses the first one it finds, which is usually not what you intended.
+
+```jsx
+function Navbar() {
+  return (
+    <nav>
+      <title>My Site</title>
+    </nav>
+  );
+}
+
+function App() {
+  return (
+    <div>
+      <Navbar />
+      <title>My Homepage</title>
+      <h1>Home</h1>
+    </div>
+  );
+}
+```
+
+- `Navbar` sets one title and `App` sets another, so two `<title>` elements land in the head.
+- The browser picks the first title, so the tab may not show the page you expect.
+- To fix this, write your code so that only one `<title>` renders at a given time, or use a dedicated library such as React Helmet that manages head tags for you. (React Helmet is beyond this lesson, but it is worth knowing the name.)
+
+## Exercises
+
+1. Add a `<title>` element to the component so React sets the tab title. Render a `<title>` whose text is `Dashboard`, alongside the existing heading.
+
+   ```{react}
+   function Dashboard() {
+     return (
+       <div>
+         <h1>Dashboard</h1>
+         <p>Your account overview.</p>
+       </div>
+     );
+   }
+
+   renderReact(<Dashboard />);
+   ```
+   ```+solution
+   function Dashboard() {
+     return (
+       <div>
+         <title>Dashboard</title>
+         <h1>Dashboard</h1>
+         <p>Your account overview.</p>
+       </div>
+     );
+   }
+
+   renderReact(<Dashboard />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.replace(/\s/g, '').includes('<title>Dashboard</title>')).should('equal', true).run('Render a `<title>Dashboard</title>` element inside the component', 'Added the title element');
+     assert('h1').should('have.text', 'Dashboard').run('Keep rendering the Dashboard heading', 'Rendered the heading');
+   }, 50);
+   ```
+
+2. When a React 19 component renders a `<title>` element, what does React do with it?
+
+   ```{mcq}
+   When a React 19 component renders a `<title>` element, where does React put it?
+   correct: Correct. React hoists `<title>` (and `<meta>`) into the document head, so the text becomes the browser tab title.
+   wrong: Remember that React recognizes elements that belong in the document head and moves them there.
+   [x] React hoists it into the document `<head>`, and it becomes the browser tab title.
+   [ ] It renders as visible text exactly where you wrote it.
+   [ ] It is ignored unless you also write `document.title` in a `useEffect`.
+   [ ] It replaces the `#root` mount element.
+   ```
+
+3. Two different components each render their own `<title>` element at the same time. What happens?
+
+   ```{mcq}
+   Two components each render a different `<title>` element at the same time. What happens?
+   correct: Correct. Both titles are hoisted into the head, and the browser uses the first one, which can be unexpected.
+   wrong: Think about what the browser does when it finds more than one title element.
+   [x] Both titles are hoisted into the head and the browser uses the first one, which can be unexpected.
+   [ ] React throws an error and stops rendering the page.
+   [ ] React merges the two titles into one combined string.
+   [ ] The second title always wins over the first.
+   ```
+
+## Resources
+
+- [MDN: &lt;title&gt; element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/title)
+- [MDN: &lt;meta&gt; element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/meta)
+- [React Docs: &lt;title&gt;](https://react.dev/reference/react-dom/components/title)
+- [React Docs: &lt;meta&gt;](https://react.dev/reference/react-dom/components/meta)

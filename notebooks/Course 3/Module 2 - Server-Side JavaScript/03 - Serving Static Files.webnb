@@ -1,0 +1,435 @@
+# Serving Static Files
+
+Hardcoded text was fine for proving that a server works. Real sites send HTML, CSS, JavaScript, and images that live in files. Files that are sent as they are, without being generated per request, are called **static files**, and a server that sends them is a **static file server**.
+
+Two more built-in Node modules:
+
+```javascript
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+```
+
+- **`fs`**, the file system module, reads files from disk. This is a thing browsers deliberately cannot do; it is available because we are in Node.
+- **`path`** builds and inspects file paths, as in Module 1.
+
+## Finding the File
+
+```javascript
+const filePath = path.join(__dirname, 'sample-static-page', 'about.html');
+```
+
+`path.join` glues path pieces together, and `__dirname` is the full directory containing the current file. Together they give an absolute path that is right wherever the project is checked out, which is the same reasoning as the Webpack `output.path` in Module 1.
+
+## Reading It
+
+```javascript
+fs.readFile(filePath, 'utf8', (error, content) => {
+  console.log(content);
+});
+```
+
+Three arguments:
+
+- the path to read,
+- an **encoding**, and
+- a callback that runs when the read finishes.
+
+`'utf8'` means "interpret the bytes as plain text", which is why `content` arrives as a string you can log. Encodings get a proper treatment in [Module 4](<../Module 4 - Internationalization and Accessibility/02 - UTF-8 and Character Encodings.webnb>); for now it is the difference between a string and raw bytes.
+
+The callback takes **`(error, content)`** in that order. That argument order is a Node convention you will see everywhere: the failure first, the result second. If the read worked, `error` is `null`; if it failed, `error` is an object describing what went wrong and `content` is undefined.
+
+Now serve it:
+
+```javascript
+const server = http.createServer((request, response) => {
+  const filePath = path.join(__dirname, 'sample-static-page', 'about.html');
+
+  fs.readFile(filePath, 'utf8', (error, content) => {
+    response.writeHead(200, { 'Content-Type': 'text/html' });
+    response.end(content);
+  });
+});
+```
+
+Note `text/html` rather than `text/plain`. Send HTML as plain text and the browser shows you the tags.
+
+## Serving What Was Asked For
+
+That server sends `about.html` no matter what you request. The URL already tells us what the client wants:
+
+```javascript
+const server = http.createServer((request, response) => {
+  let url = request.url;
+
+  if (url === '/') {
+    url = 'index.html';
+  }
+
+  const filePath = path.join(__dirname, 'sample-static-page', url);
+
+  // read and respond
+});
+```
+
+The special case for `/` matters: a request for the root of a site does not name a file, and by convention it means `index.html`.
+
+Now load `index.html` in a browser with the Network tab open and watch what the server gets asked for:
+
+```
+index.html      <- you asked for this
+styles.css      <- because index.html links to it
+script.js       <- because index.html has a script tag
+cat.jpg         <- because index.html has an img
+```
+
+You made one request; the page's contents caused four. And clicking a button that sets an image's `src` to `dog.jpg` produces a fifth, right then. This is the request waterfall every page produces, and being able to watch it is one of the more useful things about writing your own server.
+
+## The Content Type Has to Match the File
+
+Serving everything as `text/html` breaks as soon as a stylesheet arrives. The browser complains:
+
+```
+Resource interpreted as Stylesheet but transferred with MIME type text/html
+```
+
+and the page loses its styling. The stylesheet was delivered perfectly; the browser was told it was HTML and refused to treat it as CSS.
+
+The fix is to pick the content type from the file's extension, which `path.extname` gives us:
+
+```javascript
+function getContentType(filePath) {
+  const extension = path.extname(filePath);
+
+  if (extension === '.css') {
+    return 'text/css';
+  } else if (extension === '.js') {
+    return 'text/javascript';
+  } else if (extension === '.jpg') {
+    return 'image/jpeg';
+  }
+
+  return 'text/html';
+}
+```
+
+Pulling that out as a function keeps the handler readable, and the list grows as you support more file types. (The video says `image/jpg`, which browsers tolerate; `image/jpeg` is the official name for the type.)
+
+## Text and Binary Are Not the Same
+
+With content types fixed, the CSS and JavaScript work and the image is **broken**.
+
+The cause is the `'utf8'` we passed to `readFile`. A JPEG is not text. Asking Node to interpret its bytes as characters corrupts them, and what reaches the browser is not a valid image. Leaving the encoding out gives us the raw bytes instead:
+
+```javascript
+fs.readFile(filePath, (error, content) => {
+  // content is raw data, suitable for any file type
+});
+```
+
+`response.end` is happy to send those bytes, and the image appears. This is why the encoding argument is optional, and it is why real static servers leave it off.
+
+## Handling a Missing File
+
+Request `xyz.html`, which does not exist, and the current server does nothing at all: `readFile` reports an error, we ignore it, we never respond, and the browser hangs.
+
+Check the error, as the callback's argument order invites you to:
+
+```javascript
+fs.readFile(filePath, (error, content) => {
+  if (error) {
+    response.writeHead(404, { 'Content-Type': 'text/plain' });
+    response.end('404 Not Found');
+  } else {
+    response.writeHead(200, { 'Content-Type': getContentType(filePath) });
+    response.end(content);
+  }
+});
+```
+
+Treating every read failure as a 404 is a simplification: the file could exist and be unreadable, which is really a 403 or a 500. You could inspect `error.code` to tell those apart. Answering something is the important part.
+
+## The Whole Thing
+
+```javascript
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+function getContentType(filePath) {
+  const extension = path.extname(filePath);
+
+  if (extension === '.css') {
+    return 'text/css';
+  } else if (extension === '.js') {
+    return 'text/javascript';
+  } else if (extension === '.jpg') {
+    return 'image/jpeg';
+  }
+
+  return 'text/html';
+}
+
+const server = http.createServer((request, response) => {
+  let url = request.url;
+
+  if (url === '/') {
+    url = 'index.html';
+  }
+
+  const filePath = path.join(__dirname, 'sample-static-page', url);
+
+  fs.readFile(filePath, (error, content) => {
+    if (error) {
+      response.writeHead(404, { 'Content-Type': 'text/plain' });
+      response.end('404 Not Found');
+    } else {
+      response.writeHead(200, { 'Content-Type': getContentType(filePath) });
+      response.end(content);
+    }
+  });
+});
+
+server.listen(3000, () => {
+  console.log('Listening on port 3000');
+});
+```
+
+Forty lines, and it is a real web server. Static servers like this one deliver a large fraction of everything on the internet.
+
+## Running It Yourself
+
+That file is `demo-server/static-server.js`, next to this notebook, and the page it serves is in `demo-server/sample-static-page/`:
+
+```{walkthrough}
+title: demo-server/static-server.js and the page it serves
+file: demo-server/static-server.js
+region: content-type
+The content type is chosen from the file's extension, so one function covers every kind of file the server sends.
+@"return 'text/html'": The fallback. Anything not listed above is sent as HTML, which is wrong for a file type you forgot to add, and is a reasonable default while the list is short.
+
+step: Turning a URL into a file path
+file: demo-server/static-server.js
+region: url
+@"url = 'index.html'": A request for the root of a site does not name a file. By convention it means `index.html`.
+@"path.join": `__dirname` is the directory this file is in, so the server finds its files no matter which directory you started it from. Try starting it from somewhere else and it still works.
+
+step: Reading and answering
+file: demo-server/static-server.js
+region: read
+There is no encoding argument, so `content` arrives as raw bytes. That is what lets the same three lines serve an image as correctly as they serve HTML.
+@"if (error)": Every path through this callback answers the request. Delete the `error` branch and a request for a file that does not exist leaves the browser waiting forever.
+
+step: The page being served
+file: demo-server/sample-static-page/index.html
+One page, and it asks for two more files.
+@"link": Loading this page causes a second request, for `styles.css`.
+@"script": And a third, for `script.js`. You made one request; the page's contents made two more.
+```
+
+Run it, stopping any other server on port 3000 first:
+
+```
+$ cd "demo-server"
+$ node static-server.js
+Listening on port 3000
+```
+
+Open `http://localhost:3000` with the Network tab open. Three requests are listed for one page load, each with the content type this server chose for it. Then try these:
+
+1. Visit `http://localhost:3000/styles.css` directly. The stylesheet comes back as text, served as `text/css`.
+2. Visit `http://localhost:3000/xyz.html`. The `404` branch answers.
+3. In `getContentType`, change the `.css` return value to `'text/html'`, restart the server, and reload the page. The styling disappears and the console complains about the MIME type, exactly as described above. Put it back afterwards.
+4. Add a `.jpg` image to `sample-static-page/`, link it from `index.html`, and reload. Then add `'utf8'` back as the second argument to `readFile` and reload again to see the image break while the text keeps working.
+
+## Exercises
+
+The notebook runtime has no `fs` module, since there is no file system to read, so these exercises use a stand-in `readFile` over a pretend disk. `path` is real.
+
+1. Write `getContentType`, using the file's extension to choose a content type.
+
+    ```{node}
+    const path = require('path');
+
+    function getContentType(filePath) {
+      // TODO: use path.extname(filePath) and return
+      //   '.css' -> 'text/css'
+      //   '.js'  -> 'text/javascript'
+      //   '.jpg' -> 'image/jpeg'
+      //   anything else -> 'text/html'
+    }
+
+    console.log(getContentType('/site/styles.css'));
+    ```
+    ```+solution
+    const path = require('path');
+
+    function getContentType(filePath) {
+      const extension = path.extname(filePath);
+
+      if (extension === '.css') {
+        return 'text/css';
+      } else if (extension === '.js') {
+        return 'text/javascript';
+      } else if (extension === '.jpg') {
+        return 'image/jpeg';
+      }
+
+      return 'text/html';
+    }
+
+    console.log(getContentType('/site/styles.css'));
+    ```
+    ```+test
+    wrap(getContentType('/site/styles.css')).should('equal', 'text/css').run('A `.css` file should be served as `text/css`', 'Handled stylesheets');
+    wrap(getContentType('/site/script.js')).should('equal', 'text/javascript').run('A `.js` file should be served as `text/javascript`', 'Handled scripts');
+    wrap(getContentType('/site/cat.jpg')).should('equal', 'image/jpeg').run('A `.jpg` file should be served as `image/jpeg`', 'Handled images');
+    wrap(getContentType('/site/index.html')).should('equal', 'text/html').run('Anything else should fall back to `text/html`', 'Handled the default');
+    ```
+
+2. Complete the handler. Treat a request for `/` as `index.html`, respond with the file's contents and the right content type, and answer a missing file with a 404.
+
+    ```{node}
+    const path = require('path');
+
+    // Stand-in for fs.readFile, over a pretend disk.
+    const disk = {
+      'index.html': '<h1>Home</h1>',
+      'styles.css': 'body { color: red; }'
+    };
+
+    function readFile(filePath, callback) {
+      if (disk[filePath]) {
+        callback(null, disk[filePath]);
+      } else {
+        callback(new Error('ENOENT: no such file'), null);
+      }
+    }
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      let url = request.url;
+
+      // TODO: turn '/' into 'index.html', read the file, and respond.
+      // On error: 404 with the body '404 Not Found'.
+      // On success: 200, a Content-Type from the extension, and the file contents.
+    }
+
+    const home = makeFakeResponse();
+    handleRequest({ url: '/' }, home);
+
+    console.log(home.statusCode + ' ' + home.body);
+    ```
+    ```+solution
+    const path = require('path');
+
+    // Stand-in for fs.readFile, over a pretend disk.
+    const disk = {
+      'index.html': '<h1>Home</h1>',
+      'styles.css': 'body { color: red; }'
+    };
+
+    function readFile(filePath, callback) {
+      if (disk[filePath]) {
+        callback(null, disk[filePath]);
+      } else {
+        callback(new Error('ENOENT: no such file'), null);
+      }
+    }
+
+    function makeFakeResponse() {
+      const sent = { statusCode: null, headers: null, body: '' };
+
+      sent.writeHead = function (code, headers) {
+        sent.statusCode = code;
+        sent.headers = headers;
+      };
+
+      sent.end = function (text) {
+        sent.body = text;
+      };
+
+      return sent;
+    }
+
+    function handleRequest(request, response) {
+      let url = request.url;
+
+      if (url === '/') {
+        url = 'index.html';
+      }
+
+      readFile(url, (error, content) => {
+        if (error) {
+          response.writeHead(404, { 'Content-Type': 'text/plain' });
+          response.end('404 Not Found');
+        } else {
+          let contentType = 'text/html';
+
+          if (path.extname(url) === '.css') {
+            contentType = 'text/css';
+          }
+
+          response.writeHead(200, { 'Content-Type': contentType });
+          response.end(content);
+        }
+      });
+    }
+
+    const home = makeFakeResponse();
+    handleRequest({ url: '/' }, home);
+
+    console.log(home.statusCode + ' ' + home.body);
+    ```
+    ```+test
+    wrap(home.statusCode).should('equal', 200).run('A request for `/` should succeed with `200`', 'The home page returns 200');
+    wrap(home.body).should('equal', '<h1>Home</h1>').run('A request for `/` should send the contents of `index.html`', 'Mapped / to index.html');
+    wrap(home.headers && home.headers['Content-Type']).should('equal', 'text/html').run('`index.html` should be sent as `text/html`', 'Set the content type for HTML');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ url: 'styles.css' }, r); return r.statusCode + '|' + (r.headers && r.headers['Content-Type']); })()).should('equal', '200|text/css').run('A request for `styles.css` should succeed and be sent as `text/css`, chosen from the extension', 'Set the content type for CSS');
+    wrap((function () { const r = makeFakeResponse(); handleRequest({ url: 'nope.html' }, r); return r.statusCode + '|' + r.body; })()).should('equal', '404|404 Not Found').run('A file that is not on the disk should get `404` and the body `404 Not Found`. Check the callback\'s `error` argument', 'Handled the missing file');
+    ```
+
+3. What does the `'utf8'` argument to `fs.readFile(filePath, 'utf8', callback)` do?
+
+    ```{mcq}
+    What is the encoding argument for?
+    correct: Correct! It tells Node to interpret the file's bytes as text, so the callback receives a string. Leave it out and you get the raw bytes, which is what you want for an image.
+    wrong: Think about the difference between what you got for `about.html` and what happened to `cat.jpg`.
+    [x] It tells Node to interpret the file's bytes as readable plain text
+    [ ] It encrypts the file so that it cannot be read in transit
+    [ ] It compresses the file so it sends faster
+    [ ] It translates the HTML into other languages
+    ```
+
+4. Your HTML loads, but the page has no styling, and the console says `Resource interpreted as Stylesheet but transferred with MIME type text/html`. What fixes it?
+
+    ```{mcq}
+    The CSS file arrived intact. What went wrong, and what is the fix?
+    correct: Correct! The file was fine and the header was wrong. Choose the content type from the file's extension so a `.css` file is announced as `text/css`.
+    wrong: The browser is telling you what it was *told* the file was. Where does that information come from?
+    [x] Use `path.extname(filePath)` to detect `.css` and send `Content-Type: text/css`
+    [ ] Rename the file to `styles.html`
+    [ ] Delete `styles.css` and move the CSS inside the HTML file
+    [ ] Restart the computer to clear the cache
+    ```
+
+## Resources
+
+- [Node.js: fs.readFile()](https://nodejs.org/api/fs.html#fsreadfilepath-options-callback)
+- [Node.js: path.extname()](https://nodejs.org/api/path.html#pathextnamepath)
+- [MDN: MIME types](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/MIME_types)
+- [MDN: Content-Type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Type)

@@ -1,0 +1,383 @@
+# Authentication with Passport
+
+We have written registration, login, hashing, sessions, and logout by hand. Now we throw most of it away and use libraries, which is what you should do in real work. This reading is the written companion to **two** videos: "Express.js", which introduces the library that makes servers less repetitive, and "Local Authentication with Passport", which rebuilds our auth server on top of it. There is a stage for each: `auth-demo/06-express/` and `auth-demo/07-passport/`.
+
+## Part One: Express
+
+Everything we wrote with `http.createServer` worked and involved a lot of repetition. **Express** is a popular Node library that removes most of it.
+
+In the video this was a fresh project: `npm init -y` to create a `package.json` with the defaults, then `npm install express` to add the dependency. (In `auth-demo`, Express is already in the shared `package.json`.) A complete Express server is this short:
+
+```javascript
+import express from 'express';
+
+const app = express();
+
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
+
+app.listen(3000, () => {
+  console.log('Listening on port 3000');
+});
+```
+
+`express()` creates the app, our name for the server. **`app.get(path, handler)`** registers a handler for one method and one path, which is the routing we were doing by hand with `if (req.method === 'GET')` chains, and `app.listen` works the same way `server.listen` did. (The Express documentation writes `require('express')`; our project uses `import`, which Express supports equally well.)
+
+### Middleware
+
+**`app.use(...)`** installs a function that runs on requests generally, rather than for one route. Such a function is called **middleware**, and Express comes with several. The whole static-file server from Module 2, with its `fs.readFile`, content types, and 404 handling, becomes:
+
+```javascript
+app.use(express.static('sample-static-page'));
+```
+
+Middleware functions run in the order they were installed, each one seeing what the previous ones did to the request. That ordering is a real rule, not a detail, and you can watch it work:
+
+```{javascript autorun}
+// A miniature app.use: middleware runs in the order installed.
+const installed = [];
+
+function use(middlewareFunction) {
+  installed.push(middlewareFunction);
+}
+
+function handle(request) {
+  for (const middlewareFunction of installed) {
+    middlewareFunction(request);
+  }
+
+  console.log('the handler sees: ' + JSON.stringify(request));
+}
+
+// Parses the raw body, the way express.json() does.
+use((request) => {
+  request.body = JSON.parse(request.rawBody);
+});
+
+// A later middleware can rely on what an earlier one added.
+use((request) => {
+  request.emailProvided = request.body.email !== undefined;
+});
+
+handle({ rawBody: '{"email":"soney@umich.edu"}' });
+```
+
+Try swapping the two `use` calls. The second middleware now runs first, reads `request.body` before anything has created it, and throws. Installation order is execution order, which is why the real `express.json()` has to be installed before anything that reads `request.body`.
+
+### The Grocery Search, Rebuilt
+
+The video's demonstration rebuilt a server you have already met: the [Module 2 grocery search](<../Module 2 - Server-Side JavaScript/07 - Handling Query Parameters.webnb>). Here is the whole thing, which is rather the point:
+
+```{walkthrough}
+title: auth-demo/06-express/server.js
+file: auth-demo/06-express/server.js
+region: whole-server
+One screen of code where the hand-built version needed the routing chain, the file serving, and the content-type table.
+@"const app = express()": Calling the imported function creates the app.
+@"express.static": The one-line static server. It resolves the folder, reads the files, works out each content type, and answers 404s, all of which we once wrote ourselves.
+@"req.query.query": Express parses the query string for you: `?query=groceries&maxPrice=5` becomes the object `req.query`, so the parameter named `query` is `req.query.query`. No `new URL(...)`, no `searchParams.get(...)`.
+@"Number(": Query parameters arrive as strings, exactly as before; converting is still our job.
+@"for (const product": The search logic itself is copied from the Module 2 server, untouched. Express replaced the plumbing, not the thinking.
+@"res.json": Sets the content type and stringifies in one call, replacing the manual `JSON.stringify` and header.
+@"app.listen": The same shape as `server.listen`, at the same port.
+```
+
+Express also has `app.post`, `app.put`, `app.delete`, and route parameters, written like `app.post('/user/:id', ...)`, where the handler reads `req.params.id`. We will not need those today; the documentation covers them.
+
+None of this is new capability. It is the same HTTP with less typing, which is why almost every Node server you meet uses it, and why several libraries build on top of it. Including the one this lesson is named after.
+
+## Part Two: Passport
+
+**Passport** is a popular authentication library that builds on Express. Its central idea is the **strategy**: a plug-in for one way of authenticating. There are strategies for username-and-password, for Google, Facebook, and Microsoft, and hundreds more, and they are all configured the same way as each other. Ours is the username-and-password one, called the **local** strategy.
+
+Three installs joined `package.json` for this stage: `express-session`, `passport`, and `passport-local`.
+
+`auth-demo/07-passport/` is the stage-5 server rebuilt on all of this. The lowdb database, bcrypt, and the registration logic survive untouched; everything we wrote about sessions and cookies disappears into the libraries.
+
+```{walkthrough}
+title: Setting Passport up
+step: The middleware stack
+file: auth-demo/07-passport/server.js
+region: middleware
+Four `app.use` calls replace stages 4 and 5's sessions object, cookie parsing, and Set-Cookie headers.
+@"app.use(session": `express-session`, doing everything our `sessions` object and `parseCookies` did: it invents the ID, sets the cookie, and matches it back to server-side data on every request.
+@"resave": These two options must be passed; `false` is the sensible default for both, and the details are beyond what we need.
+@"secret:": Cookies from `express-session` are **signed** with this: the server attaches a value derived from the secret and verifies it on the way back, proving the cookie is one it issued rather than one someone invented. In real code this is a long random string kept out of your source; the placeholder's name says so.
+@"passport.initialize": Turns Passport on.
+@"passport.session()": Lets Passport recognize a logged-in user from the session, so `req.user` exists on later requests.
+@"express.json": Parses JSON request bodies, which is the whole `req.on('data')` and `JSON.parse` dance from stages 1 through 5 replaced by one line: the parsed body arrives as `req.body`. Installed here, before the routes below, because middleware runs in installation order and the login route needs the parsed body.
+
+step: The local strategy
+file: auth-demo/07-passport/server.js
+region: strategy
+The strategy is where our own logic goes. Compare this with stage 5's login endpoint: the database read, the case-insensitive `find`, and the `bcrypt.compare` are copied over exactly. What changed is only the ending.
+@"usernameField": Passport assumes the credential is called `username` unless told otherwise; ours has always been `email`.
+@"async (email, password, done)": The verify function. Passport hands it the credentials plus `done`, the function to report the verdict with. `done` takes an error first and a user second, the same order as Node's `fs` callbacks.
+@"done(null, foundUser)": Authenticated: no error, and here is the user.
+@"incorrect password": Not authenticated: no error, and `false` instead of a user.
+@"never found the user": The identical `done(null, false)` for an unknown email. A wrong password and a missing account are indistinguishable from outside, which is the account-enumeration lesson from the login reading, now enforced by the shape of the API.
+
+step: What a session remembers
+file: auth-demo/07-passport/server.js
+region: serialize
+This is the pair people find confusing, so to be plain: it has nothing to do with passwords or encryption. It is "which piece of the user do we write down" and "how do we look them up again from it".
+@"serializeUser": On login, Passport asks what to keep in the session. We keep the smallest thing that identifies the user: the email. Storing an identifier rather than the whole user keeps the session small and means it cannot go stale.
+@"deserializeUser": On every later request, the reverse: from the remembered email back to the full user, with the same case-insensitive lookup as everywhere else. Whatever this hands back becomes `req.user`.
+```
+
+With that in place, the routes are almost empty:
+
+```{walkthrough}
+title: The endpoints, almost empty
+step: The static pages
+file: auth-demo/07-passport/server.js
+region: static
+The same `static/` files as stage 5, byte for byte. The pages fetch `/register`, `/login`, `/logout`, and `/me` exactly as before, and nothing on the client can tell that the server underneath was replaced. That is what "same endpoints, new implementation" buys.
+
+step: Login
+file: auth-demo/07-passport/server.js
+region: login-route
+@"passport.authenticate('local')": Sitting between the path and our handler, this is middleware for one route: it runs the local strategy on the request's body. Our handler only runs if the strategy said `done(null, someUser)`; otherwise Passport answers `401` by itself, and the login page shows its message.
+
+step: Register
+file: auth-demo/07-passport/server.js
+region: register-route
+Registration is not authentication, so Passport stays out of it: this is stage 3's endpoint moved into Express.
+@"req.body": The one real change: `express.json()` already parsed the body, so the destructuring reads `req.body` instead of a hand-assembled string.
+@"res.writeHead(409": Worth noticing: an Express response is still the Node response underneath, so the old `writeHead` and `end` calls work unchanged. The Express idiom is `res.status(409).send(...)`, which `/me` below uses.
+
+step: Logout
+file: auth-demo/07-passport/server.js
+region: logout-route
+@"req.logout": Provided by Passport: it forgets the session and takes a callback to run once that is done. Compare stage 5's `delete sessions[...]` plus cookie expiry, now one call.
+
+step: Who am I
+file: auth-demo/07-passport/server.js
+region: me-route
+@"req.isAuthenticated": Also provided by Passport: true when the session identified a user.
+@"req.user.email": The user that `deserializeUser` looked up, on the request itself. Stage 4's cookie parsing and `sessions[sessionId]` lookup have become two properties.
+@"res.status(401)": The Express way to set a status code and answer in one chain.
+```
+
+We were able to replace much of the manual authentication code with Passport calls, and a large part of the benefit is that Passport now handles what we used to write by hand: the session lifecycle, the login state, the lookup on every request.
+
+## The Payoff: Other Login Methods
+
+The real payoff comes when you want "Sign in with Google". Because every Passport strategy has the same shape, adding one is not a rewrite: install `passport-google-oauth20`, register the strategy with `passport.use`, and add a pair of endpoints for Google to send the user back to. The strategy's verify function receives a Google **profile** instead of an email and password, and calls the very same `done`. Sessions, `/me`, and logout do not change at all. That is what the next video does.
+
+One new habit arrives with it. Google issues your app a **client ID** and a **client secret**, and the secret is a password for your application: it cannot be committed to a repository. The standard arrangement is a `.env` file that stays on the server and is listed in `.gitignore`:
+
+```
+GOOGLE_CLIENT_ID=your-client-id-here
+GOOGLE_CLIENT_SECRET=your-client-secret-here
+```
+
+Node loads it when started with `node --env-file=.env server.js`, and the values appear in your code as **`process.env.GOOGLE_CLIENT_ID`** and so on. `process.env` is the set of environment variables the program was started with: the standard way to give a program a secret without putting the secret in the program. (It is also the honest version of `secret: 'change-this-in-a-real-app'` above.)
+
+## Running It Yourself
+
+Both stages, from the `auth-demo` folder, one at a time (`Ctrl+C` between):
+
+```
+$ node 06-express/server.js
+Listening on port 3000
+```
+
+Search the groceries with a maximum price, with the browser console open (F12): the results arrive as JSON, exactly like the Module 2 version, from a fraction of the code.
+
+```
+$ node 07-passport/server.js
+Listening on port 3000
+```
+
+1. Register, log in, log out. The pages behave exactly as they did in stage 5, which is the point.
+2. Look at the cookies in the developer tools. The badge is now named `connect.sid`, `express-session`'s default, and its value is signed. You did not write a line of cookie code.
+3. Try a wrong password. The `401` now comes from `passport.authenticate` itself; our handler never ran.
+
+## Exercises
+
+1. Rewrite this search endpoint as an Express route.
+
+    ```{node}
+    const products = [
+      { name: 'eggs', price: 2.49 },
+      { name: 'apples', price: 1.99 },
+      { name: 'salmon', price: 9.99 }
+    ];
+
+    // Stand-ins for what Express passes to a route handler.
+    const request = { query: { maxPrice: '2' } };
+
+    let sentJson = null;
+    const response = { json: function (value) { sentJson = value; } };
+
+    function search(request, response) {
+      const searchResponse = { results: [] };
+
+      // TODO: read maxPrice from the query as a number, collect the names of
+      // products at or below it, and send the object back as JSON
+    }
+
+    search(request, response);
+
+    console.log(sentJson);
+    ```
+    ```+solution
+    const products = [
+      { name: 'eggs', price: 2.49 },
+      { name: 'apples', price: 1.99 },
+      { name: 'salmon', price: 9.99 }
+    ];
+
+    // Stand-ins for what Express passes to a route handler.
+    const request = { query: { maxPrice: '2' } };
+
+    let sentJson = null;
+    const response = { json: function (value) { sentJson = value; } };
+
+    function search(request, response) {
+      const searchResponse = { results: [] };
+
+      const maxPrice = Number(request.query.maxPrice);
+
+      for (const product of products) {
+        if (product.price <= maxPrice) {
+          searchResponse.results.push(product.name);
+        }
+      }
+
+      response.json(searchResponse);
+    }
+
+    search(request, response);
+
+    console.log(sentJson);
+    ```
+    ```+test
+    wrap(sentJson).should('equal', { results: ['apples'] }).run('Only `apples` is at or below 2. Read the parameter with `request.query.maxPrice`', 'Filtered the products');
+    wrap(/request\.query\.maxPrice/.test(source)).should('equal', true).run('In Express, query parameters are on `request.query`', 'Used request.query');
+    wrap(/response\.json\s*\(/.test(source)).should('equal', true).run('Send the object with `response.json(...)`, which sets the content type and stringifies for you', 'Used response.json');
+    wrap(/Number\s*\(/.test(source)).should('equal', true).run('Query values are strings, so convert with `Number(...)` before comparing', 'Converted the parameter');
+    ```
+
+2. Complete the local strategy's verify function.
+
+    ```{node}
+    const users = [
+      { email: 'grace@example.com', passwordHash: 'hashed(letmein)' }
+    ];
+
+    // Stands in for bcrypt.compare.
+    function compare(password, storedHash) {
+      return Promise.resolve(storedHash === 'hashed(' + password + ')');
+    }
+
+    async function verify(email, password, done) {
+      const foundUser = users.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase()
+      );
+
+      // TODO: call done with no error and the user when the password matches.
+      // Call done with no error and false when the user is unknown or the
+      // password is wrong.
+    }
+
+    verify('grace@example.com', 'letmein', (error, user) => {
+      console.log('authenticated as ' + (user ? user.email : 'nobody'));
+    });
+    ```
+    ```+solution
+    const users = [
+      { email: 'grace@example.com', passwordHash: 'hashed(letmein)' }
+    ];
+
+    // Stands in for bcrypt.compare.
+    function compare(password, storedHash) {
+      return Promise.resolve(storedHash === 'hashed(' + password + ')');
+    }
+
+    async function verify(email, password, done) {
+      const foundUser = users.find(
+        (user) => user.email.toLowerCase() === email.toLowerCase()
+      );
+
+      if (!foundUser) {
+        return done(null, false);
+      }
+
+      const match = await compare(password, foundUser.passwordHash);
+
+      if (!match) {
+        return done(null, false);
+      }
+
+      return done(null, foundUser);
+    }
+
+    verify('grace@example.com', 'letmein', (error, user) => {
+      console.log('authenticated as ' + (user ? user.email : 'nobody'));
+    });
+    ```
+    ```+test
+    wrap(/done\s*\(\s*null\s*,\s*false\s*\)/.test(source)).should('equal', true).run('A failed attempt is `done(null, false)`: no error, and no user', 'Reported failure correctly');
+    wrap(/done\s*\(\s*null\s*,\s*foundUser\s*\)/.test(source)).should('equal', true).run('A successful attempt is `done(null, foundUser)`', 'Reported success correctly');
+    wrap(/await\s+compare\s*\(/.test(source)).should('equal', true).run('`compare` returns a promise, so `await` it', 'Waited for the comparison');
+    wrap((source.match(/done\s*\(\s*null\s*,\s*false\s*\)/g) || []).length).should('equal', 2).run('Both failures, an unknown user and a wrong password, should produce the same `done(null, false)`, so that neither can be told from the other', 'Gave nothing away');
+    ```
+
+3. In Express, what replaces `parsedUrl.searchParams.get('query')`?
+
+    ```{mcq}
+    How do you read a query parameter called `query` in Express?
+    correct: Correct! Express parses the query string for you and puts the result on `request.query`, so a parameter named `query` is `request.query.query`.
+    wrong: Express gives you the parameters as an object. What is the object, and how do you get one parameter out of it?
+    [x] `request.query.query`
+    [ ] `request.query`
+    [ ] `request.get('query')`
+    [ ] `request['query']`
+    ```
+
+4. What do `serializeUser` and `deserializeUser` do?
+
+    ```{mcq}
+    Which description is right?
+    correct: Correct! `serializeUser` chooses what identifying value to keep in the session, and `deserializeUser` turns that value back into the full user on later requests.
+    wrong: Neither one touches passwords. Think about what has to be written into a session, and what has to happen on the next request.
+    [x] `serializeUser` chooses what to store in the session; `deserializeUser` turns that back into a user object
+    [ ] `serializeUser` hashes the password and `deserializeUser` unhashes it
+    [ ] `serializeUser` converts server code into a string to send to the browser
+    [ ] They compress images and other large files
+    ```
+
+5. Your client secret is in a `.env` file. How do you read it in your code?
+
+    ```{mcq}
+    How do you get at an environment variable?
+    correct: Correct! Environment variables are on `process.env`, so a variable named `GOOGLE_CLIENT_ID` is `process.env.GOOGLE_CLIENT_ID`.
+    wrong: The values are properties of an object the program is given when it starts.
+    [x] `process.env.GOOGLE_CLIENT_ID`
+    [ ] `process.env.get('GOOGLE_CLIENT_ID')`
+    [ ] `import.env.GOOGLE_CLIENT_ID`
+    [ ] `require('.env').GOOGLE_CLIENT_ID`
+    ```
+
+6. What is the main benefit of Passport?
+
+    ```{mcq}
+    What does using Passport actually buy you?
+    correct: Correct! It handles the session and login boilerplate we wrote by hand, and because every strategy is configured the same way, adding Google or GitHub later does not disturb the code around it.
+    wrong: Think about both what it removed from our server and what it lets you add without a rewrite.
+    [x] It handles the session and login plumbing, and lets you add different login methods without rewriting the rest
+    [ ] It moves session management out of the server and into client-side cookies
+    [ ] It removes the need for an Express server
+    [ ] It builds the HTML and CSS for your login page
+    ```
+
+## Resources
+
+- [Express](https://expressjs.com/)
+- [Passport](https://www.passportjs.org/)
+- [passport-local](https://www.passportjs.org/packages/passport-local/)
+- [passport-google-oauth20](https://www.passportjs.org/packages/passport-google-oauth20/)
+- [Node.js: process.env](https://nodejs.org/api/process.html#processenv)

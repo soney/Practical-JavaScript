@@ -1,0 +1,250 @@
+# Using Loaders and Plugins
+
+Webpack understands JavaScript. A web application is more than JavaScript: it has HTML, CSS, images, and data files. Two mechanisms extend Webpack to cover the rest.
+
+- A **loader** teaches Webpack how to handle one *kind of file* when you import it.
+- A **plugin** adds functionality to the build as a whole.
+
+Before either: you do not need to memorize the configuration syntax on this page. Most developers copy an example or use a tool that generates it. What is worth understanding is what each part is *for*, so you can recognize and adjust one when you meet it.
+
+## Loaders
+
+Say you have a stylesheet:
+
+```css
+/* src/styles/page.css */
+body {
+  background-color: black;
+  color: white;
+}
+```
+
+You could link it from your HTML, as we have done since Course 1. With a loader, you can instead import it from JavaScript, next to the code that needs it:
+
+```javascript
+// src/index.js
+import './styles/page.css';
+```
+
+Note the `./`. It is a relative path to your own file, exactly as in Lesson 3, and leaving it off is a mistake that is easy to make and easy to miss.
+
+For that import to work, install two loaders:
+
+```
+$ npm install style-loader css-loader --save-dev
+```
+
+They do different halves of the job:
+
+- **`css-loader`** reads the `.css` file and turns it into something Webpack can treat as a module.
+- **`style-loader`** takes that and injects it into the page at run time, inside a `<style>` element.
+
+Then tell Webpack when to use them:
+
+```javascript
+// webpack.config.js
+module.exports = {
+  entry: './src/index.js',
+  module: {
+    rules: [
+      {
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader']
+      }
+    ]
+  }
+};
+```
+
+Reading the rule:
+
+- **`test`** is a regular expression matched against each file's name. `/\.css$/i` means "ends with `.css`", where `$` anchors it to the end and `i` makes it case insensitive, so `PAGE.CSS` matches too.
+- **`use`** lists the loaders to run. The list is applied **from the end backwards**: `css-loader` runs first, because something has to read the file before anything can inject it, and `style-loader` runs on its output. That is why the order looks reversed.
+
+Run `npx webpack` and the page's background is black, from a stylesheet that no HTML file ever mentioned.
+
+CSS is only the common case. There are loaders for images, for data formats, and for translating other languages into JavaScript.
+
+## How a Rule Gets Matched
+
+The matching itself is not complicated, and seeing it run makes the configuration less opaque:
+
+```{javascript autorun}
+const rules = [
+  { test: /\.css$/i, use: ['style-loader', 'css-loader'] },
+  { test: /\.png$/i, use: ['file-loader'] }
+];
+
+function loadersFor(fileName) {
+  for (const rule of rules) {
+    if (rule.test.test(fileName)) {
+      return rule.use;
+    }
+  }
+
+  return ['(handled as JavaScript)'];
+}
+
+console.log('page.css  -> ' + loadersFor('page.css'));
+console.log('PAGE.CSS  -> ' + loadersFor('PAGE.CSS'));
+console.log('logo.png  -> ' + loadersFor('logo.png'));
+console.log('index.js  -> ' + loadersFor('index.js'));
+```
+
+## Plugins
+
+A loader handles one file at a time. A plugin can do things to the build as a whole.
+
+In the previous readings we wrote an `index.html` by hand with a `<script src="dist/main.js">` tag in it. That is a small piece of duplication waiting to break: rename the output in the configuration and the HTML is silently wrong. **`html-webpack-plugin`** removes it by generating the HTML for you.
+
+```
+$ npm install html-webpack-plugin --save-dev
+```
+
+```javascript
+// webpack.config.js
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+module.exports = {
+  entry: './src/index.js',
+  plugins: [
+    new HtmlWebpackPlugin()
+  ]
+};
+```
+
+Requiring the plugin and then creating one with `new` is the usual pattern: `plugins` is a list of plugin *instances*, each configured with its own options.
+
+Run the build and `dist/index.html` appears, already containing a script tag pointing at the bundle. Rename the bundle later and the generated HTML follows, because it is generated from the same configuration.
+
+By default the page is otherwise empty, which is rarely what you want. Give the plugin a **template** and it uses your file as the starting point:
+
+```html
+<!-- src/index.html -->
+<body>
+  <h1>Hello, webpack!</h1>
+</body>
+```
+
+```javascript
+  plugins: [
+    new HtmlWebpackPlugin({
+      template: './src/index.html'
+    })
+  ]
+```
+
+Now `dist/index.html` has your heading *and* the generated script tag.
+
+Templates can also take values from the configuration, using a placeholder syntax:
+
+```html
+<title><%= htmlWebpackPlugin.options.title %></title>
+```
+
+```javascript
+    new HtmlWebpackPlugin({
+      template: './src/index.html',
+      title: 'Specified in webpack.config.js'
+    })
+```
+
+That is two of a very large number of loaders and plugins. The ecosystem is most of the reason Webpack is used as widely as it is: whatever kind of file or build step you need, the mechanism for adding it already exists.
+
+## Exercises
+
+1. Add a rule so that any file ending in `.css`, whatever its capitalization, is handled by the two CSS loaders in the working order.
+
+    ```{javascript}
+    const rule = {
+      // Write the test and use properties here
+    };
+
+    console.log(rule);
+    ```
+    ```+solution
+    const rule = {
+      test: /\.css$/i,
+      use: ['style-loader', 'css-loader']
+    };
+
+    console.log(rule);
+    ```
+    ```+test
+    wrap(rule.test instanceof RegExp).should('equal', true).run('`test` should be a regular expression', 'Used a regular expression');
+    wrap(rule.test.test('page.css')).should('equal', true).run('It should match `page.css`', 'Matched a css file');
+    wrap(rule.test.test('page.CSS')).should('equal', true).run('Add the `i` flag so it matches `page.CSS` too', 'Matched case insensitively');
+    wrap(rule.test.test('page.css.js')).should('equal', false).run('Anchor it with `$` so it only matches names that *end* in `.css`', 'Anchored to the end of the name');
+    wrap(rule.use).should('equal', ['style-loader', 'css-loader']).run('`use` should list `style-loader` then `css-loader`. The list runs from the end backwards, so `css-loader` reads the file first', 'Listed the loaders in the right order');
+    ```
+
+2. Complete `loadersFor` so it returns the loaders configured for a file name.
+
+    ```{javascript}
+    const rules = [
+      { test: /\.css$/i, use: ['style-loader', 'css-loader'] },
+      { test: /\.png$/i, use: ['file-loader'] }
+    ];
+
+    function loadersFor(fileName) {
+      // TODO: return the use list of the first rule whose test matches fileName
+
+      return ['(handled as JavaScript)'];
+    }
+
+    console.log(loadersFor('page.css'));
+    ```
+    ```+solution
+    const rules = [
+      { test: /\.css$/i, use: ['style-loader', 'css-loader'] },
+      { test: /\.png$/i, use: ['file-loader'] }
+    ];
+
+    function loadersFor(fileName) {
+      for (const rule of rules) {
+        if (rule.test.test(fileName)) {
+          return rule.use;
+        }
+      }
+
+      return ['(handled as JavaScript)'];
+    }
+
+    console.log(loadersFor('page.css'));
+    ```
+    ```+test
+    wrap(loadersFor('page.css')).should('equal', ['style-loader', 'css-loader']).run('A `.css` file should get the two CSS loaders. Use `rule.test.test(fileName)` to check a rule', 'Matched the css rule');
+    wrap(loadersFor('logo.png')).should('equal', ['file-loader']).run('A `.png` file should get `file-loader`', 'Matched the png rule');
+    wrap(loadersFor('index.js')).should('equal', ['(handled as JavaScript)']).run('A file matching no rule should fall through to the default', 'Fell through for JavaScript');
+    ```
+
+3. `css-loader` and `style-loader` are both needed. What does each one do?
+
+    ```{mcq}
+    Two loaders, two jobs. Which is which?
+    correct: Correct! One reads the file so Webpack can treat it as a module, and the other puts the resulting CSS into the page at run time. Neither does the other's job, which is why you install both.
+    wrong: One of them has to turn a file into something Webpack understands. The other has to get the CSS onto the page.
+    [x] `css-loader` lets Webpack read the CSS as a module, and `style-loader` injects it into the page in a `<style>` element
+    [ ] `css-loader` makes text bigger and `style-loader` changes colors
+    [ ] `style-loader` is for modern browsers and `css-loader` is for older ones
+    [ ] They do the same thing, and the second is a backup
+    ```
+
+4. What is the difference between a loader and a plugin?
+
+    ```{mcq}
+    How do the two mechanisms differ in scope?
+    correct: Correct! A loader is attached to a file type and transforms matching files as they are brought in. A plugin acts on the build itself, which is why generating an HTML file is a plugin's job rather than a loader's.
+    wrong: Think about what each one is pointed at: a kind of file, or the build as a whole?
+    [x] Loaders handle individual file types during bundling; plugins perform wider tasks on the whole build
+    [ ] Loaders are for small files and plugins are for large ones
+    [ ] Loaders are free and plugins are paid
+    [ ] Loaders are written in JavaScript and plugins in HTML
+    ```
+
+## Resources
+
+- [Webpack: loaders](https://webpack.js.org/concepts/loaders/)
+- [Webpack: plugins](https://webpack.js.org/concepts/plugins/)
+- [Webpack: HtmlWebpackPlugin](https://webpack.js.org/plugins/html-webpack-plugin/)
+- [MDN: regular expressions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions)

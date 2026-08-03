@@ -1,0 +1,127 @@
+# WCAG Guideline 2: Operable
+
+The second WCAG principle is **operable**: user interface components and navigation must be operable. In other words, users must be able to interact with and navigate your application using whatever input they have, including a keyboard, a mouse, a touch screen, voice control, or assistive technologies like a screen reader.
+
+Two common ways to meet this principle are to make all functionality available from a keyboard, and to give users enough time to read and use your content. This lesson covers keyboard access, focus, and writing link text that makes sense on its own.
+
+## Keyboard Access
+
+All functionality should be available from a keyboard. For example, a user should be able to press `Enter` to submit a form or press `Escape` to close a dialog.
+
+The best way to get this behavior is to use the right element for the job. A `<form>` with a submit button already responds to the `Enter` key with no extra code. When you build something the platform does not handle for you, you can attach a manual event listener to respond to those keys:
+
+```javascript
+dialog.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeDialog();
+  }
+});
+```
+
+This ties into WCAG success criterion 2.1.1: all functionality of the content is operable through a keyboard interface, without requiring specific timings for individual keystrokes.
+
+## Use Native Controls
+
+Native HTML controls come with keyboard behavior built in.
+
+```{html}
+<button>Open menu</button>
+```
+
+A `<button>` can be reached with the `Tab` key and activated with `Enter` or `Space`, and a screen reader announces it as a button. A clickable `<div>` does not do any of that on its own. Start with the semantically correct element whenever possible.
+
+## Focus and Tab Order
+
+Only some element types are focusable by keyboard by default: links (`<a href>`), buttons, and form inputs. If you need to make another element focusable, you can add the `tabindex` attribute:
+
+```html
+<div tabindex="0">Now reachable with the keyboard</div>
+```
+
+- `tabindex="0"` puts the element into the natural tab order, after which it can receive keyboard focus.
+- A positive value like `tabindex="1"` forces a specific order, which is fragile and error-prone.
+
+Reach for `tabindex` sparingly. The better approach is to structure your HTML with the semantically appropriate elements (which are already focusable) and, if you need a different visual order, reorder them with CSS rather than overriding the tab order by hand.
+
+## Focus Must Be Visible
+
+Keyboard users need to see where focus currently is. The browser draws a focus outline for this reason. Do not remove focus outlines without replacing them with a clearly visible focus style, or keyboard users lose track of where they are on the page.
+
+```css
+button:focus-visible {
+  outline: 3px solid #1a73e8;
+}
+```
+
+## Descriptive Link Text
+
+Screen readers let users jump from link to link, and many users navigate a page that way. When they do, the reader announces only the link text, with no surrounding sentence for context.
+
+Compare these two versions:
+
+```html
+<!-- Weak: the link text is "Click here" -->
+Want to learn more about the School of Information? <a href="/si">Click here</a>.
+
+<!-- Strong: the descriptive phrase is the link -->
+<a href="/si">Learn more about the School of Information</a>.
+```
+
+When a screen reader lands on the first link, it reads "Click here," which tells the user nothing about where the link goes. The second link reads "Learn more about the School of Information," so its purpose is clear from the link text alone. This is WCAG success criterion 2.4.9: the purpose of each link should be identifiable from its link text.
+
+## Exercises
+
+1. What does the **operable** principle require?
+
+   ```{mcq}
+   What is this principle about?
+   correct: Correct. Operable means users can interact with and navigate the interface with whatever input they use, including the keyboard.
+   wrong: Think about keyboard access, focus, and navigation.
+   [x] Users can interact with and navigate the interface using their input method, including the keyboard.
+   [ ] The page must only support a mouse.
+   [ ] Interactive elements should never be focusable.
+   [ ] Every form should submit automatically.
+   ```
+
+2. Replace the clickable `div` with a real button that says `Open menu`, so it is keyboard focusable and activatable by default.
+
+   ```{html}
+   <div>Open menu</div>
+   ```
+   ```+solution
+   <button>Open menu</button>
+   ```
+   ```+test
+   assert('button').should('have.text', 'Open menu').run('Use a native <button> element with the text "Open menu"', 'Used a native button');
+   ```
+
+3. This link uses vague text. Rewrite it so the link text is the descriptive phrase `Learn more about the School of Information` instead of `Click here`.
+
+   ```{html}
+   <p>Want to learn more? <a href="/si">Click here</a>.</p>
+   ```
+   ```+solution
+   <p><a href="/si">Learn more about the School of Information</a>.</p>
+   ```
+   ```+test
+   assert('a').should('have.text', 'Learn more about the School of Information').run('Make the link text the descriptive phrase, not "Click here"', 'The link text is descriptive on its own');
+   ```
+
+4. Why is `Click here` a poor choice for link text?
+
+   ```{mcq}
+   What does a screen reader user hear when jumping between links?
+   correct: Correct. Screen reader users often navigate link to link, and "Click here" gives no context about where the link goes.
+   wrong: Think about a screen reader user jumping from link to link, hearing only the link text.
+   [x] When a screen reader reads the link text alone, "Click here" gives no clue about the link's destination.
+   [ ] Links are not allowed to contain the word "here".
+   [ ] "Click here" prevents the link from being clicked.
+   [ ] Descriptive link text is only relevant to server code.
+   ```
+
+## Resources
+
+- [W3C: WCAG Principle 2 Operable](https://www.w3.org/WAI/WCAG22/Understanding/operable)
+- [MDN: The tabindex attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/tabindex)
+- [MDN: Keyboard-navigable JavaScript widgets](https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Keyboard-navigable_JavaScript_widgets)
+- [MDN: The Button element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/button)

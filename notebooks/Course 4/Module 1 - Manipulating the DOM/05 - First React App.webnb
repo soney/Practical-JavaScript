@@ -1,0 +1,141 @@
+# First React App
+
+React is a library for building user interfaces out of **components**. A component is a function that returns a description of what should appear on the page. Instead of writing `document.createElement(...)` and `element.textContent = ...` by hand, we describe the page with HTML-like code and let React build the DOM for us.
+
+Every React app starts with a **root component**: the top-level component React renders into the page. In the examples below, `renderReact(...)` gives us a way to render a component right here in the notebook without setting up a full project. Further down we will see the `createRoot(...).render(...)` step that a real project uses in place of `renderReact(...)`.
+
+## A Small App
+
+```{react}
+function App() {
+  return (
+    <main>
+      <h1>My first React app</h1>
+      <p>Components describe the page.</p>
+    </main>
+  );
+}
+
+renderReact(<App />);
+```
+
+A few things to notice:
+
+- `App` is a function that **returns** HTML-like markup. That markup is called **JSX** (we cover it in depth in the next lessons).
+- The component name starts with a capital letter. React treats lowercase names like `main` and `h1` as built-in HTML elements, and capitalized names like `App` as components you wrote.
+- `renderReact(<App />)` renders the component. We write `<App />` (with angle brackets), the same way we would write an HTML tag, rather than calling `App()` directly.
+
+## How a Real React Project Is Set Up
+
+The notebook hides some machinery so we can focus on components. In a real project you set up that machinery yourself. Here is what goes into it.
+
+**Install the libraries.** After creating a `package.json` with `npm init`, you install the two core packages:
+
+```
+npm install react react-dom
+```
+
+- `react` is the React library itself (components, JSX, and so on).
+- `react-dom` connects React to the browser's DOM so your components can actually appear on the page.
+
+**Add the build tools.** JSX (the HTML-like code inside `App`) is *not* something a browser can run directly. It has to be translated into ordinary JavaScript first, and the many files of a project have to be combined into something the browser can load. Those jobs are handled by development dependencies:
+
+```
+npm install --save-dev webpack webpack-cli webpack-dev-server babel-loader @babel/core @babel/preset-react css-loader style-loader html-webpack-plugin
+```
+
+- **Webpack** is a **bundler**: it starts at your entry file, follows every `import`, and packages all of your JavaScript (and CSS) into files the browser can load. The dev server rebuilds and reloads as you edit.
+- **Babel** is a **translator (transpiler)**: it rewrites modern JavaScript and JSX into plain JavaScript that browsers understand. The `@babel/preset-react` preset is what teaches Babel how to turn JSX into regular function calls. Babel connects to Webpack through `babel-loader`.
+- The CSS and HTML loaders/plugins let you `import` a `.css` file and generate the final HTML page.
+
+**Wire it up in code.** A minimal project has an HTML page with a mount point and a JavaScript entry file that renders into it. The HTML page contains an empty element for React to fill:
+
+```html
+<body>
+  <div id="root"></div>
+  <script type="module" src="src/main.jsx"></script>
+</body>
+```
+
+The entry file (`main.jsx`) finds that element and renders the app into it:
+
+```jsx
+import reactDom from 'react-dom/client';
+import App from './App';
+import './style.css';
+
+const rootElement = document.querySelector('#root');
+const root = reactDom.createRoot(rootElement);
+
+root.render(<App />);
+```
+
+Reading that top to bottom:
+
+- We `import` `react-dom/client`, which knows how to connect React to the DOM, plus our own `App` component and a stylesheet.
+- `document.querySelector('#root')` grabs the `<div id="root">` from the HTML page.
+- `reactDom.createRoot(rootElement)` creates a React **root** anchored to that element. This is the "root component" step: it tells React where on the page the app should appear.
+- `root.render(<App />)` renders the `App` component into that root. Everything React draws goes inside `#root`.
+
+Files that contain JSX are commonly named with a `.jsx` extension so it is obvious they hold HTML-like markup, though they still contain JavaScript.
+
+## The Notebook Sandbox vs. a Real Project
+
+In this notebook there is no Webpack, no Babel config, and no `index.html` to edit. The `renderReact(<App />)` call stands in for the whole `createRoot(...).render(...)` flow shown above: the notebook already created a `#root` mount point and set up the root for you, so you can focus on writing components. When you build a project outside the notebook, you write that `createRoot(...).render(...)` code yourself, and a bundler plus Babel turn your JSX into runnable JavaScript.
+
+## Exercises
+
+1. Create an `App` component that renders the exact heading `Hello React`.
+
+   ```{react}
+   function App() {
+     return <h1>Change me</h1>;
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   function App() {
+     return <h1>Hello React</h1>;
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('h1').should('have.text', 'Hello React').run('Render the exact heading `Hello React`', 'Rendered the heading');
+   }, 50);
+   ```
+
+2. Browsers cannot run JSX directly. Which tool translates JSX into plain JavaScript the browser can run?
+
+   ```{mcq}
+   Browsers cannot run JSX directly. Which tool translates JSX into plain JavaScript the browser can run?
+   correct: Correct. Babel transpiles JSX and modern JavaScript into plain JavaScript that browsers understand.
+   wrong: Think about which tool translates modern JavaScript and JSX, versus which one bundles files together.
+   [x] Babel translates (transpiles) JSX into plain JavaScript.
+   [ ] Webpack renders JSX directly in the browser.
+   [ ] `react-dom` removes the need to translate JSX.
+   [ ] The browser runs JSX natively, so no tool is needed.
+   ```
+
+3. Why should React component names start with a capital letter?
+
+   ```{mcq}
+   Why should React component names start with a capital letter?
+   correct: Correct. Capitalized names tell React that the tag refers to a component you wrote.
+   wrong: Think about how React distinguishes components from built-in HTML elements.
+   [x] Capitalized names tell React the tag refers to a component.
+   [ ] Lowercase names are always faster.
+   [ ] Component names cannot contain letters.
+   [ ] HTML elements must always be uppercase.
+   ```
+
+## Resources
+
+- [React Docs: Your first component](https://react.dev/learn/your-first-component)
+- [React Docs: Render and commit](https://react.dev/learn/render-and-commit)
+- [React Docs: createRoot](https://react.dev/reference/react-dom/client/createRoot)
+- [Babel: What is Babel?](https://babeljs.io/docs/)

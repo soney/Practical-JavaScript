@@ -1,0 +1,156 @@
+# useRef: Storing Values without Rerendering
+
+`useRef` creates an object with a `.current` property.
+
+Changing `.current` does not cause React to render again. That makes refs useful for values that need to survive renders but should not directly control the UI.
+
+## A Ref Value
+
+```{react}
+function ClickTracker() {
+  const clickCount = React.useRef(0);
+  const [label, setLabel] = React.useState('Clicks: 0');
+
+  function handleClick() {
+    clickCount.current = clickCount.current + 1;
+    setLabel('Clicks: ' + clickCount.current);
+  }
+
+  return <button onClick={handleClick}>{label}</button>;
+}
+
+renderReact(<ClickTracker />);
+```
+
+The ref remembers the number. The state changes the button label.
+
+## Why Not Just a Variable Outside the Component?
+
+A tempting alternative is to keep the value in a plain variable declared outside the component:
+
+```jsx
+let intervalId;   // outside the component
+
+function Timer() {
+  React.useEffect(() => {
+    intervalId = setInterval(tick, 1000);
+
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // ...
+}
+```
+
+That works with exactly one `Timer` on the page, and breaks with two.
+
+There is **one** `intervalId`, shared by every instance of the component, because it belongs to the module rather than to a component. The second `Timer` to mount overwrites the first one's id. Now nothing holds the first timer's id, so its cleanup clears the second timer's interval and the first keeps running forever.
+
+A ref is created **per instance**, by the `useRef` call inside the component. Two `Timer` components have two refs and never see each other's values:
+
+```jsx
+function Timer() {
+  const intervalId = React.useRef(null);
+
+  React.useEffect(() => {
+    intervalId.current = setInterval(tick, 1000);
+
+    return () => clearInterval(intervalId.current);
+  }, []);
+
+  // ...
+}
+```
+
+The rule: **a value that belongs to one component instance belongs in a ref (or in state), never in a variable outside the component.** Module-level variables are for things genuinely shared by everyone.
+
+## Refs Are Mutable
+
+You can change `ref.current`, but changing it does not automatically update the visible UI. Use state for values that should be displayed.
+
+## Exercises
+
+1. What property stores the value inside a ref object?
+
+   ```{mcq}
+   What property stores the value inside a ref object?
+   correct: Correct. Ref values are stored in `.current`.
+   wrong: Think about `ref.current`.
+   [x] `.current`
+   [ ] `.valueOfReact`
+   [ ] `.className`
+   [ ] `.href`
+   ```
+
+2. Complete the click handler so the button shows `Clicks: 1` after one click.
+
+   ```{react}
+   function ClickTracker() {
+     const clickCount = React.useRef(0);
+     const [label, setLabel] = React.useState('Clicks: 0');
+
+     function handleClick() {
+       clickCount.current = clickCount.current;
+       setLabel('Clicks: ' + clickCount.current);
+     }
+
+     return <button onClick={handleClick}>{label}</button>;
+   }
+
+   renderReact(<ClickTracker />);
+   ```
+   ```+solution
+   function ClickTracker() {
+     const clickCount = React.useRef(0);
+     const [label, setLabel] = React.useState('Clicks: 0');
+
+     function handleClick() {
+       clickCount.current = clickCount.current + 1;
+       setLabel('Clicks: ' + clickCount.current);
+     }
+
+     return <button onClick={handleClick}>{label}</button>;
+   }
+
+   renderReact(<ClickTracker />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('button').click().run('Click the button', 'Clicked the button');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('button').should('have.text', 'Clicks: 1').run('Show `Clicks: 1` after one click', 'Updated the label');
+     }, 50);
+   }, 50);
+   ```
+
+3. When should you usually use state instead of a ref?
+
+   ```{mcq}
+   When should you usually use state instead of a ref?
+   correct: Correct. Use state when changing the value should update the visible UI.
+   wrong: Think about whether React should render again.
+   [x] When changing the value should update the visible UI.
+   [ ] When the value should never affect rendering.
+   [ ] When storing a DOM node.
+   [ ] When remembering a timer id.
+   ```
+
+4. Why is storing an interval id in a variable declared outside the component a mistake?
+
+   ```{mcq}
+   Two of these components are on the page at once. What goes wrong?
+   correct: Correct! One variable, shared by every instance. The second component to mount overwrites the first one's id, so cleanup clears the wrong timer and one interval runs forever. A ref is created per instance.
+   wrong: Ask how many copies of that variable exist when the component is rendered twice.
+   [x] The variable is shared by every instance, so the timers interfere with each other
+   [ ] Variables outside a component cannot hold numbers
+   [ ] React deletes module-level variables between renders
+   [ ] `setInterval` cannot be called from inside an effect
+   ```
+
+## Resources
+
+- [React Docs: useRef](https://react.dev/reference/react/useRef)
+- [React Docs: Referencing values with refs](https://react.dev/learn/referencing-values-with-refs)

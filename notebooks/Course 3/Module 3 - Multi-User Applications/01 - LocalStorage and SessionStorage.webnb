@@ -1,0 +1,268 @@
+# LocalStorage and SessionStorage
+
+Every variable you have written so far disappears when the page closes. That is usually fine, and sometimes it is not: whether the user prefers dark mode, what is in their shopping cart, the draft they were halfway through writing.
+
+The **Web Storage API** keeps data in the user's own browser, so it survives a page load. It comes in two forms.
+
+## Two Storages, One API
+
+**`localStorage`** and **`sessionStorage`** have exactly the same methods. Both are limited to about **five megabytes per domain**. They differ in two ways.
+
+**Persistence.** `localStorage` survives the browser being closed and reopened. `sessionStorage` is discarded when the page is closed.
+
+**Locality.** `localStorage` is shared by every tab and window from the same origin, so writing in one tab is visible in another. `sessionStorage` is separate for each tab, so two tabs of the same site have two independent copies.
+
+So what is `sessionStorage` for? Temporary state that *should* be forgotten and *should not* leak between tabs: a form being filled in across several pages, a token needed only while signing in. Anything that would be wrong to find still sitting there tomorrow.
+
+`localStorage` is much more common, and everything below applies to both.
+
+## The Methods
+
+Storage holds **key-value pairs**, like an object, and there are six things you can do with it:
+
+```javascript
+localStorage.setItem('prefersDarkMode', 'true');   // add or replace a pair
+localStorage.getItem('prefersDarkMode');           // read a value
+localStorage.removeItem('prefersDarkMode');        // delete one pair
+localStorage.clear();                              // delete every pair
+localStorage.length;                               // how many pairs there are
+localStorage.key(0);                               // the key at an index
+```
+
+`setItem` and `getItem` are the two you will use constantly. The others come up rarely. Be careful with `clear()`: it empties everything your site has stored, not just the key you had in mind.
+
+```{javascript autorun}
+localStorage.setItem('demo-theme', 'dark');
+localStorage.setItem('demo-fontSize', '16');
+
+console.log('theme is ' + localStorage.getItem('demo-theme'));
+console.log('pairs stored under this origin: ' + localStorage.length);
+
+localStorage.removeItem('demo-theme');
+
+console.log('after removing it: ' + localStorage.getItem('demo-theme'));
+```
+
+Run that twice and note that the values are still there the second time. They are on your machine now.
+
+## Missing Keys Give You `null`
+
+`getItem` returns **`null`** for a key that was never set, which is how you detect a first-time visitor:
+
+```javascript
+let theme;
+
+if (localStorage.getItem('theme') === null) {
+  theme = 'light';
+} else {
+  theme = localStorage.getItem('theme');
+}
+```
+
+That is worth writing out once, and then never again, because `||` does the same job in one line:
+
+```javascript
+const theme = localStorage.getItem('theme') || 'light';
+```
+
+## Everything Is a String
+
+This is the rule that catches people. **A stored value is always a string.** `getItem` returns either `null` or a string, whatever you put in:
+
+```{javascript autorun}
+localStorage.setItem('demo-count', 42);
+
+const count = localStorage.getItem('demo-count');
+
+console.log(count + ' is a ' + typeof count);
+console.log('count + 1 gives ' + (count + 1));
+
+localStorage.removeItem('demo-count');
+```
+
+`42` went in and `'42'` came out, so `count + 1` glued the strings together instead of adding. Numbers need `Number(...)` on the way out, as with query parameters.
+
+For objects and arrays there is a better answer: **JSON**, from Course 2. `JSON.stringify` on the way in, `JSON.parse` on the way out.
+
+```{javascript autorun}
+const point = { x: 1, y: 2 };
+
+localStorage.setItem('demo-point', JSON.stringify(point));
+
+const stored = localStorage.getItem('demo-point');
+
+console.log('stored as the string: ' + stored);
+
+const recovered = JSON.parse(stored);
+
+console.log('recovered y is ' + recovered.y + ', a ' + typeof recovered.y);
+
+localStorage.removeItem('demo-point');
+```
+
+## Parsing Can Fail
+
+`JSON.parse` throws if it is handed something that is not valid JSON, and stored data can be older than your current code, or corrupted, or written by a previous version of your site. A crash on page load is a bad outcome for a stored preference, so wrap it:
+
+```{javascript autorun}
+// Something invalid ended up in storage.
+localStorage.setItem('demo-tasks', 'not valid json');
+
+let tasks;
+
+try {
+  tasks = JSON.parse(localStorage.getItem('demo-tasks'));
+} catch (error) {
+  console.log('could not parse stored tasks: ' + error.message);
+  tasks = [];
+}
+
+console.log('carrying on with ' + tasks.length + ' tasks');
+
+localStorage.removeItem('demo-tasks');
+```
+
+The application starts with an empty list instead of not starting at all.
+
+## A Worked Example: A To-Do List That Remembers
+
+The to-do list from earlier keeps its items in an array, `tasksArray`, and rebuilds the page from it. Two functions make it persistent.
+
+Saving is one line plus the conversion:
+
+```javascript
+function saveTasksToLocalStorage() {
+  localStorage.setItem('todos', JSON.stringify(tasksArray));
+}
+```
+
+Call it wherever the list changes: after adding a task, and after removing one.
+
+Recalling is the same in reverse, with the guard:
+
+```javascript
+function recallTasksFromLocalStorage() {
+  try {
+    return JSON.parse(localStorage.getItem('todos'));
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+}
+```
+
+Then start from stored data rather than from nothing:
+
+```javascript
+const tasksArray = recallTasksFromLocalStorage();
+
+for (const description of tasksArray) {
+  createTaskDomElement(description);
+}
+```
+
+That last loop is the step it is easy to miss. Recalling the array is not enough; the page has to be rebuilt from it. Without the loop the tasks are in memory and invisible.
+
+## Two Other Things Worth Knowing
+
+You can be told when storage changes in **another tab**:
+
+```javascript
+window.addEventListener('storage', (storageEvent) => {
+  console.log(storageEvent.key + ' changed');
+});
+```
+
+And support is universal in any browser you are likely to meet. Genuinely old ones, Internet Explorer 7 and its contemporaries, lack it, and a **polyfill** such as `localstorage-polyfill` fills the gap by using the real API when it exists and reimplementing it when it does not.
+
+## Exercises
+
+1. Save this array so it survives a page load, then read it back as an array.
+
+    ```{javascript}
+    const tasks = ['buy milk', 'do homework'];
+
+    // TODO: store tasks under the key 'exercise-todos'
+
+    const recalled = /* read them back as an array */;
+
+    console.log(recalled);
+    ```
+    ```+solution
+    const tasks = ['buy milk', 'do homework'];
+
+    localStorage.setItem('exercise-todos', JSON.stringify(tasks));
+
+    const recalled = JSON.parse(localStorage.getItem('exercise-todos'));
+
+    console.log(recalled);
+    ```
+    ```+test
+    wrap(typeof localStorage.getItem('exercise-todos')).should('equal', 'string').run('Store the array under the key `exercise-todos`. Storage only holds strings, so convert it with `JSON.stringify`', 'Stored the array as text');
+    wrap(recalled).should('equal', ['buy milk', 'do homework']).run('Read it back with `getItem` and turn it into an array again with `JSON.parse`', 'Recovered the array');
+    wrap(Array.isArray(recalled)).should('equal', true).run('`recalled` should be an array, not the stored string', 'Recovered a real array');
+    ```
+
+2. Write `recallTasks` so a corrupted value in storage cannot break the page.
+
+    ```{javascript}
+    // Something invalid is already in storage.
+    localStorage.setItem('exercise-broken', '{oops');
+
+    function recallTasks(key) {
+      // TODO: try to parse the stored value and return it.
+      // If parsing fails, return an empty array instead.
+    }
+
+    console.log(recallTasks('exercise-broken'));
+    ```
+    ```+solution
+    // Something invalid is already in storage.
+    localStorage.setItem('exercise-broken', '{oops');
+
+    function recallTasks(key) {
+      try {
+        return JSON.parse(localStorage.getItem(key));
+      } catch (error) {
+        return [];
+      }
+    }
+
+    console.log(recallTasks('exercise-broken'));
+    ```
+    ```+test
+    wrap(recallTasks('exercise-broken')).should('equal', []).run('Parsing `{oops` throws, so the `catch` block should return an empty array', 'Survived the corrupted value');
+    wrap((function () { localStorage.setItem('exercise-good', '["a","b"]'); const r = recallTasks('exercise-good'); localStorage.removeItem('exercise-good'); return r; })()).should('equal', ['a', 'b']).run('When the stored value is valid JSON, return the parsed value', 'Returned real stored data');
+    wrap(/try\s*\{/.test(source) && /catch/.test(source)).should('equal', true).run('Use `try` and `catch`, since `JSON.parse` reports failure by throwing', 'Used try and catch');
+    ```
+
+3. You want to keep a partly filled form while the user moves between pages, and you want it gone when they close the tab, with each tab keeping its own copy. Which storage, and why?
+
+    ```{mcq}
+    Which of the two fits that description?
+    correct: Correct! `sessionStorage` is discarded when the page closes and is separate for every tab, which is exactly what temporary per-tab state wants.
+    wrong: One of the two survives a browser restart and is shared across tabs. Would either of those be right here?
+    [x] `sessionStorage`, because it does not persist after the page closes and is separate for each tab
+    [ ] `localStorage`, because it is separate for every tab and window
+    [ ] `localStorage`, because it is designed for temporary interface state
+    [ ] Either one, since they behave identically
+    ```
+
+4. Why must `tasksArray` be passed through `JSON.stringify` before `setItem`?
+
+    ```{mcq}
+    Why not store the array directly?
+    correct: Correct! Web storage holds strings and nothing else. `JSON.stringify` produces a string that `JSON.parse` can turn back into the array later.
+    wrong: Think about what type `getItem` always hands back.
+    [x] Storage can only hold strings, so the array has to be converted to one first
+    [ ] `setItem` throws an error when given array syntax
+    [ ] It encrypts the data so other sites cannot read it
+    [ ] It is required for the `storage` event to fire
+    ```
+
+## Resources
+
+- [MDN: Web Storage API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API)
+- [MDN: using the Web Storage API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API/Using_the_Web_Storage_API)
+- [MDN: Window.sessionStorage](https://developer.mozilla.org/en-US/docs/Web/API/Window/sessionStorage)
+- [MDN: JSON.parse()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse)

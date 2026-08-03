@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Submit via POST</title>
+    <style>
+      body { font-family: sans-serif; max-width: 40em; margin: 2em auto; padding: 0 1em; }
+      input, button { font-size: 15px; padding: 6px; }
+    </style>
+  </head>
+  <body>
+    <h1>A form that sends a POST</h1>
+
+    <p>
+      Open the Network tab before you press the button, and keep the
+      server's terminal where you can see it.
+    </p>
+
+    <!-- #region form -->
+    <form method="POST" action="/submit_form">
+      <input type="text" name="first" placeholder="First Name">
+      <input type="text" name="last" placeholder="Last Name">
+      <button type="submit">Submit via POST</button>
+    </form>
+    <!-- #endregion -->
+  </body>
+</html>

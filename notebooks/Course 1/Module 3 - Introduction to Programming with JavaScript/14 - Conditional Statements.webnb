@@ -1,0 +1,228 @@
+# Conditional Statements
+
+We have talked about booleans and about the operators that produce them, but it is still not obvious why we would want one if all we do is log it. This lesson is the answer. **Conditional execution** looks at the value of a boolean and uses it to decide whether or not to run a piece of code.
+
+## The `if` Statement
+
+Imagine a block of code that runs top to bottom. If we want part of it to run only when some condition is met, we wrap that part in an `if` statement. The syntax is the keyword `if`, then a boolean expression in parentheses, then the "guarded" code inside curly braces:
+
+```javascript
+if (condition) {
+  // code that runs only when condition is true
+}
+```
+
+That splits the block into three parts. The code before the `if` runs no matter what. The code inside the braces runs only when the condition is `true`. The code after the `if` runs no matter what, whichever way the condition went.
+
+Here is that in a real example. Suppose we are writing a game and `health` tracks the player's remaining health:
+
+```{javascript autorun}
+const health = 0;
+
+console.log('before');
+
+if (health <= 0) {
+  console.log('game over');
+}
+
+console.log('after');
+```
+
+`health` is `0`, so `health <= 0` is `true` and we get all three messages. Change `health` to `5` and run the cell again: `5 <= 0` is `false`, so the engine skips over the braces entirely and you see only `before` and `after`. The code around the conditional runs either way.
+
+## The `else` Clause
+
+Often we want one thing to happen when the condition holds and something different when it does not. That is what `else` is for. An `else` clause has no condition of its own; its condition is implicitly "the `if` above me did not run".
+
+```{javascript autorun}
+const health = 5;
+
+console.log('before');
+
+if (health <= 0) {
+  console.log('game over');
+} else {
+  console.log('keep playing');
+}
+
+console.log('after');
+```
+
+With `health` at `5` we get `before`, `keep playing`, `after`. Set it back to `0` and we get `before`, `game over`, `after`. Exactly one of the two branches runs every time.
+
+Here is the same shape with a shopping cart, where a customer gets a discount on large orders:
+
+```{javascript autorun}
+const totalCost = 40;
+
+if (totalCost >= 50) {
+  console.log('You get a discount!');
+} else {
+  console.log('Sorry, no discount.');
+}
+```
+
+`40` is not greater than or equal to `50`, so we land in the `else`. Change `totalCost` to `140` and the `if` branch runs instead.
+
+## The `else if` Clause
+
+Two branches are often not enough. An `else if` clause has its own condition, and it runs only when **no preceding condition in the group has been met** *and* its own condition is true.
+
+![The anatomy of an if, else if, else group. The if block is labeled "code that only gets run if A is true", with the condition A is true beside it. The else if block is labeled "code that only gets run if B is true and no preceding conditions have been met", with the condition A is not true and B is true beside it. The else block is labeled "code that only gets run if no preceding conditions have been met", with the condition A and B are not true beside it.](images/if-elseif-else.png)
+
+*The notes on the right are what each branch really asks for. Only the first branch gets to judge its condition on its own; every branch after it also requires that everything above it was false.*
+
+```{javascript autorun}
+const hour = 9;
+
+if (hour < 12) {
+  console.log('Good morning');
+} else if (hour < 18) {
+  console.log('Good afternoon');
+} else {
+  console.log('Good evening');
+}
+```
+
+With `hour` at `9`, the first condition is true, so we log `Good morning` and skip everything below it. Try these:
+
+- `hour = 14`: `14 < 12` is false, so we check the `else if`. `14 < 18` is true, so we log `Good afternoon` and skip the `else`.
+- `hour = 20`: neither condition is true, so we fall through to the `else` and log `Good evening`.
+
+Notice that `20 < 18` and `9 < 18` are different questions with the same operator, and that the chain reads naturally as a set of ranges only because each branch is reached after the ones above it have already been ruled out.
+
+### At Most One Branch Runs
+
+This is the part people are most often surprised by. Once a branch in the group runs, the rest are skipped, even if their conditions would also have been true.
+
+```{javascript autorun}
+const score = 95;
+
+if (score > 50) {
+  console.log('over 50');
+} else if (score > 90) {
+  console.log('over 90');
+}
+```
+
+`95` is over 90, but only `over 50` is logged, because the first condition already matched. If you want both messages you need two separate `if` statements rather than one chain.
+
+## Nesting Conditionals
+
+A conditional can contain another conditional. The inner one is its own separate group and is only reached when the outer branch runs.
+
+```{javascript autorun}
+const hour = 5;
+
+if (hour < 12) {
+  console.log('Good morning');
+  if (hour < 6) {
+    console.log('You are up very early!');
+  }
+} else if (hour < 18) {
+  console.log('Good afternoon');
+} else {
+  console.log('Good evening');
+}
+```
+
+At `hour = 5` both messages appear: the outer `if` matched, and inside it the nested `if` matched too. Change `hour` to `9` and only `Good morning` is logged, because `9 < 6` is false. The nested `if` is never even looked at when the outer branch is skipped.
+
+## How the Group Fits Together
+
+`if`, `else if`, and `else` are not three independent statements. They form one **group**, and there are rules about how the group is built:
+
+- A group always starts with an `if`. An `if` is what begins a new group.
+- After it come zero or more `else if` clauses.
+- At the end there may be one `else`, or none.
+
+![Diagram of the shape of a conditional group. A single if at the top starts the group, followed by a column of else if clauses labeled "zero or more else if", and a single else at the bottom labeled "zero or one else". A bracket spanning all of the branches is labeled "at most, one of these can run".](images/at-most-one-cond-runs.png)
+
+*However many branches you write, the group is still one decision: the engine takes the first branch whose condition holds and skips all the rest.*
+
+So all of these are valid groups: an `if` on its own; an `if` with an `else`; an `if` with one `else if`; an `if` with an `else if` and an `else`; an `if` with six `else if` clauses and an `else`.
+
+Two consequences follow, and they are worth remembering:
+
+- **At most one branch in a group runs.** Never two.
+- If the group has an `else`, **exactly one** branch is guaranteed to run. If it has no `else`, it is entirely possible that none of them run.
+
+None of this stops you from putting another conditional inside any branch, as we did above. That inner conditional is simply a new group of its own.
+
+Conditional statements are what let code adapt to different situations and different states, and you will write them constantly from here on.
+
+## Exercises
+
+1. Write an `if...else` statement that sets `status` to `"Old enough to drive"` when `age` is `16` or older, and to `"Too young to drive"` otherwise.
+
+    ```{javascript}
+    const age = 15;
+    let status;
+
+    // Write your code here
+
+    console.log(status);
+    ```
+    ```+solution
+    const age = 15;
+    let status;
+
+    if (age >= 16) {
+      status = 'Old enough to drive';
+    } else {
+      status = 'Too young to drive';
+    }
+
+    console.log(status);
+    ```
+    ```+test
+    wrap(status).should('equal', 'Too young to drive').run('`status` should be `Too young to drive` when `age` is 15', 'Set status for an age under 16');
+    wrap(source.includes('else')).should('equal', true).run('Use an `else` clause for the other case', 'Used an else clause');
+    ```
+
+2. Write a chain that sets `advice` based on `temperature`: `Bundle up` when it is below `32`, `Bring a jacket` when it is below `60`, and `Enjoy the sun` otherwise.
+
+    ```{javascript}
+    const temperature = 45;
+    let advice;
+
+    // Write your code here
+
+    console.log(advice);
+    ```
+    ```+solution
+    const temperature = 45;
+    let advice;
+
+    if (temperature < 32) {
+      advice = 'Bundle up';
+    } else if (temperature < 60) {
+      advice = 'Bring a jacket';
+    } else {
+      advice = 'Enjoy the sun';
+    }
+
+    console.log(advice);
+    ```
+    ```+test
+    wrap(advice).should('equal', 'Bring a jacket').run('`advice` should be `Bring a jacket` when the temperature is 45', 'Chose the right branch for 45 degrees');
+    wrap(source.includes('else if')).should('equal', true).run('Use an `else if` clause for the middle case, so the three ranges do not overlap', 'Used an else if clause');
+    ```
+
+3. How many branches run
+
+    ```{mcq}
+    A group has an `if`, two `else if` clauses, and an `else`. When the code runs, how many of those four branches execute?
+    correct: Correct! At most one branch of a group ever runs, and because this group ends with an `else`, exactly one is guaranteed to run.
+    wrong: Look back at "How the Group Fits Together", and at the `score = 95` example above it.
+    [x] Exactly one
+    [ ] All four, in order
+    [ ] Every branch whose condition is true
+    [ ] None, unless the `else` is removed
+    ```
+
+## Resources
+
+- [MDN: if...else](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/if...else)
+- [MDN: Making decisions in your code (conditionals)](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Conditionals)
+- [MDN: Control flow and error handling](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Control_flow_and_error_handling)

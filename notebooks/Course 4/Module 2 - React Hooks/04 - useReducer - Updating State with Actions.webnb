@@ -1,0 +1,275 @@
+# useReducer: Updating State with Actions
+
+`useState` works well when each event updates one value on its own. But some state is updated by several different events, each in its own way. A task list, for example, might respond to "add a task", "complete a task", and "clear completed tasks". Spreading that update logic across many separate event handlers makes it hard to see, in one place, everything that can happen to the state.
+
+React has a second state hook for exactly this situation: `useReducer`. With `useReducer`, we describe each change as a plain object called an **action**, and we write one function, called a **reducer**, that knows how to turn the current state plus an action into the next state.
+
+## The Reducer Function
+
+A reducer is a plain JavaScript function. It receives two arguments and returns the next state:
+
+- `state`: the current state value.
+- `action`: an object describing what happened. By convention it has a `type` property (a string), plus any extra data the update needs.
+
+![The reducer drawn as one of the gray function boxes from earlier in the course, with two inputs slotted into its top and one output leaving the bottom. The first input is a blue hexagon labeled state, the current state. The second is an action, drawn as a red lightning bolt arriving from an event. The output at the bottom is a green hexagon, also labeled state, which is the next state the reducer returned.](images/state-action-reducer.png =x340)
+
+```js
+function counterReducer(state, action) {
+  if (action.type === 'increment') {
+    return { count: state.count + 1 };
+  }
+
+  if (action.type === 'decrement') {
+    return { count: state.count - 1 };
+  }
+
+  return state;
+}
+```
+
+Three rules make reducers predictable:
+
+- The reducer **returns** the next state; React replaces the old state with whatever it returns.
+- For an action type the reducer does not recognize, it returns the current `state` unchanged.
+- The reducer never mutates the existing state. Like `useState` updates, it builds a new object or array (with spread syntax or methods like `map`) instead of modifying the old one.
+
+## Wiring It Up with useReducer
+
+`React.useReducer(reducer, initialState)` connects a reducer to a component. It returns two things, just like `useState`: the current state, and a function called `dispatch` that we call with an action object.
+
+```{react}
+function counterReducer(state, action) {
+  if (action.type === 'increment') {
+    return { count: state.count + 1 };
+  }
+
+  if (action.type === 'decrement') {
+    return { count: state.count - 1 };
+  }
+
+  return state;
+}
+
+function Counter() {
+  const [state, dispatch] = React.useReducer(counterReducer, { count: 0 });
+
+  return (
+    <section>
+      <p>Count: {state.count}</p>
+      <button onClick={() => dispatch({ type: 'increment' })}>+1</button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>-1</button>
+    </section>
+  );
+}
+
+renderReact(<Counter />);
+```
+
+When a button is clicked, `dispatch({ type: 'increment' })` hands the action to React. React calls `counterReducer(currentState, action)`, stores whatever the reducer returns, and re-renders the component with the new state. We never call the reducer ourselves; we only dispatch actions.
+
+## Actions Can Carry Data
+
+Any extra properties on the action object ride along with `type`. The reducer reads them to build the next state. Here a text value travels with the `add` action, and the reducer copies the current array with spread syntax instead of mutating it:
+
+```{react}
+function listReducer(items, action) {
+  if (action.type === 'add') {
+    return [...items, action.text];
+  }
+
+  if (action.type === 'clear') {
+    return [];
+  }
+
+  return items;
+}
+
+function GroceryList() {
+  const [items, dispatch] = React.useReducer(listReducer, ['bread']);
+
+  return (
+    <section>
+      <ul>
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+      <button id="add-milk" onClick={() => dispatch({ type: 'add', text: 'milk' })}>
+        Add milk
+      </button>
+      <button id="clear-list" onClick={() => dispatch({ type: 'clear' })}>
+        Clear
+      </button>
+    </section>
+  );
+}
+
+renderReact(<GroceryList />);
+```
+
+## When to Reach for useReducer
+
+`useState` remains the right choice for independent values. A reducer earns its keep when:
+
+- Several different events update the same state shape (add, complete, remove, clear).
+- The next state depends on the current state in more than one way.
+- You want every possible state change listed in one function, so the update logic can be read and tested on its own. Because a reducer is a plain function, you can call it directly with a state and an action and check what it returns, without rendering anything.
+
+## Exercises
+
+1. What does React do with the value a reducer returns?
+
+   ```{mcq}
+   What does React do with the value a reducer returns?
+   correct: Correct. The reducer's return value becomes the new state, and React re-renders with it.
+   wrong: Think about how the reducer's return value relates to the component's state.
+   [x] It becomes the component's next state, and the component re-renders with it.
+   [ ] It is passed as an argument to the next dispatch call.
+   [ ] It replaces the reducer function for future updates.
+   [ ] Nothing; the reducer must mutate the state directly for changes to appear.
+   ```
+
+2. Complete the `decrement` case so the second button lowers the count by 1. Remember to return a new object rather than changing `state`.
+
+   ```{react}
+   function counterReducer(state, action) {
+     if (action.type === 'increment') {
+       return { count: state.count + 1 };
+     }
+
+     if (action.type === 'decrement') {
+       return state; // TODO: return the next state with count lowered by 1
+     }
+
+     return state;
+   }
+
+   function Counter() {
+     const [state, dispatch] = React.useReducer(counterReducer, { count: 5 });
+
+     return (
+       <section>
+         <p id="count">Count: {state.count}</p>
+         <button id="up" onClick={() => dispatch({ type: 'increment' })}>+1</button>
+         <button id="down" onClick={() => dispatch({ type: 'decrement' })}>-1</button>
+       </section>
+     );
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+solution
+   function counterReducer(state, action) {
+     if (action.type === 'increment') {
+       return { count: state.count + 1 };
+     }
+
+     if (action.type === 'decrement') {
+       return { count: state.count - 1 };
+     }
+
+     return state;
+   }
+
+   function Counter() {
+     const [state, dispatch] = React.useReducer(counterReducer, { count: 5 });
+
+     return (
+       <section>
+         <p id="count">Count: {state.count}</p>
+         <button id="up" onClick={() => dispatch({ type: 'increment' })}>+1</button>
+         <button id="down" onClick={() => dispatch({ type: 'decrement' })}>-1</button>
+       </section>
+     );
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('#down').should('exist').click().run('Click the -1 button', 'Clicked the -1 button');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('#count').should('have.text', 'Count: 4').run('The decrement case should lower the count to 4', 'The decrement case lowers the count');
+     }, 50);
+   }, 50);
+   ```
+
+3. Complete the `add` case so the button appends the action's `text` to the list. Use spread syntax to build a new array instead of calling `push` on the existing one.
+
+   ```{react}
+   function listReducer(items, action) {
+     if (action.type === 'add') {
+       return items; // TODO: return a new array with action.text added at the end
+     }
+
+     return items;
+   }
+
+   function TodoList() {
+     const [items, dispatch] = React.useReducer(listReducer, []);
+
+     return (
+       <section>
+         <ul id="todo-list">
+           {items.map((item) => (
+             <li key={item}>{item}</li>
+           ))}
+         </ul>
+         <button id="add-walk" onClick={() => dispatch({ type: 'add', text: 'walk the dog' })}>
+           Add task
+         </button>
+       </section>
+     );
+   }
+
+   renderReact(<TodoList />);
+   ```
+   ```+solution
+   function listReducer(items, action) {
+     if (action.type === 'add') {
+       return [...items, action.text];
+     }
+
+     return items;
+   }
+
+   function TodoList() {
+     const [items, dispatch] = React.useReducer(listReducer, []);
+
+     return (
+       <section>
+         <ul id="todo-list">
+           {items.map((item) => (
+             <li key={item}>{item}</li>
+           ))}
+         </ul>
+         <button id="add-walk" onClick={() => dispatch({ type: 'add', text: 'walk the dog' })}>
+           Add task
+         </button>
+       </section>
+     );
+   }
+
+   renderReact(<TodoList />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('#add-walk').should('exist').click().run('Click the Add task button', 'Clicked the Add task button');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('#todo-list li').should('have.text', 'walk the dog').run('The add case should append the new task', 'The add case appends the new task');
+       wrap(source.includes('...')).should('equal', true).run('Use spread syntax (...) to build the new array', 'Used spread syntax');
+     }, 50);
+   }, 50);
+   ```
+
+## Resources
+
+- [React Docs: useReducer](https://react.dev/reference/react/useReducer)
+- [React Docs: Extracting state logic into a reducer](https://react.dev/learn/extracting-state-logic-into-a-reducer)
+- [MDN: Spread syntax](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)

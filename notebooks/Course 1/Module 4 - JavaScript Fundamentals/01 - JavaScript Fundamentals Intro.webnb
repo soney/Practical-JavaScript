@@ -1,0 +1,109 @@
+# JavaScript Fundamentals
+
+So far we have talked a lot about how to write JavaScript code: expressions, variables, conditionals, loops, and functions. What we have not covered is how any of it relates to the HTML and CSS from the first two modules. Every value we have produced has gone to the console, which, as we said back in Lesson 1, is the one place our visitors never look.
+
+In this module we bridge that gap with the **DOM**, the Document Object Model. You are going to learn how JavaScript represents the elements of a page as objects, and how to reach into those objects to read and change them from code. This is a real milestone: it is the point where you start writing JavaScript that changes the web page.
+
+## What the DOM Is
+
+When the browser loads a page, it does not keep your HTML around as text. It reads the file once and builds a **live tree of objects** in memory, one object per element, nested exactly the way the tags were nested. That is the same element tree we drew back in Module 1, except that now it exists as objects your code can reach. The tree is the DOM, and it is what the browser draws on the screen.
+
+Each of the three words is doing work:
+
+- **Document**: the page itself.
+- **Object**: every element in it is an object, the type we meet in the very next lesson, with properties we can read and write, such as the text inside it or its styles.
+- **Model**: the tree is a representation of the page that a program can work with, rather than a wall of text.
+
+Two consequences shape everything in this module. The first is that the screen follows the DOM, not the HTML file. Change an element object from JavaScript and the browser redraws that part of the page right away, while the `.html` file on disk is untouched; reload the page and the change is gone. The second is that anything on the page is reachable this way. If you can write a CSS selector for an element, you can get the object for it and read or change its content, its attributes, and its appearance.
+
+We will get into the details in the "DOM Elements in JavaScript" lesson later in the module.
+
+## From Logging Values to Changing Pages
+
+Here is a taste of where this module ends up. Run the cell, then click the button.
+
+```html id=page1
+<p id="message">This paragraph starts out plain.</p>
+<button id="greet">Change the message</button>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#greet');
+const message = document.querySelector('#message');
+
+button.addEventListener('click', function () {
+  message.textContent = 'JavaScript changed this text.';
+});
+```
+```+id=page1
+```
+
+Nothing in that cell should be a mystery by the end of the module, and you are not expected to follow it now. But look at what it does: the page changed, in the browser, without reloading anything. That is the whole point of JavaScript on the web, and every piece of the cell is something we are about to cover.
+
+There are three lessons ahead:
+
+- **JavaScript Objects and DOM Elements**, where we meet objects as a type, the `window` and `document` objects the browser gives us, and how to select an element and change it.
+- **Debugging**, where we look at what the browser is really doing when it runs our functions, and at the tools for finding out why code is not doing what we meant.
+- **Deploying Pages**, where we take a page from a folder on your computer to a URL anyone can visit.
+
+## Exercises
+
+1. Where does JavaScript output go if we only ever call `console.log`?
+
+    ```{mcq}
+    Everything we have written so far has logged its results using `console.log`. Who sees that output?
+    correct: Correct! Console output is for developers with the developer tools open. Changing what a visitor sees means changing the page itself, which is what this module is about.
+    wrong: Think back to the caveat in "Using the JavaScript Console" about who has DevTools open.
+    [x] Only someone who has opened the browser's developer tools
+    [ ] Every visitor to the page
+    [ ] Nobody, ever
+    [ ] Only the web server
+    ```
+
+2. What does DOM stand for?
+
+    ```{mcq}
+    The abbreviation DOM stands for what?
+    correct: Correct! The Document Object Model is how the browser represents a page's elements as objects that JavaScript can reach.
+    wrong: Look at the second paragraph of this lesson.
+    [x] Document Object Model
+    [ ] Data Output Method
+    [ ] Dynamic Object Manager
+    [ ] Document Ordering Mechanism
+    ```
+
+3. Try the idea before we explain it. The cell below is the demo from above, with the new text missing. Set the paragraph's `textContent` to `Hello from JavaScript` when the button is clicked. Copy the shape from the demo; the explanations come in the lessons ahead.
+
+    ```html id=page2
+    <p id="message">This paragraph starts out plain.</p>
+    <button id="greet">Change the message</button>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#greet');
+    const message = document.querySelector('#message');
+
+    button.addEventListener('click', function () {
+      // TODO: set message.textContent to 'Hello from JavaScript'
+    });
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const button = document.querySelector('#greet');
+    const message = document.querySelector('#message');
+
+    button.addEventListener('click', function () {
+      message.textContent = 'Hello from JavaScript';
+    });
+    ```
+    ```+test
+    assert('#message').should('have.text', 'This paragraph starts out plain.').run('Leave the paragraph alone until the button is clicked', 'The paragraph starts unchanged');
+    assert('#greet').click().run('Click the button', 'Clicked the button');
+    assert('#message').should('have.text', 'Hello from JavaScript').run('Set `message.textContent` to `Hello from JavaScript` inside the click handler', 'The click changed the page');
+    ```
+
+## Resources
+
+- [MDN: JavaScript guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide)
+- [MDN: Introduction to the DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction)

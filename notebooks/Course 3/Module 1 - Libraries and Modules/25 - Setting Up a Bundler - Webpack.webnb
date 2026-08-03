@@ -1,0 +1,214 @@
+# Setting Up a Bundler: Webpack
+
+**Webpack** is the most widely used bundler, and enough other tools are built on top of it that learning it teaches you the vocabulary for all of them. Let's set one up from an empty directory.
+
+## Starting the Project
+
+```
+$ mkdir my-webpack-project
+$ cd my-webpack-project
+$ npm init -y
+```
+
+Then install the bundler itself:
+
+```
+$ npm install webpack webpack-cli --save-dev
+```
+
+Two things to notice.
+
+**Two packages, one command.** Listing names separated by spaces installs all of them. `webpack` is the bundler; `webpack-cli` is the command line interface that lets you run it from a terminal.
+
+**`--save-dev`.** This records them under `devDependencies` rather than `dependencies`:
+
+```json
+{
+  "name": "my-webpack-project",
+  "version": "1.0.0",
+  "devDependencies": {
+    "webpack": "^5.101.0",
+    "webpack-cli": "^6.0.1"
+  }
+}
+```
+
+A **development dependency** is a tool you need in order to *build* the project. Someone using the finished result does not need it. Webpack is the clearest possible example: it produces your bundle, and once the bundle exists it has no further part to play, so the visitor's browser never wants it.
+
+If you forget the flag, nothing breaks. Webpack lands in `dependencies` instead, and anyone installing your project downloads a build tool they will not use. It is untidy rather than wrong.
+
+## Webpack's Defaults
+
+Webpack has an opinion about where your code lives, and if you go along with it there is nothing to configure yet:
+
+- Source code goes in **`src/`**, short for source.
+- The **entry file**, the one Webpack starts from, is **`src/index.js`**.
+
+```
+$ mkdir src
+```
+
+```javascript
+// src/index.js
+console.log('Hello, webpack!');
+```
+
+## Running It
+
+```
+$ npx webpack
+```
+
+`npx` comes with npm, and it runs a command from a package installed in *your project*. That matters: `webpack` is not a program installed on your computer generally, it is a file inside this project's `node_modules/`, and `npx` is how you reach it.
+
+Webpack creates a directory of its own:
+
+```
+my-webpack-project/
+  dist/
+    main.js        <- the bundle
+  src/
+    index.js
+  node_modules/
+  package.json
+```
+
+**`dist`** is short for distribution: the code you ship. You edit `src/`, and you never edit `dist/`, because the next build overwrites it.
+
+## What the Bundler Did
+
+With one small file the bundle looks almost identical to the source, give or take a quote style. Add a few things and the differences appear.
+
+Source:
+
+```javascript
+// src/index.js
+// This is a comment
+console.log('Hello, webpack!');
+
+const x = 1 + 2 + 3;
+```
+
+Bundle: the comment is gone, and so is `x`. Webpack could see that the variable is never used, so it left out both the variable and the arithmetic. That is the unused-code removal from the previous reading.
+
+Now use it:
+
+```javascript
+// src/index.js
+console.log('Hello, webpack!');
+
+const x = 1 + 2 + 3;
+
+console.log(x);
+```
+
+The bundle contains `console.log(6)`. Webpack did the addition at build time, because the answer cannot change, so every visitor is spared work that only needed doing once.
+
+## More Than One File
+
+One file bundled is not much of a bundle. Split it:
+
+```javascript
+// src/util.js
+export const x = 1 + 2 + 3;
+```
+
+```javascript
+// src/index.js
+import { x } from './util.js';
+
+console.log(x);
+```
+
+Run `npx webpack` again and `dist/main.js` holds both files' code, plus some machinery of Webpack's own for wiring modules together. Two files in, one file out.
+
+Now add a real library:
+
+```
+$ npm i lodash
+```
+
+```javascript
+// src/index.js
+import { shuffle } from 'lodash';
+
+console.log(shuffle([1, 2, 3, 4, 5]));
+```
+
+This time the bundle is dramatically bigger, because Lodash is in it. Scroll to the bottom and your own few lines are there, underneath everything the library needed. That is the bundler doing its job: one file for the browser, containing your code and every dependency.
+
+You may also see a `main.js.LICENSE.txt` appear next to the bundle. Webpack collects the license notices of the code it included, which is how it satisfies the attribution requirement of licenses like Lodash's MIT.
+
+## Using the Bundle
+
+Point a page at the output:
+
+```html
+<script src="dist/main.js"></script>
+```
+
+Open the page and all three logs appear in the console. There is a nicer way to connect the HTML and the bundle, and it is coming in the reading on loaders and plugins; for now, a script tag pointing at `dist/main.js` is enough.
+
+## Exercises
+
+1. Set up a Webpack project from nothing and build it.
+
+    ```{external}
+    title: Webpack from an empty directory
+    interval: off
+    - command: mkdir my-webpack-project | Create the project directory
+    - command: cd my-webpack-project | Move into it
+    - command: npm init -y | Initialize the npm project
+    - command: npm install webpack webpack-cli --save-dev | Install both tools as development dependencies
+    - command: mkdir src | Create the source directory Webpack looks for
+    - command: npx webpack | Build the bundle into dist/
+    ```
+    ```+terminal
+    welcome: Run the commands in order, then run the cell to check them.
+    prompt: $
+    ```
+
+2. Write the script tag this page needs so it runs the bundle Webpack just produced with its default settings.
+
+    ```{html}
+    <h1>My Webpack Project</h1>
+    <!-- Write the script tag here -->
+    ```
+    ```+solution
+    <h1>My Webpack Project</h1>
+    <script src="dist/main.js"></script>
+    ```
+    ```+test
+    assert('script').should('have.length', 1).run('Add one `script` tag', 'Added the script tag');
+    wrap(/src\s*=\s*["']dist\/main\.js["']/.test(source)).should('equal', true).run('Point it at `dist/main.js`, the bundle Webpack writes by default. Not at `src/index.js`, which is your source', 'Pointed it at the bundle');
+    ```
+
+3. Why install Webpack with `--save-dev` rather than as an ordinary dependency?
+
+    ```{mcq}
+    What makes Webpack a development dependency?
+    correct: Correct! Webpack builds the bundle. Once the bundle exists, the visitor's browser has everything it needs, so nobody using the finished site requires Webpack itself.
+    wrong: Ask who needs Webpack: the person building the project, or the person visiting the site?
+    [x] It is needed to build the project, and not by anyone visiting the finished site
+    [ ] It is a large file, and the flag makes it download faster
+    [ ] It saves the code somewhere other than the project folder
+    [ ] It stops other developers from reading your source code
+    ```
+
+4. After `npx webpack`, a new folder has appeared. Which one, and what is in it?
+
+    ```{mcq}
+    Which folder did Webpack create, and what does it hold?
+    correct: Correct! `dist`, short for distribution, holds the built and optimized output. That is the folder you upload to a web server, and the one you never edit by hand.
+    wrong: Three of these folders already existed before you ran the bundler.
+    [x] `dist`, holding the optimized output ready to be deployed
+    [ ] `src`, holding the original code you wrote
+    [ ] `node_modules`, holding the libraries you installed
+    [ ] `bin`, holding executable files for the operating system
+    ```
+
+## Resources
+
+- [Webpack: getting started](https://webpack.js.org/guides/getting-started/)
+- [npm: about devDependencies](https://docs.npmjs.com/cli/v10/configuring-npm/package-json#devdependencies)
+- [npm: npx](https://docs.npmjs.com/cli/v10/commands/npx)

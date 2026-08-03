@@ -1,0 +1,189 @@
+# useEffect: Running Code with Side Effects
+
+A component's job is to return a description of UI. Real applications need components to do more than that: fetch data from an API, start a timer, write to `localStorage`, add a listener, hand a DOM node to a charting library.
+
+Anything a component does **other than returning UI** is a **side effect**, and `useEffect` is where it goes.
+
+## The Shape
+
+```javascript
+React.useEffect(() => {
+  // side-effect code
+});
+```
+
+You pass a callback. React calls it for you, after rendering.
+
+Here is the click counter from Module 1, now also keeping the window title in step with the count:
+
+```{react autorun}
+function ClickTrackingButton() {
+  const [clickCount, setClickCount] = React.useState(0);
+
+  React.useEffect(() => {
+    window.document.title = 'Clicked ' + clickCount + ' times';
+  });
+
+  return (
+    <button onClick={() => setClickCount(clickCount + 1)}>
+      Clicked {clickCount} times
+    </button>
+  );
+}
+
+renderReact(<ClickTrackingButton />);
+```
+
+Click a few times and look at the browser tab: the title tracks the count. Setting `document.title` is not returning UI, so it does not belong in the body of the component. It belongs in an effect.
+
+(These cells write `window.document` because inside a notebook cell `document` is the cell's own output area. In a real project it would be `document.title`.)
+
+## The Timing
+
+This is the part that confuses people, and it is worth getting exactly right. Three things happen in order:
+
+1. **The component renders.** Your function runs and returns its description.
+2. **The DOM is updated** to match. Any cleanup left over from a previous effect runs here too, which is the subject of a later reading.
+3. **The effect runs.**
+
+The effect is **last**, always. It does not matter where in the component you wrote the `useEffect` call:
+
+```{react autorun}
+function OrderDemo() {
+  const [count, setCount] = React.useState(0);
+
+  React.useEffect(() => {
+    console.log('  EFFECT ran, count is ' + count);
+  });
+
+  console.log('RENDER ran, count is ' + count);
+
+  return <button onClick={() => setCount(count + 1)}>Clicked {count} times</button>;
+}
+
+renderReact(<OrderDemo />);
+```
+
+The `useEffect` call sits above the `console.log`, and `RENDER` still prints first every time. Click the button and watch the pairs arrive in the same order.
+
+The reason is worth holding on to: **when the effect runs, the DOM already exists.** That is what makes effects the right place for anything that needs a real element, a measured size, or a subscription to something outside React.
+
+## What Belongs in an Effect
+
+Effects are for **synchronizing with things outside React**: the document title, a timer, a network request, a WebSocket, `localStorage`, a third-party library.
+
+They are not for computing values. If something can be worked out from props and state while rendering, work it out while rendering:
+
+```jsx
+// Unnecessary: an effect, a second state variable, and an extra render.
+const [total, setTotal] = React.useState(0);
+
+React.useEffect(() => {
+  setTotal(price * quantity);
+});
+
+// Enough: it is just a value.
+const total = price * quantity;
+```
+
+The second version is shorter, always correct, and never renders twice. A good check: if the effect's body only calls `setSomething` with a value derived from props and state, it should not be an effect at all.
+
+## Exercises
+
+1. Add an effect that sets the document title to `Saved`.
+
+   ```{react}
+   function TitleUpdater() {
+     // TODO: add an effect that sets window.document.title to 'Saved'
+
+     return <p>Saved</p>;
+   }
+
+   renderReact(<TitleUpdater />);
+   ```
+   ```+solution
+   function TitleUpdater() {
+     React.useEffect(() => {
+       window.document.title = 'Saved';
+     });
+
+     return <p>Saved</p>;
+   }
+
+   renderReact(<TitleUpdater />);
+   ```
+   ```+test
+   wrap(/React\.useEffect\s*\(/.test(source)).should('equal', true).run('Use `React.useEffect`', 'Used useEffect');
+   wrap(/document\.title\s*=/.test(source)).should('equal', true).run('Set the document title inside the effect', 'Set the document title');
+   // The effect runs after the first commit, so check on a later tick.
+   setTimeout(function () {
+     wrap(window.document.title).should('equal', 'Saved').run('The effect should actually run and set the title', 'The effect ran');
+   }, 50);
+   ```
+
+2. Keep the title in step with the state. Each click should set the document title to `Count: 1`, `Count: 2`, and so on.
+
+   ```{react}
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     // TODO: add an effect that sets window.document.title to 'Count: ' + count
+
+     return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+solution
+   function Counter() {
+     const [count, setCount] = React.useState(0);
+
+     React.useEffect(() => {
+       window.document.title = 'Count: ' + count;
+     });
+
+     return <button onClick={() => setCount(count + 1)}>Count: {count}</button>;
+   }
+
+   renderReact(<Counter />);
+   ```
+   ```+test
+   setTimeout(function () {
+     wrap(window.document.title).should('equal', 'Count: 0').run('The title should start at `Count: 0`, from the effect running after the first render', 'The title starts right');
+     assert('button').click().run('Click the button', 'Clicked the button');
+     // The state update re-renders, and the effect runs after that render.
+     setTimeout(function () {
+       wrap(window.document.title).should('equal', 'Count: 1').run('After a click the title should read `Count: 1`, so the effect has to run on every render rather than only the first', 'The title follows the state');
+     }, 60);
+   }, 60);
+   ```
+
+3. When does an effect run?
+
+   ```{mcq}
+   Your component logs a line, and its effect logs another. Which prints first, and why?
+   correct: Correct! The render happens first, then the DOM is updated, and only then does the effect run. Where the `useEffect` call appears in the function makes no difference.
+   wrong: Run the OrderDemo cell above and read the console. The position of the `useEffect` call in the source is not what decides this.
+   [x] The render line, because effects run after React has rendered and updated the DOM
+   [ ] The effect line, because `useEffect` was written above the log
+   [ ] Whichever appears first in the source
+   [ ] They print at the same time, in an unpredictable order
+   ```
+
+4. Which of these belongs in an effect?
+
+   ```{mcq}
+   One of these is synchronizing with something outside React. Which?
+   correct: Correct! A timer lives outside React and has to be started, and later stopped, at particular moments. The others are values that can be worked out during render, where an effect would only add a second render.
+   wrong: Ask of each one: can this be worked out from props and state while rendering? If it can, it is not an effect.
+   [x] Starting a `setInterval` that ticks once a second
+   [ ] Multiplying `price` by `quantity` to get a total
+   [ ] Building a class name string from a `isActive` prop
+   [ ] Formatting a date for display
+   ```
+
+## Resources
+
+- [React Docs: Synchronizing with effects](https://react.dev/learn/synchronizing-with-effects)
+- [React Docs: You might not need an effect](https://react.dev/learn/you-might-not-need-an-effect)
+- [React Docs: useEffect](https://react.dev/reference/react/useEffect)

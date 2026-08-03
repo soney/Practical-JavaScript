@@ -1,0 +1,205 @@
+# Spread Syntax
+
+We have built arrays by listing their items and objects by listing their properties. The **spread syntax** is a convenient way to spread out the contents of an array or an object into a new one. It is written as three periods, `...`, in front of the thing being spread.
+
+## Spreading an Array
+
+Suppose we have an array of colors and want a longer array that contains all of them plus a few more:
+
+```{javascript autorun}
+const colors = ['yellow', 'blue'];
+
+const palette = ['orange', ...colors, 'green'];
+
+console.log(palette);
+```
+
+`...colors` takes every element inside `colors` and inserts them, in order, at that spot. The result is `['orange', 'yellow', 'blue', 'green']`. Without the spread we would have got an array containing an array, which is a different thing entirely. Try removing the three dots and running the cell again to see the difference.
+
+Adding one item on the end is the most common use of all:
+
+```{javascript autorun}
+const L = [10, 20, 30];
+const lPlus = [...L, 40];
+
+console.log(L);
+console.log(lPlus);
+```
+
+Note that `L` itself is unchanged. Spreading copies values out; it does not modify the original.
+
+## Pulling an Array Apart
+
+The same three dots can do the opposite job: take an array and split it into a first item and everything else.
+
+```{javascript autorun}
+const palette = ['orange', 'yellow', 'blue', 'green'];
+
+const [firstColor, ...otherColors] = palette;
+
+console.log(firstColor);
+console.log(otherColors);
+```
+
+`firstColor` gets the first item, and `otherColors` is an array holding all the remaining ones.
+
+## Spreading an Object
+
+Spread syntax works with objects too, where it copies properties.
+
+```{javascript autorun}
+const user = { name: 'Ann', theme: 'dark' };
+
+const nextUser = { ...user, isAdmin: false };
+
+console.log(nextUser);
+```
+
+`...user` copies `name` and `theme` into the new object, and then `isAdmin: false` adds a property that was not there before.
+
+Because the properties are read in order, anything written *after* the spread overrides what the spread brought in:
+
+```{javascript autorun}
+const user = { name: 'Ann', theme: 'dark' };
+
+const nextUser = { ...user, isAdmin: false, theme: 'light' };
+
+console.log(nextUser);
+```
+
+`theme` came in as `dark` and was then set to `light`, so the final object has `name: 'Ann'`, `isAdmin: false`, and `theme: 'light'`. This is a nice way to treat one object as a set of defaults and change only the parts you care about.
+
+## Spread in Function Definitions
+
+The three dots also work in a parameter list, where they collect *any number* of arguments into one array.
+
+```{javascript autorun}
+function add(...numbers) {
+  console.log(numbers);
+}
+
+add(1, 2, 3);
+add(1, 2, 3, 4, 5);
+```
+
+`numbers` is an ordinary array holding whatever arguments were passed, so we can loop over it:
+
+```{javascript autorun}
+function add(...numbers) {
+  let result = 0;
+
+  for (const number of numbers) {
+    result = result + number;
+  }
+
+  return result;
+}
+
+console.log(add(1, 2, 3, 4));
+```
+
+That `result = result + number` line has a shorthand of its own: `result += number` means the same thing, in the same way `result++` means `result = result + 1`.
+
+By the way, JavaScript has a built-in `Math.sumPrecise` function that adds up an array for you, so the whole body above could have been `return Math.sumPrecise(numbers);`.
+
+## Spread in Function Calls
+
+Finally, spread works at a call site, where it turns one array back into a list of separate arguments:
+
+```{javascript autorun}
+function add(...numbers) {
+  let result = 0;
+  for (const number of numbers) {
+    result += number;
+  }
+  return result;
+}
+
+const lPlus = [10, 20, 30, 40];
+
+console.log(add(...lPlus));
+```
+
+`add(...lPlus)` is the same as writing `add(10, 20, 30, 40)`, so the answer is `100`. Without the dots we would be passing one argument, the array itself, which is not what `add` expects.
+
+## Exercises
+
+1. Use spread syntax to build `fullList`, which should be `['first', 'a', 'b', 'c', 'last']`.
+
+    ```{javascript}
+    const middle = ['a', 'b', 'c'];
+
+    const fullList = /* Your code here */;
+
+    console.log(fullList);
+    ```
+    ```+solution
+    const middle = ['a', 'b', 'c'];
+
+    const fullList = ['first', ...middle, 'last'];
+
+    console.log(fullList);
+    ```
+    ```+test
+    wrap(fullList).should('equal', ['first', 'a', 'b', 'c', 'last']).run('`fullList` should be `[\'first\', \'a\', \'b\', \'c\', \'last\']`', 'Spread the middle array into the new one');
+    wrap(source.includes('...middle')).should('equal', true).run('Use `...middle` rather than typing the three letters out', 'Used spread syntax');
+    ```
+
+2. Build `updatedSettings` from `defaults`, keeping the `fontSize` but changing `theme` to `dark` and adding `language` set to `en`.
+
+    ```{javascript}
+    const defaults = { theme: 'light', fontSize: 14 };
+
+    const updatedSettings = /* Your code here */;
+
+    console.log(updatedSettings);
+    ```
+    ```+solution
+    const defaults = { theme: 'light', fontSize: 14 };
+
+    const updatedSettings = { ...defaults, theme: 'dark', language: 'en' };
+
+    console.log(updatedSettings);
+    ```
+    ```+test
+    wrap(updatedSettings.fontSize).should('equal', 14).run('`fontSize` should still be `14`, copied from `defaults`', 'Kept the font size');
+    wrap(updatedSettings.theme).should('equal', 'dark').run('`theme` should be overridden to `dark`', 'Overrode the theme');
+    wrap(updatedSettings.language).should('equal', 'en').run('Add a `language` property set to `en`', 'Added the language');
+    wrap(source.includes('...defaults')).should('equal', true).run('Use `...defaults` to copy the existing properties', 'Used spread syntax');
+    ```
+
+3. Write a function `largest` that accepts any number of arguments and returns the biggest one. Use a spread parameter and a `for...of` loop.
+
+    ```{javascript}
+    function largest(/* Your code here */) {
+      // Write your code here
+    }
+
+    console.log(largest(3, 9, 4));
+    ```
+    ```+solution
+    function largest(...numbers) {
+      let biggest = numbers[0];
+
+      for (const number of numbers) {
+        if (number > biggest) {
+          biggest = number;
+        }
+      }
+
+      return biggest;
+    }
+
+    console.log(largest(3, 9, 4));
+    ```
+    ```+test
+    wrap(largest(3, 9, 4)).should('equal', 9).run('`largest(3, 9, 4)` should return `9`', 'Found the largest of three');
+    wrap(largest(5)).should('equal', 5).run('`largest(5)` should return `5`', 'Handled a single argument');
+    wrap(largest(2, 8, 1, 11, 7)).should('equal', 11).run('`largest` should work for any number of arguments. Use a spread parameter such as `...numbers`', 'Handled five arguments');
+    ```
+
+## Resources
+
+- [MDN: Spread syntax (...)](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax)
+- [MDN: Rest parameters](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/rest_parameters)
+- [MDN: Destructuring assignment](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring_assignment)

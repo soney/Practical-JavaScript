@@ -1,0 +1,294 @@
+# Combining CSS Selectors
+
+So far we have written single selectors: a tag selector like `p`, a class selector like `.box`, or an ID selector like `#main_panel`. We can combine these building blocks to control more precisely which DOM elements a rule applies to. In this notebook, let's cover three ways to combine selectors: compound selectors, descendant selectors, and selector lists.
+
+## Compound Selectors
+
+A compound selector writes several selectors together with no space between them. It matches only the elements that **satisfy every subselector** (all the parts). For example, let's say we want to select all `<p>` elements (selector: `p`) that also have `class="box"` (selector: `.box`). We can combine those two selectors into a single compound selector (`p.box`):
+
+```css
+p.box { background-color: yellow; } /* Applies to <p> elements that also have class="box" */
+```
+
+The first part (`p`) requires a `<p>` element and the second part (`.box`) requires `class="box"`. A `<div>` with `class="box"` would not match, because it is not a `<p>`, and a `<p>` without `class="box"` would not match either. Only elements that meet *all* the criteria are selected. Here is that rule applied to all three cases at once:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      p.box { background-color: yellow; }
+    </style>
+  </head>
+  <body>
+    <p class="box">A p that has class box.</p>
+    <div class="box">A div that has class box.</div>
+    <p>A p with no class.</p>
+  </body>
+</html>
+```
+
+Only the first line is highlighted: it is the only element that satisfies both parts. Change the selector to just `.box` and run the cell again, and the `<div>` highlights too, because dropping the `p` drops the requirement that it be a paragraph.
+
+We can also combine a tag with an ID:
+
+```css
+div#main_panel { color: red; } /* Applies to the <div> element that has id="main_panel" */
+```
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      div#main_panel { color: red; }
+    </style>
+  </head>
+  <body>
+    <div id="main_panel">A div with id main_panel.</div>
+    <div>A div with no id.</div>
+    <p id="side_panel">A p with a different id.</p>
+  </body>
+</html>
+```
+
+We could also combine multiple class selectors:
+
+```css
+p.highlighted.selected { background-color: yellow; } /* Applies to <p> elements that have BOTH class="highlighted" and class="selected" */
+```
+
+This matches `<p>` elements that have both `class="highlighted"` and `class="selected"`:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      p.highlighted.selected { background-color: yellow; }
+    </style>
+  </head>
+  <body>
+    <p class="highlighted selected">Both classes.</p>
+    <p class="highlighted">Only highlighted.</p>
+    <p class="selected">Only selected.</p>
+    <p class="selected highlighted extra">Both classes, in the other order, plus an extra one.</p>
+  </body>
+</html>
+```
+
+The last paragraph matches too: the order of the names in the `class` attribute does not matter, and an extra class does not break the match. The rule asks for those two classes to be present, not for the attribute to say exactly that. Delete `.selected` from the rule and run it again to see every paragraph with `highlighted` match, whether or not it is also `selected`.
+
+The key thing to remember is that **no space** between the selectors means that they all apply to the same element. This can be a little confusing, since we add multiple classes to an element with spaces (e.g. `class="highlighted selected"`), but if we want to select elements that match multiple criteria, we want no space. If we put a space between them, it would be a [descendant selector](#descendant-selectors) instead, which we'll cover next.
+
+## Descendant Selectors
+
+We can also select elements that are descendants of other elements. For example, let's say we have a `<div>` element with `id="main_panel"`, with some content inside it:
+
+```html
+<div id="main_panel">
+  <p>This is a paragraph inside the main panel.</p>
+</div>
+```
+
+If we want to select the `<p>` element inside that `<div>`, we can write a descendant selector: we write the selector for the ancestor, then a space, then the selector for the descendant (`#main_panel p`):
+
+```css
+#main_panel p { color: red; } /* Applies to <p> elements that are descendants of the element with id="main_panel" */
+```
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      #main_panel p { color: red; }
+    </style>
+  </head>
+  <body>
+    <div id="main_panel">
+      <p>This paragraph is a descendant of the element with id="main_panel"</p>
+      <div>
+        <p>This paragraph is nested one level deeper, but still a descendant.</p>
+      </div>
+    </div>
+    <p>This paragraph is not a descendant of the element with id="main_panel"</p>
+  </body>
+</html>
+```
+
+Both paragraphs inside the panel are red, including the one nested a level deeper, and the paragraph outside the panel is left alone. Change the selector to just `p` and run the cell again to see all three turn red, because nothing is asking for an ancestor any more.
+
+## Selector Lists
+
+Whereas the compound selector (the first one we covered) requires that an element match **all** of the subselectors, a selector list allows us to select elements that match **any** of the subselectors. For example, we can select all elements that has `class="box"` or `class="highlight"` in a single rule by writing a comma-separated list of selectors (`.box, .highlight`):
+
+```css
+.box, .highlight { font-size: 26px; } /* Applies to every element with class="box" AND every element with class="highlight" */
+```
+
+An element only needs to match one of the two selectors to be styled.
+
+The selectors in a list can be different kinds. For example, we can combine a tag selector with an ID selector:
+
+```css
+a, #list { color: red; } /* Applies to every <a> element AND the element with id="list" */
+```
+
+This selects every `<a>` element and, separately, the element with `id="list"`.
+
+It helps to read the comma as the word "or": `.box, .highlight` means "any element with class `box` or class `highlight`." This is different from a compound selector like `.box.highlight`, which (with no comma and no space) means "an element with both class `box` *and* class `highlight`."
+
+## Exercises
+
+1. Use a descendant selector to make the paragraph inside `#main_panel` red. Leave the paragraph outside the panel unstyled.
+
+    ```html id=page1
+    <div id="main_panel">
+      <p>Inside the panel</p>
+    </div>
+    <p>Outside the panel</p>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    #main_panel p {
+      color: red;
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+test
+    assert('#main_panel p').should('exist').should('have.css', 'color: red').run('Failed to style the paragraph inside #main_panel', 'Styled the paragraph inside #main_panel');
+    assert('#main_panel + p').should('not.have.css', 'color: red').run('The paragraph outside the panel should be left alone. A space between the two selectors means "descendant of"', 'Left the outside paragraph alone');
+    ```
+
+2. Use a compound selector to style a paragraph that has both the `highlighted` and `selected` classes. Give it a yellow background, and leave the paragraph that has only one of the two classes unstyled.
+
+    ```html id=page2
+    <p class="highlighted selected">Chosen paragraph</p>
+    <p class="highlighted">Only highlighted</p>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    p.highlighted.selected {
+      background-color: yellow;
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+test
+    assert('p.highlighted.selected').should('exist').should('have.css', 'background-color: yellow').run('Failed to style the paragraph with both classes', 'Styled the paragraph with both classes');
+    assert('p:last-child').should('not.have.css', 'background-color: yellow').run('The paragraph with only one of the two classes should not be styled. Write the class selectors together, with nothing between them', 'Required both classes');
+    ```
+
+3. Use a single selector list to give a `font-size` of `26px` to every element with `class="box"` and every element with `class="highlight"`. Write one rule with a comma-separated selector.
+
+    ```html id=page3
+    <p class="box">A box paragraph</p>
+    <li class="highlight">A highlighted item</li>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    .box, .highlight {
+      font-size: 26px;
+    }
+    ```
+    ```+id=page3
+    ```
+    ```+test
+    assert('.box').should('exist').should('have.css', 'font-size: 26px').run('Failed to size the .box element', 'Sized the .box element');
+    assert('.highlight').should('exist').should('have.css', 'font-size: 26px').run('Failed to size the .highlight element', 'Sized the .highlight element');
+    ```
+
+4. What a compound selector matches
+
+    ```{mcq}
+    Given this HTML, which elements does the selector `p.box` select? (Select all that apply)
+
+    ~~~html
+    <p class="box">One</p>
+    <div class="box">Two</div>
+    <p class="box highlight">Three</p>
+    <p class="highlight">Four</p>
+    ~~~
+
+    shuffle: false
+    correct: Correct! `p.box` needs an element that is a `<p>` *and* has `class="box"`.
+    wrong: Not quite. Check each element against both parts of the selector: is it a `<p>`, and does it have `class="box"`? Look back at "Compound Selectors".
+    [x] One
+      correct: Right, it is a `<p>` with `class="box"`.
+      wrong: This is a `<p>` with `class="box"`, so it matches both parts.
+    [ ] Two
+      wrong: This has `class="box"`, but it is a `<div>` and not a `<p>`.
+    [x] Three
+      correct: Right, extra classes are fine as long as `box` is one of them.
+      wrong: This is a `<p>` and `box` is one of its classes, so it matches. Having an extra class does not break the match.
+    [ ] Four
+      wrong: This is a `<p>`, but it does not have `class="box"`.
+    ```
+
+5. How deep does a descendant selector reach?
+
+    ```{mcq}
+    Given this HTML, which links does the selector `nav a` select? (Select all that apply)
+
+    ~~~html
+    <nav>
+      <a href="/">Home</a>
+      <ul>
+        <li><a href="/about">About</a></li>
+      </ul>
+    </nav>
+    <a href="/help">Help</a>
+    ~~~
+
+    shuffle: false
+    correct: Correct! A descendant can be nested any number of levels deep, but it does have to be inside the `<nav>`.
+    wrong: Not quite. `nav a` selects every `<a>` inside a `<nav>`, no matter how deeply it is nested. Revisit "Descendant Selectors".
+    [x] Home
+      correct: Right, this link is directly inside the `<nav>`.
+      wrong: This link is inside the `<nav>`, so it is selected.
+    [x] About
+      correct: Right, a descendant does not have to be a direct child.
+      wrong: This link is nested inside a `<ul>` and an `<li>`, but it is still inside the `<nav>`, so it is selected.
+    [ ] Help
+      wrong: This link is outside the `<nav>` entirely, so `nav a` does not select it.
+    ```
+
+6. Which selectors match this paragraph?
+
+    ```{mcq}
+    Which of these selectors would select the `<p>` element below? (Select all that apply)
+
+    ~~~html
+    <div id="main_panel">
+      <p class="box highlight">Hello</p>
+    </div>
+    ~~~
+
+    correct: Correct! The same element can be selected in several different ways, and only the space changes what is being asked for.
+    wrong: Check each selector one part at a time, and watch for the space.
+    [x] `p.box`
+      correct: Right, it is a `<p>` that has `class="box"`.
+      wrong: The paragraph is a `<p>` with `class="box"`, so this compound selector matches.
+    [x] `#main_panel p`
+      correct: Right, the paragraph is inside the element with `id="main_panel"`.
+      wrong: The paragraph is a descendant of `#main_panel`, so this selects it.
+    [x] `.box.highlight`
+      correct: Right, the paragraph has both classes.
+      wrong: The paragraph has both `box` and `highlight` in its `class` attribute, so this matches.
+    [ ] `p .box`
+      wrong: The space makes this a descendant selector, so it looks for `.box` *inside* a `<p>`. Here the `<p>` is the `.box` itself.
+    ```
+
+## Resources
+
+- [MDN: CSS selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors)
+- [MDN: Descendant combinator](https://developer.mozilla.org/en-US/docs/Web/CSS/Descendant_combinator)
+- [MDN: Selector list](https://developer.mozilla.org/en-US/docs/Web/CSS/Selector_list)
+- [MDN: Selector list](https://developer.mozilla.org/en-US/docs/Web/CSS/Selector_list)

@@ -1,0 +1,223 @@
+# The Trouble with Nested Callbacks
+
+We now know why callbacks exist: they let us schedule work without freezing the page. So far we have used them in small doses, one at a time. In real code they pile up, and when they do they get messy and hard to read.
+
+Before we look at the solution in the next few lessons, it is worth feeling the problem properly.
+
+## Waiting for One Thing After Another
+
+Suppose we need the results of three asynchronous operations, and each one depends on the one before it. With callbacks, the only way to express "and then" is to nest:
+
+```javascript
+asyncFunction1((value1) => {
+  asyncFunction2((value2) => {
+    asyncFunction3((value3) => {
+      callback(value1, value2, value3);
+    });
+  });
+});
+```
+
+Read that from the outside in: call the first, and when it finishes call the second, and when *that* finishes call the third, and when that finishes do the real work.
+
+Here it is actually running. Each step is a stand-in for a slow operation: it waits a moment and then calls back with a value.
+
+```{javascript autorun}
+function fetchFirst(callback) {
+  setTimeout(() => callback('one'), 100);
+}
+
+function fetchSecond(callback) {
+  setTimeout(() => callback('two'), 100);
+}
+
+function fetchThird(callback) {
+  setTimeout(() => callback('three'), 100);
+}
+
+fetchFirst((value1) => {
+  fetchSecond((value2) => {
+    fetchThird((value3) => {
+      console.log(value1 + ', ' + value2 + ', ' + value3);
+    });
+  });
+});
+```
+
+It works. Notice the shape, though: the code drifts to the right, one indent per step, and the thing we actually care about is buried at the deepest point. Five steps instead of three and it looks like this:
+
+```javascript
+asyncFunction1((value1) => {
+  asyncFunction2((value2) => {
+    asyncFunction3((value3) => {
+      asyncFunction4((value4) => {
+        asyncFunction5((value5) => {
+          callback(value1, value2, value3, value4, value5);
+        });
+      });
+    });
+  });
+});
+```
+
+This shape has a name: the **pyramid of doom**. It is hard to read, hard to rearrange, and hard to add error handling to without making it considerably worse.
+
+## Waiting for Several Things at Once
+
+You might object that if the operations are unrelated, we should not be waiting for them one after another at all. We should start them together and carry on when the last one arrives. That is exactly right, and it is where callbacks get genuinely awkward.
+
+With no way to say "when all of these are done", each callback has to check whether the others have finished:
+
+```{javascript autorun}
+function fetchName(callback) {
+  setTimeout(() => callback('Ada'), 150);
+}
+
+function fetchCity(callback) {
+  setTimeout(() => callback('Ann Arbor'), 100);
+}
+
+let name;
+let city;
+
+function reportWhenReady() {
+  console.log(name + ' is in ' + city);
+}
+
+fetchName((value) => {
+  name = value;
+  if (city !== undefined) {
+    reportWhenReady();
+  }
+});
+
+fetchCity((value) => {
+  city = value;
+  if (name !== undefined) {
+    reportWhenReady();
+  }
+});
+```
+
+Both requests go out immediately, so this finishes sooner than the nested version would. But look at the cost: two variables declared outside both callbacks, and each callback has to know about the other one and check up on it.
+
+Now add a third:
+
+```javascript
+let value1;
+let value2;
+let value3;
+
+asyncFunction1((v1) => {
+  value1 = v1;
+  if (value2 !== undefined && value3 !== undefined) {
+    callback(value1, value2, value3);
+  }
+});
+
+asyncFunction2((v2) => {
+  value2 = v2;
+  if (value1 !== undefined && value3 !== undefined) {
+    callback(value1, value2, value3);
+  }
+});
+
+asyncFunction3((v3) => {
+  value3 = v3;
+  if (value1 !== undefined && value2 !== undefined) {
+    callback(value1, value2, value3);
+  }
+});
+```
+
+Every callback now checks every other one. Add a fourth operation and all four blocks need editing. And this only works because `undefined` happens to be a value none of the results could legitimately have; if one of them could genuinely be `undefined`, the checks quietly break.
+
+There has to be a better way, and in many situations there is. That is the subject of the next lesson: **promises**.
+
+## Exercises
+
+1. Chain the two functions so the cell logs `Ada from Ann Arbor`. `fetchCity` must not start until `fetchName` has called back.
+
+    ```{javascript}
+    function fetchName(callback) {
+      setTimeout(() => callback('Ada'), 100);
+    }
+
+    function fetchCity(callback) {
+      setTimeout(() => callback('Ann Arbor'), 100);
+    }
+
+    // Write your code here
+    ```
+    ```+solution
+    function fetchName(callback) {
+      setTimeout(() => callback('Ada'), 100);
+    }
+
+    function fetchCity(callback) {
+      setTimeout(() => callback('Ann Arbor'), 100);
+    }
+
+    fetchName((name) => {
+      fetchCity((city) => {
+        console.log(name + ' from ' + city);
+      });
+    });
+    ```
+    ```+test
+    wrap(console.history().length).should('equal', 0).run('Nothing should be logged synchronously', 'Nothing logs immediately');
+    setTimeout(() => {
+      check.consoleLogged('Ada from Ann Arbor').run('The cell should eventually log `Ada from Ann Arbor`. Call `fetchCity` from inside the callback you pass to `fetchName`', 'Chained the two callbacks');
+    }, 400);
+    ```
+
+2. Write `giveMessage`, a callback-style function that calls its callback with the string `Ready` after a `100` millisecond delay.
+
+    ```{javascript}
+    function giveMessage(callback) {
+      // Write your code here
+    }
+
+    let message = '';
+
+    giveMessage((value) => {
+      message = value;
+      console.log(message);
+    });
+    ```
+    ```+solution
+    function giveMessage(callback) {
+      setTimeout(() => callback('Ready'), 100);
+    }
+
+    let message = '';
+
+    giveMessage((value) => {
+      message = value;
+      console.log(message);
+    });
+    ```
+    ```+test
+    wrap(message).should('equal', '').run('`message` should still be empty straight after the cell runs, because the callback has not been called yet', 'The callback is asynchronous');
+    setTimeout(() => {
+      wrap(message).should('equal', 'Ready').run('After the delay the callback should have been called with `Ready`', 'The callback delivered its value');
+    }, 300);
+    ```
+
+3. What is the "pyramid of doom"?
+
+    ```{mcq}
+    What problem does that phrase describe?
+    correct: Correct! Each dependent step nests inside the callback of the one before it, so the code marches to the right and the part that matters ends up deepest.
+    wrong: Look at the shape of the five-step example under "Waiting for One Thing After Another".
+    [x] Callbacks nested inside callbacks, indenting further with every dependent step
+    [ ] A function that calls itself until the browser runs out of memory
+    [ ] Too many event listeners attached to a single element
+    [ ] Asynchronous code that accidentally runs synchronously
+    ```
+
+## Resources
+
+- [MDN: Introducing asynchronous JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Introducing)
+- [MDN: Callback function](https://developer.mozilla.org/en-US/docs/Glossary/Callback_function)
+- [MDN: How to use promises](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Promises)

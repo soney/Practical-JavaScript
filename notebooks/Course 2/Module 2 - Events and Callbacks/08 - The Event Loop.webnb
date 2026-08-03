@@ -1,0 +1,167 @@
+# The Event Loop
+
+We have been handing callbacks to `addEventListener`, `setTimeout`, and `setInterval` without asking exactly *how* the browser gets around to running them. This lesson answers that, and the answer explains a result that looks impossible at first.
+
+Run this and read the output:
+
+```{javascript autorun}
+console.log('A');
+
+setTimeout(() => {
+  console.log('B');
+}, 0);
+
+console.log('C');
+```
+
+`A`, then `C`, then `B`. The delay was **zero milliseconds**, and `B` still came last. To understand why, we need two ideas: the call stack, and the queue.
+
+## The Call Stack
+
+We met the **[call stack](<../../Course 1/Module 4 - JavaScript Fundamentals/07 - Call Stacks.webnb>)** in Course 1: it tracks what is running and where to return when it finishes. A function call is added to the top; when it returns, it comes off the top. Last in, first out.
+
+One addition to that picture. At the very bottom of the stack sits **Global**, which represents all the code you wrote outside of any function. It goes on first and comes off last.
+
+```{javascript autorun}
+function multiply(x, y) {
+  return x * y;
+}
+
+function square(n) {
+  return multiply(n, n);
+}
+
+function printSquare(n) {
+  const squared = square(n);
+  console.log(squared);
+}
+
+printSquare(5);
+```
+
+While `multiply` is running, the stack from bottom to top is: `Global`, `printSquare`, `square`, `multiply`. Then they unwind in the opposite order.
+
+JavaScript is **single-threaded**: it runs one thing at a time. The call stack is the record of that one thing.
+
+## The Queue
+
+Now the second structure: the **queue**, a line of functions waiting to be called.
+
+The rule that matters is this: **the queue waits for the call stack to be empty.** Only when nothing at all is running does the next function in the queue move onto the call stack.
+
+Where the stack is last-in-first-out, the queue is **first in, first out**: functions are taken in the order they joined the line. The machinery that moves things from the queue to the stack is what gives this lesson its name, the **event loop**.
+
+## Where Callbacks Actually Go
+
+Here is the part that changes your mental model. When an event fires, **the callback is not put on the call stack.** It is put on the queue.
+
+Trace a click listener:
+
+- `Global` goes on the stack. `document.querySelector` runs and comes off. The callback is defined. `addEventListener` runs, registers the listener, and comes off. `Global` comes off. The stack is empty.
+- Nothing happens, possibly for minutes.
+- The user clicks. The callback joins the **queue**.
+- The stack is empty, so the event loop moves the callback onto the stack and it runs.
+
+In that example the distinction makes no visible difference, because the stack happened to be empty already. The `setTimeout` case is where it shows.
+
+## Why `A`, `C`, `B`
+
+Walk the first cell through the same machinery:
+
+1. `Global` goes on the stack.
+2. `console.log('A')` runs. **`A` is logged.**
+3. `setTimeout` runs. Its delay is `0`, so the callback is ready essentially at once, and it joins the **queue**. It cannot run yet, because the stack is not empty: `Global` is still on it.
+4. `console.log('C')` runs. **`C` is logged.**
+5. `Global` finishes and comes off. The stack is now empty.
+6. The event loop sees something waiting, moves the callback onto the stack, and runs it. **`B` is logged.**
+
+So a delay of `0` does not mean "right now". It means "as soon as possible, once everything currently running has finished". No callback can ever interrupt code that is already running, which is a guarantee worth relying on.
+
+You can watch this in the debugger. Put a `debugger;` statement inside the timeout callback and one before it, and compare the call stacks: at the first breakpoint the stack has `Global` on it, and at the second one `Global` is gone and the anonymous callback is running on its own.
+
+```{javascript autorun}
+console.log('first');
+
+setTimeout(() => {
+  console.log('fourth, even with a zero delay');
+}, 0);
+
+setTimeout(() => {
+  console.log('fifth, queued after the one above');
+}, 0);
+
+console.log('second');
+console.log('third');
+```
+
+The two queued callbacks run in the order they were queued, and both wait for everything synchronous to finish.
+
+Finally: why would anyone deliberately write a delay of `0`? It is a slightly hacky but real technique for saying "let the current work finish, then do this next". You will run into it.
+
+## Exercises
+
+1. Make the cell log `one`, `two`, `three` in that order, by adding a single `setTimeout` with a delay of `0` around one of the existing logs.
+
+    ```{javascript}
+    console.log('two');
+    console.log('one');
+    console.log('three');
+    ```
+    ```+solution
+    setTimeout(() => {
+      console.log('two');
+    }, 0);
+
+    console.log('one');
+    console.log('three');
+    ```
+    ```+test
+    wrap(source.includes('setTimeout')).should('equal', true).run('Use a `setTimeout` with a delay of `0`', 'Used setTimeout');
+    setTimeout(() => {
+      wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'one,three,two').run('The output should be `one`, `three`, `two`: the queued callback runs after all the synchronous code', 'The queued log came last');
+    }, 200);
+    ```
+
+2. This code sets `ready` inside a zero-delay timeout and then reads it immediately, so it always logs `false`. Move the log so that it reports `true`.
+
+    ```{javascript}
+    let ready = false;
+
+    setTimeout(() => {
+      ready = true;
+    }, 0);
+
+    console.log(ready);
+    ```
+    ```+solution
+    let ready = false;
+
+    setTimeout(() => {
+      ready = true;
+      console.log(ready);
+    }, 0);
+    ```
+    ```+test
+    wrap(console.history().length).should('equal', 0).run('Nothing should be logged synchronously. The log has to happen after `ready` is set, which means moving it inside the callback', 'Nothing logs synchronously');
+    setTimeout(() => {
+      check.consoleLogged('true').run('The cell should eventually log `true`', 'Logged true once the callback had run');
+    }, 200);
+    ```
+
+3. Does the queue apply to click callbacks as well as timeouts?
+
+    ```{mcq}
+    A long calculation is running when the user clicks a button that has a click listener. What happens?
+    correct: Correct! Event callbacks go on the queue exactly as timeout callbacks do, and the queue waits for the call stack to empty. The click is handled once the calculation finishes, not in the middle of it.
+    wrong: Look back at "Where Callbacks Actually Go". The queue is not only for timers.
+    [x] The click callback waits in the queue until the calculation finishes, then runs
+    [ ] The click callback interrupts the calculation and runs straight away
+    [ ] The click is discarded, because the call stack was busy
+    [ ] Both run at the same time, since the browser uses two threads
+    ```
+
+## Resources
+
+- [MDN: The event loop](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Execution_model)
+- [MDN: Call stack](https://developer.mozilla.org/en-US/docs/Glossary/Call_stack)
+- [MDN: setTimeout()](https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout)

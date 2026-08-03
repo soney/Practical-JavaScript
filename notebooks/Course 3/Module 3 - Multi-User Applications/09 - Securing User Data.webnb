@@ -1,0 +1,291 @@
+# Securing User Data
+
+Time to fix the thing we have been flagging for two readings.
+
+Our `users.json` contains readable passwords. If that file is stolen, copied into a backup that leaks, or accidentally committed to a public repository, every account is compromised at once. And it is worse than it looks, because people reuse passwords: the address and password in your database probably also open that person's email, and their email opens everything else, up to and including bank accounts. You cannot fix password reuse as a developer. You can make sure your breach is not the one that hands it over.
+
+## Hashing
+
+The trick is to **not store the password at all**, and still be able to check it.
+
+A **hashing function** takes a password and produces a **hash**: a scrambled-looking string. It has two properties that together do the job:
+
+- Given a password and a hash, you can check **whether they match**.
+- Given a hash, you cannot work out the password, other than by guessing passwords one at a time and hashing each guess.
+
+It is a **one-way** function. Password to hash is the direction the function runs; hash to password is not a route that exists.
+
+That is what distinguishes hashing from **encryption**. Encryption is designed to be reversed: with the key, you get the original back. Hashing has no key and no reverse. For passwords that is exactly right, because you never need to read a password back. You only ever need to answer "is this the right one?".
+
+## bcrypt
+
+Do not write your own. Use **bcrypt**, which exists specifically for passwords:
+
+```
+$ npm install bcrypt
+```
+
+(In `auth-demo` it is already listed in `package.json`, so the one `npm install` you ran covers it.)
+
+The library gives us two functions, and they are the whole API we need:
+
+- **`bcrypt.hash(plainPassword, saltRounds)`** produces the hash. The `10` we pass is the number of **salt rounds**, and the cost is exponential: 10 rounds means 2 to the power of 10 iterations, 12 means 2 to the power of 12. Ten to twelve is the usual range. Higher is harder to attack and slower for your server on every single login, so it is a genuine trade rather than a free win.
+- **`bcrypt.compare(plainPassword, storedHash)`** answers "does this password match this hash?" with a boolean.
+
+Both return **promises**, so both get an `await`. Hashing is deliberately slow, which we will come back to. (The bcrypt documentation also shows a callback style; with promises and `await`, we do not need it.)
+
+You will also meet **bcryptjs**, a pure-JavaScript implementation with the same API, and that is the one this module's assignments use. Everything here applies to both.
+
+## What Changed in the Server
+
+This reading's snapshot is `auth-demo/03-hashing/`, and it is stage 2 with three edits: an import, one line in `/register`, and one line in `/login`. The two TODO comments are gone. Nothing else moved, and the pages in `static/` are untouched.
+
+```{walkthrough}
+title: Stage 2 to stage 3, three edits
+step: The import
+file: auth-demo/03-hashing/server.js
+region: setup
+@"import bcrypt": The one new dependency.
+
+step: Hashing on registration
+file: auth-demo/03-hashing/server.js
+region: register
+The registration endpoint from stage 2, with the plain-text line replaced by two.
+@"bcrypt.hash": The password goes through the hashing function, with 10 salt rounds, and `await` because it returns a promise.
+@"password: hashedPassword": Where stage 2 stored `data.password` with a TODO apologizing for it, the record now holds the hash. The typed password is never written anywhere.
+
+step: Checking on login
+file: auth-demo/03-hashing/server.js
+region: login
+The login endpoint from stage 2, with the `===` comparison replaced.
+@"bcrypt.compare": A stored hash can never `===` a typed password, so the comparison goes through bcrypt: it hashes what was typed the way the stored one was hashed and reports whether they agree.
+@"if (match)": From here down the endpoint is exactly stage 2: `200` on a match, the same vague `401 Invalid credentials` on either kind of failure.
+```
+
+One naming note. The video keeps calling the stored field `password` even though it now holds a hash, and this server follows the video. The assignments in this module name the field `passwordHash` instead, which is the better habit: name the field accurately and code that stores the real password *looks* wrong. The exercises below use that name.
+
+After the change, `users.json` looks like this:
+
+```json
+{
+  "users": [
+    {
+      "created": 1717000000000,
+      "email": "soney@umich.edu",
+      "password": "$2b$10$N9qo8uLOickgx2ZMRZoMy.MH/rGSkFYvbTFqjM6C8yGGkQFHHDVAe"
+    }
+  ]
+}
+```
+
+Someone reading that file learns an email address and nothing else useful. One catch: any accounts you registered under stage 1 or 2 stored the password itself, and `bcrypt.compare` will never match against those. The video's answer was to delete the old `users.json` and register again (you *could* write code to migrate it, but there is nothing worth migrating here). In `auth-demo`, each stage has its own `users.json`, so stage 3 starts empty.
+
+## The Same Password, Different Hashes
+
+Register two accounts with the identical password and look at the file: the two hashes are **different**.
+
+That is deliberate, and it is what the "salt" in salt rounds refers to. bcrypt mixes a random value, the salt, into each hash and stores it as part of the resulting string. So:
+
+- An attacker with your database cannot tell that two users share a password.
+- They cannot hash a list of common passwords once and match the results against every row, which is exactly the attack that unsalted hashes fall to.
+
+Here is that behavior, with a toy stand-in for bcrypt, since the real library cannot run in a notebook. **This is not a real hash function** and must never be used for anything; it only shows the shape:
+
+```{javascript autorun}
+// A toy, for illustration only. Real hashing is nothing like this.
+function toyHash(password, salt) {
+  let scrambled = 0;
+
+  for (const character of password + salt) {
+    scrambled = (scrambled * 31 + character.charCodeAt(0)) % 1000000;
+  }
+
+  return salt + '$' + scrambled;
+}
+
+function toyHashWithRandomSalt(password) {
+  const salt = 'salt' + Math.floor(Math.random() * 1000);
+
+  return toyHash(password, salt);
+}
+
+function toyCompare(password, stored) {
+  const salt = stored.split('$')[0];
+
+  return toyHash(password, salt) === stored;
+}
+
+// Two accounts, one password.
+const firstHash = toyHashWithRandomSalt('abc123');
+const secondHash = toyHashWithRandomSalt('abc123');
+
+console.log('first:  ' + firstHash);
+console.log('second: ' + secondHash);
+console.log('same password, same hash? ' + (firstHash === secondHash));
+
+// Checking still works, because the salt is stored alongside the hash.
+console.log('correct password matches? ' + toyCompare('abc123', firstHash));
+console.log('wrong password matches?   ' + toyCompare('wrong', firstHash));
+```
+
+The salt is kept inside the stored string, which is how the check can reproduce the same hash without knowing the password in advance. Run the cell a few times: the salts change, the hashes change, and the checks keep working.
+
+## What Hashing Does Not Fix
+
+Hashing is not a magic word. If your database is stolen, an attacker can still guess: take a list of common passwords, hash each against a user's salt, and see whether anything matches. That is why bcrypt is deliberately slow. At ten salt rounds each guess costs real time, so a million guesses becomes an expensive undertaking rather than a few seconds' work.
+
+The honest summary: hashing turns "every account is gone immediately" into "strong passwords are probably fine, weak ones will fall eventually". That is an enormous improvement and not a guarantee.
+
+## Running It Yourself
+
+From the `auth-demo` folder (stop the previous stage with `Ctrl+C` first):
+
+```
+$ node 03-hashing/server.js
+Listening on port 3000
+```
+
+1. Register an account, then open `03-hashing/users.json`. Where stage 1 showed your password, there is now a `$2b$10$...` string. The `10` embedded in it is the salt rounds.
+2. Log in with the right password, then the wrong one. The behavior is exactly stage 2's, which is the point: hashing changed what the server *stores*, not what the user sees.
+3. Register a second account with the **same** password and compare the two hashes in the file. Different, thanks to the salt.
+
+There is still one piece of rudeness left: the site forgets you the moment you refresh, so every private action would mean sending the password again. Keeping users logged in is the next reading.
+
+## Exercises
+
+1. Complete `registerUser` so the stored record holds a hash rather than the password. `hash` stands in for `bcrypt.hash`.
+
+    ```{node}
+    // Stands in for bcrypt.hash, which returns a promise.
+    function hash(password, saltRounds) {
+      return Promise.resolve('hashed(' + password + ',' + saltRounds + ')');
+    }
+
+    const users = [];
+
+    async function registerUser(email, password) {
+      // TODO: hash the password with 10 salt rounds, then push a user
+      // with email, passwordHash, and created: 0
+    }
+
+    registerUser('user@company.com', 'abc123');
+
+    console.log(users);
+    ```
+    ```+solution
+    // Stands in for bcrypt.hash, which returns a promise.
+    function hash(password, saltRounds) {
+      return Promise.resolve('hashed(' + password + ',' + saltRounds + ')');
+    }
+
+    const users = [];
+
+    async function registerUser(email, password) {
+      const hashedPassword = await hash(password, 10);
+
+      users.push({ email: email, passwordHash: hashedPassword, created: 0 });
+    }
+
+    registerUser('user@company.com', 'abc123');
+
+    console.log(users);
+    ```
+    ```+test
+    wrap(/await\s+hash\s*\(/.test(source)).should('equal', true).run('`hash` returns a promise, so `await` it', 'Waited for the hash');
+    wrap(/hash\s*\([^)]*,\s*10\s*\)/.test(source)).should('equal', true).run('Pass `10` as the number of salt rounds', 'Used ten salt rounds');
+    wrap(/passwordHash\s*:/.test(source)).should('equal', true).run('Store the hash under `passwordHash`, not `password`', 'Named the field accurately');
+    wrap(/\bpassword\s*:/.test(source)).should('equal', false).run('The stored record must not contain a `password` field at all', 'Stored no plain-text password');
+    ```
+
+2. Complete `login` so it checks a submitted password against a stored hash. `compare` stands in for `bcrypt.compare`.
+
+    ```{node}
+    // Stands in for bcrypt.compare, which returns a promise for a boolean.
+    function compare(password, storedHash) {
+      return Promise.resolve(storedHash === 'hashed(' + password + ',10)');
+    }
+
+    const users = [
+      { email: 'grace@example.com', passwordHash: 'hashed(letmein,10)' }
+    ];
+
+    async function login(email, password) {
+      const foundUser = users.find((user) => user.email === email);
+
+      // TODO: return '200 Login successful' when the user exists and the
+      // password matches the stored hash, and '401 Invalid credentials'
+      // otherwise
+    }
+
+    login('grace@example.com', 'letmein').then((result) => {
+      console.log(result);
+    });
+    ```
+    ```+solution
+    // Stands in for bcrypt.compare, which returns a promise for a boolean.
+    function compare(password, storedHash) {
+      return Promise.resolve(storedHash === 'hashed(' + password + ',10)');
+    }
+
+    const users = [
+      { email: 'grace@example.com', passwordHash: 'hashed(letmein,10)' }
+    ];
+
+    async function login(email, password) {
+      const foundUser = users.find((user) => user.email === email);
+
+      if (!foundUser) {
+        return '401 Invalid credentials';
+      }
+
+      const match = await compare(password, foundUser.passwordHash);
+
+      if (match) {
+        return '200 Login successful';
+      }
+
+      return '401 Invalid credentials';
+    }
+
+    login('grace@example.com', 'letmein').then((result) => {
+      console.log(result);
+    });
+    ```
+    ```+test
+    wrap(/await\s+compare\s*\(/.test(source)).should('equal', true).run('`compare` returns a promise, so `await` it', 'Waited for the comparison');
+    wrap(/compare\s*\(\s*password\s*,\s*foundUser\.passwordHash/.test(source)).should('equal', true).run('Call `compare` with the submitted password first and `foundUser.passwordHash` second', 'Called compare the right way round');
+    wrap(/200 Login successful/.test(source)).should('equal', true).run('Return `200 Login successful` when the password matches', 'Reported a successful login');
+    wrap(/passwordHash\s*===|===\s*foundUser\.passwordHash/.test(source)).should('equal', false).run('A stored hash cannot be compared with `===` against a typed password; that is what `compare` is for', 'Did not compare the hash directly');
+    wrap(/Invalid credentials/.test(source)).should('equal', true).run('Failures should answer with the vague `Invalid credentials` message from the previous reading', 'Kept the failure message vague');
+    ```
+
+3. What is the difference between encryption and hashing?
+
+    ```{mcq}
+    Which statement is right?
+    correct: Correct! Encryption exists to be reversed by whoever holds the key. Hashing is one-way, with no key and no reverse, which is what makes it right for a value you never need to read back.
+    wrong: Ask whether each one is meant to be undone, and what you would need in order to undo it.
+    [x] Encryption is meant to be reversed with a key; hashing is one-way and cannot be reversed to recover the password
+    [ ] Hashing makes the password shorter and encryption makes it longer
+    [ ] Hashing only works on numbers, encryption only on letters
+    [ ] Hashing needs an internet connection and encryption does not
+    ```
+
+4. Why would you increase the number of salt rounds passed to `bcrypt.hash`?
+
+    ```{mcq}
+    What does a higher number buy?
+    correct: Correct! More rounds means more computation per hash. That is barely noticeable once per login and enormously expensive for an attacker making millions of guesses against a stolen database.
+    wrong: More rounds makes hashing slower. Who does that slowness cost more, you or an attacker?
+    [x] It raises the cost of computing each hash, making brute-force guessing much slower
+    [ ] It lets users choose shorter passwords
+    [ ] It makes hashing faster for the server
+    [ ] It makes the same password always produce the same hash
+    ```
+
+## Resources
+
+- [npm: bcrypt](https://www.npmjs.com/package/bcrypt)
+- [npm: bcryptjs](https://www.npmjs.com/package/bcryptjs)
+- [OWASP: password storage cheat sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+- [MDN: hash function](https://developer.mozilla.org/en-US/docs/Glossary/Hash_function)

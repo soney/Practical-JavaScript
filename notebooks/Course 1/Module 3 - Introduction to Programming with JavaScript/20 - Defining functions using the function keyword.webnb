@@ -1,0 +1,150 @@
+# Defining Functions
+
+Now that we know what functions are, let's define our own. A function takes a chunk of code and condenses it into one block, the gray box from the last lesson.
+
+## Building One From Code You Already Have
+
+The first thing to decide is what goes in the box. Suppose we have these two statements:
+
+```{javascript autorun}
+console.log('hello');
+console.log('goodbye');
+```
+
+To turn them into a function, we indent them, and wrap them in three things: the `function` keyword, a name, and a pair of curly braces.
+
+```{javascript autorun}
+function doGreet() {
+  console.log('hello');
+  console.log('goodbye');
+}
+```
+
+Run that cell. **Nothing is logged.** That is not a mistake, and it is the most important thing to notice in this lesson. We will come back to it in a moment.
+
+Taking the syntax apart piece by piece:
+
+- `function` is the keyword that says we are defining a function.
+- `doGreet` is the **function name**. It follows the same naming rules as a variable: start with a letter, then letters, digits, `_`, or `$`.
+- `()` is where the **parameters** go. For now we leave the parentheses empty, and we will fill them in a couple of lessons from now.
+- `{ ... }` holds everything that belongs to the function.
+
+![Diagram labeling the parts of a function definition. The first line reads function ourFunc() {. The name ourFunc is in a red box labeled Function name, the empty parentheses right after it are in a blue box labeled Parameters, and the indented code between the braces is in a green box labeled Function body, with the note "code to run when we call the function". The closing brace sits on its own line at the bottom.](images/function-parts.png)
+
+Two pieces of vocabulary come out of that. The first line, `function doGreet()`, is the **function declaration signature**. Everything inside the curly braces is the **function body**: the code that runs when the function is called.
+
+## Defining Is Not Running
+
+Defining a function creates the box. It does not open it. This is like building a machine and never switching it on: the machine exists, and nothing has happened yet.
+
+To actually run the body, we have to **call** the function, by writing its name followed by parentheses:
+
+```{javascript autorun}
+function doGreet() {
+  console.log('hello');
+  console.log('goodbye');
+}
+
+doGreet();
+```
+
+Now `hello` and `goodbye` appear. The definition built the box, and the last line opened it.
+
+## Calling It More Than Once
+
+Usually the reason we define a function in the first place is that we want to run its code in several places. Once the function exists, running it again is one line:
+
+```{javascript autorun}
+function doGreet() {
+  console.log('hello');
+  console.log('goodbye');
+}
+
+doGreet();
+doGreet();
+doGreet();
+```
+
+That runs the body three times, for six lines of output, and we never had to repeat the two `console.log` statements. That is the whole point of the box: write the code once, use it as many times as you like.
+
+A page can define as many functions as it needs, each with its own name and its own body:
+
+```{javascript autorun}
+function doGreet() {
+  console.log('hello');
+  console.log('goodbye');
+}
+
+function myFunc() {
+  console.log(1 + 2 + 3);
+}
+
+doGreet();
+myFunc();
+```
+
+We now know the syntax for defining a function. In the next lesson we will look more closely at the other half: invoking, or calling, the functions we define.
+
+## Exercises
+
+1. Define a function named `greet` that logs `Hello!` to the console, and then call it once.
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+solution
+    function greet() {
+      console.log('Hello!');
+    }
+
+    greet();
+    ```
+    ```+test
+    wrap(typeof greet).should('equal', 'function').run('Define a function named `greet` using the `function` keyword', 'Defined the greet function');
+    check.consoleLogged('Hello!').run('Call `greet()` so that it logs `Hello!`', 'Called the function');
+    ```
+
+2. Define a function named `cheer` that logs `Go Blue!`, then call it three times so the message appears three times.
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+solution
+    function cheer() {
+      console.log('Go Blue!');
+    }
+
+    cheer();
+    cheer();
+    cheer();
+    ```
+    ```+test
+    wrap(typeof cheer).should('equal', 'function').run('Define a function named `cheer`', 'Defined the cheer function');
+    wrap(console.history().length).should('equal', 3).run('Call `cheer()` three times, so `Go Blue!` is logged three times', 'Called the function three times');
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'Go Blue!,Go Blue!,Go Blue!').run('Each call should log `Go Blue!`', 'Logged the cheer three times');
+    ```
+
+3. What does this code log?
+
+    ```{mcq}
+    A script contains only these four lines:
+
+    ~~~js
+    function sayHello() {
+      console.log('Hello, world!');
+    }
+    ~~~
+
+    What appears in the console when it runs?
+    correct: Correct! Defining a function builds the box but does not open it. Nothing runs until the function is called with `sayHello()`.
+    wrong: Look back at "Defining Is Not Running", and at what happened the first time we defined `doGreet`.
+    [x] Nothing at all
+    [ ] `Hello, world!`
+    [ ] `sayHello`
+    [ ] `undefined`
+    ```
+
+## Resources
+
+- [MDN: function declaration](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/function)
+- [MDN: Functions guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions)

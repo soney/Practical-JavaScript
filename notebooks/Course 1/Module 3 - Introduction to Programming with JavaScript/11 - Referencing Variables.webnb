@@ -1,0 +1,141 @@
+# Referencing Variables
+
+In the last lesson we declared variables, which in the box analogy is creating a box, labeling it, and putting something inside. The logical next question is how to find out what is in the box later, or to take the thing back out. That is called **referencing** a variable, and it fetches the value stored in it.
+
+To reference a variable, write its name. That is the whole syntax.
+
+```{javascript autorun}
+const pi = 3.14;
+
+console.log(pi);
+```
+
+The expression `pi` on the last line references the variable `pi`, and its value is `3.14`. A variable reference is an expression like any other, so it can go anywhere an expression can go:
+
+```{javascript autorun}
+const myVar = 1 + 2 + 3;
+
+console.log(myVar);
+console.log(myVar + 5);
+```
+
+The first log gives `6`, and the second gives `11`, because `myVar + 5` is an arithmetic expression with a variable reference on one side of the `+`.
+
+## You Get the Value It Has Right Now
+
+A reference gives you whatever is in the box at the moment the reference runs. If the variable is reassigned later, earlier references are not affected.
+
+```{javascript autorun}
+let count = 5;
+console.log(count);
+
+count = 6;
+console.log(count);
+```
+
+The first `console.log` prints `5`, even though `count` changes on the very next line. That log ran while the box still held `5`. The second prints `6`.
+
+## Variable References Versus String Literals
+
+This is the distinction to be most careful about. Quotation marks make whatever is between them a **string literal**, so they turn a variable name into ordinary text.
+
+```{javascript autorun}
+const greeting = 'hello, world';
+
+console.log(greeting);
+console.log('greeting');
+```
+
+The first line logs `hello, world`, the value stored in the variable. The second logs the word `greeting`, because the quotes made it a piece of text that has nothing to do with any variable. The two lines look almost the same and mean entirely different things.
+
+To reference a variable, write the bare name, with no quotation marks around it.
+
+## Values, Not Expressions, Again
+
+We said this when we declared variables, and it is worth seeing from the other side. A variable holds the value that was computed, not the expression that computed it:
+
+```{javascript autorun}
+const abc = 1 + 2;
+console.log(abc);
+```
+
+That logs `3`. Now compare it with this:
+
+```{javascript autorun}
+const xyz = '1 + 2';
+console.log(xyz);
+```
+
+That logs `1 + 2`. Not because the expression was remembered, but because the value of `xyz` is a string whose text happens to read `1 + 2`. In both cases we logged the value; the values were just different things.
+
+## Declare and Assign Before You Reference
+
+A variable has to exist before you can reference it. The engine runs your code from top to bottom, so a reference above the declaration is a reference to something that does not exist yet. Run this cell and read the error:
+
+```{javascript}
+console.log(temperature);
+
+const temperature = 72;
+```
+
+The message says `temperature` cannot be found, because at the moment that line ran, no such box had been made. Move the `console.log` below the declaration and run it again.
+
+You will see the same kind of error from a typo in the name, because variable names are **case sensitive**. `MyVar` and `myVar` are two different names, and referencing the one you never declared produces `MyVar is not defined`.
+
+## Exercises
+
+1. Reference `firstName` and `lastName` to build a `fullName` whose value is `Ada Lovelace`, with a space between the two words.
+
+    ```{javascript}
+    const firstName = 'Ada';
+    const lastName = 'Lovelace';
+
+    const fullName = /* Your code here */;
+
+    console.log(fullName);
+    ```
+    ```+solution
+    const firstName = 'Ada';
+    const lastName = 'Lovelace';
+
+    const fullName = firstName + ' ' + lastName;
+
+    console.log(fullName);
+    ```
+    ```+test
+    wrap(fullName).should('equal', 'Ada Lovelace').run('`fullName` should be `Ada Lovelace`, built by referencing `firstName` and `lastName`', 'Built the full name');
+    ```
+
+2. The cell below logs the wrong thing. Fix it so it logs the value `120` rather than the word `total`.
+
+    ```{javascript}
+    const total = 40 * 3;
+
+    console.log('total');
+    ```
+    ```+solution
+    const total = 40 * 3;
+
+    console.log(total);
+    ```
+    ```+test
+    check.consoleLogged(/^120$/).run('Reference the variable by writing its name without quotation marks', 'Logged the value of the variable');
+    ```
+
+3. What happens when a variable is referenced before it is declared?
+
+    ```{mcq}
+    A script calls `console.log(score)` on line 1 and declares `const score = 10;` on line 2. What happens?
+    correct: Correct! The engine runs top to bottom, so on line 1 no variable named `score` exists yet and it reports an error.
+    wrong: Revisit "Declare and Assign Before You Reference", and remember the top-to-bottom rule from earlier in this module.
+    [x] An error, because `score` does not exist yet when line 1 runs.
+    [ ] It logs `10`, because the engine reads the whole file first.
+    [ ] It logs the word `score`.
+    [ ] It logs nothing at all and continues silently.
+    ```
+
+## Resources
+
+- [MDN: Grammar and types](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Grammar_and_types)
+- [MDN: let](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let)
+- [MDN: ReferenceError: "x" is not defined](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Not_defined)

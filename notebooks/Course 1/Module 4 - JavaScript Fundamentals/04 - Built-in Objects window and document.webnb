@@ -1,0 +1,120 @@
+# The `window` Object
+
+JavaScript and the browser give us many built-in objects, and arguably the most important is **`window`**. It represents the browser window itself, and it also serves as the **global context** for everything that happens on the page. It is the top-level global object.
+
+`window` has properties that tell us about the user's browsing context:
+
+- `window.innerWidth`: the width of the window's content area, in pixels.
+- `window.innerHeight`: the height of the window's content area, in pixels.
+- `window.location`: an object describing the URL the browser is on. `window.location.href` gives that URL as a string.
+
+```{javascript autorun}
+console.log(window.location.href);
+console.log(window.innerWidth);
+console.log(window.innerHeight);
+```
+
+Resize the browser window and run that cell again. The numbers change, because these properties always report the window's current state.
+
+It also has built-in methods:
+
+- `window.alert(message)` displays a modal dialog that the user has to dismiss by clicking OK.
+- `window.prompt(message)` displays a modal dialog with an input field, and returns whatever the user typed.
+
+These two interrupt the page, so the cells below are not set to run automatically. Run them yourself when you want to see them.
+
+```{javascript}
+alert('This is a window alert!');
+```
+
+```{javascript}
+const name = prompt('What is your name?');
+
+console.log(name);
+```
+
+Type `Steve` into the second one and click OK, and `name` holds the string `Steve`. `prompt` hands back the text as its return value, which is why we store it in a variable.
+
+## Omitting `window.`
+
+Here is the consequence of `window` being the top-level global object: **all global variables and functions are automatically properties of `window`**. Which means we can leave off the `window.` prefix whenever we use one.
+
+```{javascript autorun}
+console.log(window.innerWidth === innerWidth);
+console.log(window.location.href === location.href);
+```
+
+So `alert('hi')` and `window.alert('hi')` are the same call, and `innerWidth` and `window.innerWidth` are the same value. You will see both styles in real code. The short form is more common.
+
+## `document`
+
+One property of `window` is important enough to get its own lesson: **`window.document`**, or just `document`. It represents the HTML document currently loaded in the browser, and it is the entry point to the DOM, which is how JavaScript reads and changes the content of the page.
+
+```{javascript autorun}
+console.log(window.document === document);
+```
+
+That is the subject of the next lesson.
+
+## Exercises
+
+1. Read two properties of `window`. Store the page's URL as a string in `pageUrl`, and the window's inner width in `windowWidth`. Read the width *without* the `window.` prefix, to prove that its properties are global.
+
+    ```{javascript}
+    const pageUrl = /* Your code here */;
+    const windowWidth = /* Your code here */;
+
+    console.log(pageUrl, windowWidth);
+    ```
+    ```+solution
+    const pageUrl = window.location.href;
+    const windowWidth = innerWidth;
+
+    console.log(pageUrl, windowWidth);
+    ```
+    ```+test
+    wrap(pageUrl).should('equal', window.location.href).run('`pageUrl` should hold the URL string from `window.location.href`', 'Read the page URL');
+    wrap(windowWidth).should('equal', window.innerWidth).run('`windowWidth` should be the window\'s inner width', 'Read the window width');
+    wrap(/(^|[^.\w])innerWidth/.test(source)).should('equal', true).run('Read `innerWidth` without the `window.` prefix', 'Used the global form');
+    ```
+
+2. Write a function `windowSize` that returns an object describing the window right now, with a `width` property holding the inner width and a `height` property holding the inner height. Read both without the `window.` prefix.
+
+    ```{javascript}
+    function windowSize() {
+      // Write your code here
+    }
+
+    console.log(windowSize());
+    ```
+    ```+solution
+    function windowSize() {
+      return { width: innerWidth, height: innerHeight };
+    }
+
+    console.log(windowSize());
+    ```
+    ```+test
+    wrap(windowSize().width).should('equal', window.innerWidth).run('The returned object should have a `width` property holding the inner width', 'Reported the width');
+    wrap(windowSize().height).should('equal', window.innerHeight).run('The returned object should have a `height` property holding the inner height', 'Reported the height');
+    wrap(/(^|[^.\w])innerHeight/.test(source)).should('equal', true).run('Read `innerHeight` without the `window.` prefix', 'Used the global form');
+    ```
+
+3. Why the `window.` prefix is optional
+
+    ```{mcq}
+    `alert('hi')` and `window.alert('hi')` do the same thing. Why can the `window.` prefix be left off when calling `alert`?
+    correct: Correct! `window` is the top-level global object, so every global name is already a property of it, and the prefix is optional.
+    wrong: Look back at the "Omitting `window.`" section.
+    [x] `window` is the global object, so its properties are also global names
+    [ ] `alert` is a special case that the browser handles differently from other `window` methods
+    [ ] The browser copies every `window` method into `document` when the page loads
+    [ ] Leaving the prefix off creates a new function that calls `window.alert` for you
+    ```
+
+## Resources
+
+- [MDN: Window](https://developer.mozilla.org/en-US/docs/Web/API/Window)
+- [MDN: Window.prompt()](https://developer.mozilla.org/en-US/docs/Web/API/Window/prompt)
+- [MDN: Window.location](https://developer.mozilla.org/en-US/docs/Web/API/Window/location)
+- [MDN: Document](https://developer.mozilla.org/en-US/docs/Web/API/Document)

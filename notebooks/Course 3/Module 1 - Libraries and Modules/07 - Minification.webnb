@@ -1,0 +1,153 @@
+# Minification
+
+**Minification** is the process of making code shorter while keeping it functionally identical. Shorter code is fewer bytes, and fewer bytes download faster, which is the whole reason anyone bothers.
+
+Take a function that returns the area of a rectangle:
+
+```javascript
+// Calculate the area of a rectangle,
+// given its width and its height.
+function calculateArea(width, height) {
+  const area = width * height;
+
+  return area;
+}
+```
+
+Now shorten it, one kind of change at a time.
+
+**Remove the comments.** They are for people, and the browser never executes them.
+
+**Shorten the names.** `width` becomes `a`, `height` becomes `b`. The names are meaningless to the browser, so nothing breaks.
+
+**Remove the whitespace.** Spaces, indentation, and newlines that exist for readability can nearly all go, which collapses the function onto one line.
+
+```javascript
+function calculateArea(a,b){return a*b}
+```
+
+There are further tricks, some of which use JavaScript syntax we have not covered, and real minifiers apply all of them. In the video's version of this example, the original is 336 characters and the minified result is 75.
+
+The two versions behave identically. The second one is unpleasant to read, and nobody writes code that way on purpose.
+
+## You Write One, a Tool Writes the Other
+
+That is the key idea. A developer writes the readable version, with comments and sensible spacing. Then a program called a **minifier** reads it and produces the short version, which is what gets served to users.
+
+You never edit the minified file. It is an output, like a compiled binary. Later in this module we will run a minifier ourselves as part of bundling.
+
+Here is the size difference, measured rather than asserted. `String` applied to a function gives back its source text, so the cell can measure itself:
+
+```{javascript autorun}
+// Calculate the area of a rectangle,
+// given its width and its height.
+function calculateArea(width, height) {
+  const area = width * height;
+
+  return area;
+}
+
+function ca(a,b){return a*b}
+
+console.log('readable: ' + String(calculateArea).length + ' characters');
+console.log('minified: ' + String(ca).length + ' characters');
+console.log('same answer for 4 and 5? ' + (calculateArea(4, 5) === ca(4, 5)));
+```
+
+The saving on one small function is not interesting. On a library of thousands of functions it is the difference between a page that feels quick and one that does not.
+
+## Minified Libraries
+
+Because the benefit is largest for library code, libraries publish a minified build alongside the full one. By convention the minified file's name ends in **`.min.js`**:
+
+- `lodash.js` is the full, readable build.
+- `lodash.min.js` is the minified build, with the whitespace gone and single-character variable names throughout.
+
+On the Lodash site, the minified download is the one offered as the gzipped build. You save it into your project the same way, and a file called `lodash.min.js` appears next to your code.
+
+Using it requires no other change at all:
+
+```html
+<script src="lodash.min.js"></script>
+<script src="my-code.js"></script>
+```
+
+`_.shuffle` and everything else still work exactly as before, because it is the same library. Only the formatting is different.
+
+```
+my-project/
+  index.html
+  lodash.min.js
+  my-code.js
+```
+
+The one real cost is debugging. When an error is reported on line 1, column 24,910 of `lodash.min.js`, that tells you almost nothing. There is a fix for that, called a source map, and we will get to it when we cover bundlers.
+
+## Exercises
+
+1. Minify this function by hand. Keep the behavior exactly the same, and get the whole cell down to 40 characters or fewer.
+
+    ```{javascript}
+    // Returns the total price for a quantity of items
+    function total(price, quantity) {
+      const result = price * quantity;
+
+      return result;
+    }
+    ```
+    ```+solution
+    function total(a,b){return a*b}
+    ```
+    ```+test
+    wrap(typeof total).should('equal', 'function').run('Keep a function named `total`', 'Kept the function name');
+    wrap(total(3, 4)).should('equal', 12).run('It should still return `12` for `3` and `4`. Minified code has to behave identically', 'Behavior is unchanged');
+    wrap(total(0, 9)).should('equal', 0).run('It should still return `0` when the price is `0`', 'Behavior is unchanged for zero');
+    wrap(source.trim().length <= 40).should('equal', true).run('The whole cell should be 40 characters or fewer. Drop the comment, shorten the parameter names, and remove the newlines', 'Fit inside 40 characters');
+    ```
+
+2. A page currently loads `lodash.js`. Change the tag so it loads the minified build instead, and leave the second tag alone.
+
+    ```{html}
+    <script src="lodash.js"></script>
+    <script src="my-code.js"></script>
+    ```
+    ```+solution
+    <script src="lodash.min.js"></script>
+    <script src="my-code.js"></script>
+    ```
+    ```+test
+    wrap(/src\s*=\s*["']lodash\.min\.js["']/.test(source)).should('equal', true).run('Point the first tag at `lodash.min.js`', 'Loaded the minified build');
+    wrap(/src\s*=\s*["']my-code\.js["']/.test(source)).should('equal', true).run('Leave the `my-code.js` tag as it is; using a minified library needs no other change', 'Left your own script alone');
+    assert('script').should('have.length', 2).run('There should still be two script tags', 'Kept both tags');
+    ```
+
+3. What is the main advantage of loading `lodash.min.js` instead of `lodash.js`?
+
+    ```{mcq}
+    Both files define the same functions. Why prefer the minified one?
+    correct: Correct! It is a smaller file, so it downloads faster for your users. That is the entire benefit; the code it defines is the same.
+    wrong: Compare the two files. What is different about them, and who does that difference help?
+    [x] It reduces the file size, so the library downloads faster for users
+    [ ] It adds features that the full build does not have
+    [ ] It makes the code easier for developers to read and debug
+    [ ] It automatically fixes errors in the original code
+    ```
+
+4. Which of these changes does a minifier commonly make?
+
+    ```{mcq}
+    Which change is part of minification?
+    correct: Correct! Descriptive names are for people, and the browser does not care, so a minifier replaces them with the shortest names it can.
+    wrong: Look back at the three changes made to `calculateArea`.
+    [x] Replacing descriptive variable names with much shorter ones
+    [ ] Adding comments that explain what the code does
+    [ ] Converting the JavaScript into HTML
+    [ ] Splitting the code across several files
+    ```
+
+## Resources
+
+- [MDN: Minification](https://developer.mozilla.org/en-US/docs/Glossary/Minification)
+- [Lodash download options](https://lodash.com/)
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)
+- [MDN: Function.prototype.toString()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/toString)

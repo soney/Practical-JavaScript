@@ -1,0 +1,186 @@
+# Expressions, Values, and Types
+
+[Last time](<03 - Adding JavaScript Code.webnb>) we learned how to get JavaScript code into our pages. Now let's talk about what happens to that code once it is there: how the JavaScript engine reads what we wrote and decides what to do.
+
+## The JavaScript Engine
+
+Everything between the `<script>` tags is JavaScript, and the piece of the browser that reads it is called the **JavaScript engine**. The engine is one part of a much larger browser. The browser also contains an HTML renderer that turns your markup into a page you can see, code for networking that fetches things from the Internet, and a great deal more. For this module we are going to ignore all of that and look only at the engine.
+
+### Programmers write Expressions
+
+What the engine actually reads is a series of **expressions** that programmers write. An expression is a piece of code that the engine can work out an answer for. The engine looks at each expression and computes a **value** for it.
+
+```{javascript autorun}
+console.log(1 + 2 + 3);
+```
+
+`1 + 2 + 3` is an expression, and the value the engine computes for it is `6`.
+
+### Syntax Errors
+
+Programmers try to write the right expression to compute what they want. These expressions must be **syntactically correct**, which means they must follow the "rules" of JavaScript. If they are not syntactically correct, the engine cannot understand them and will report an error. For example, the code below is not syntactically correct because it is missing a closing parenthesis `)`. The engine cannot compute a value for it, so it reports an error instead.
+
+```{javascript}
+console.log(1 + 2
+```
+
+## Every Value Has a Type
+
+Programmers write expressions, and the engine evaluates them into values. Every value also has a **type**, which is a way of categorizing what kind of value it is. The value `6` is a number, so its type is `number`. The *type* is going to influence what you can actually *do* with that value (for example, we subtract numbers but we can't substract text, which are called 'strings').
+
+Here are a few examples. The first column is the expression we write, the second is the value the engine computes, and the third is the type of that value.
+
+| Expression           | Value           | Type                                                    |
+| -------------------- | --------------- | ------------------------------------------------------- |
+| `500`                | `500`           | `number` (a type that represents numbers or quantities) |
+| `1 + 1`              | `2`             | `number`                                                |
+| `'Hello'`            | `'Hello'`       | `string` (a type that represents text)                  |
+| `'Hello' + ' World'` | `'Hello World'` | `string`                                                |
+
+The first row is worth a look: `500` on its own is a perfectly valid expression whose value is also `500` (known as a "literal" expression when the expression is essentially the same as the value).
+
+Putting quotation marks around some text creates an expression whose value is a **string**, which is a chunk of text. We will spend a whole lesson on strings shortly. And when we add two strings together, the engine does not do arithmetic on them; it **concatenates** them, which means it glues them together end to end.
+
+Run this cell and check each line against the table above:
+
+```{javascript autorun}
+console.log(500);
+console.log(1 + 1);
+console.log('Hello');
+console.log('Hello' + ' World');
+```
+
+Try adding a line of your own, such as `console.log(2 * 21);`, and running the cell again.
+
+### Runtime Errors
+
+We mentioned that *syntax* errors are when our expressions don't follow the "rules" of JavaScript. There is another kind of error called a **runtime** error, which is when the engine can read the expression perfectly well but cannot carry it out. The code is written correctly, so the engine gets as far as running it, and only then does something go wrong.
+
+Here is the one you are most likely to meet. The engine can read `console.log(total)` and knows exactly what it has been asked to do: find whatever `total` refers to and log it. But if nothing in the program is called `total`, there is nothing to find, so the engine reports a runtime error instead of a value.
+
+```{javascript}
+console.log(total);
+```
+
+Notice the difference between the two kinds of error. The syntax error earlier was never run at all, because the engine could not read it. This line is perfectly readable, and it fails only at the moment the engine tries to carry it out. Once we learn how to give names to values, this same line will work fine.
+
+## Nothing Shows Up on Its Own
+
+Just because we write an expression and JavaScript computes a value for it does not mean that value will show up anywhere. The engine computes the value, but it does not display it on the page or in the console unless we ask it to. For example, in the code below, JavaScript computes `1+1` as `2`, but it does not display that value anywhere.
+
+```{javascript}
+1 + 1
+```
+
+Nothing shows up because nothing in that code asked for the value to be displayed anywhere.
+
+To see the value of an expression, we need two things:
+
+- The expression has to be inside a call to `console.log(...)`.
+- The JavaScript console has to be open in the browser, so there is somewhere for the message to appear.
+
+
+```{javascript autorun}
+console.log(1 + 1);
+```
+
+With those two things in place, `2` shows up in the console. Inside these notebooks the console is always open for you, as the output area under each cell, which is why every example so far has used `console.log`. We will look at the real browser console in the next lesson.
+
+## Writing the Right Expression
+
+Expressions have to obey the **syntactic rules** of JavaScript, which is the format the engine expects. Write something the engine cannot parse and it will not guess at what you meant; it will report an error.
+
+```{javascript autorun}
+console.log('Ann Arbor' + ' ' + 'Michigan');
+```
+
+A large part of learning to program, and of learning any new programming language, is learning how to write the right expression for a given goal. We will get better at that over the rest of the specialization.
+
+We have already covered two types of errors:
+
+- **Syntax errors** are when the engine cannot read the expression at all, because it does not follow the rules of JavaScript.
+- **Runtime errors** are when the engine can read the expression but cannot carry it out, because something is missing or wrong in the program.
+
+There is also another type of error called a **semantic error**:
+
+- **Semantic errors** are when the engine can read and run the expression, but it does not do what we intended. The code is syntactically correct and runs without crashing, but it does not produce the right result. For example, if we wanted to compute `1 + 1` but wrote `1 - 1` instead, that would be a semantic error.
+
+## Exercises
+
+1. Replace the `0` below with an arithmetic expression whose value is `100`, such as one that multiplies two numbers.
+
+    ```{javascript}
+    console.log(0);
+    ```
+    ```+solution
+    console.log(10 * 10);
+    ```
+    ```+test
+    check.consoleLogged(/^100$/).run('The cell should log the value `100`', 'Logged the value 100');
+    wrap(source.replace(/\s/g, '').includes('console.log(100)')).should('equal', false).run('Write an expression that computes `100`, rather than the number `100` itself', 'Used an expression');
+    ```
+
+2. Write an expression that concatenates the two strings `Go` and `Blue` with a space between them, so the cell logs `Go Blue`.
+
+    ```{javascript}
+    console.log('Go');
+    ```
+    ```+solution
+    console.log('Go' + ' ' + 'Blue');
+    ```
+    ```+test
+    check.consoleLogged(/^Go Blue$/).run('The cell should log `Go Blue`', 'Logged `Go Blue`');
+    ```
+
+3. What is the type of the value that the expression `'Hello' + ' World'` produces?
+
+    ```{mcq}
+    The engine evaluates `'Hello' + ' World'`. What type is the value it computes?
+    correct: Correct! Adding two strings concatenates them, and the result is another string.
+    wrong: Look back at the last row of the table in "Every Value Has a Type", and at what the `+` operator does to two strings.
+    [x] `string`
+    [ ] `number`, because `+` always does arithmetic
+    [ ] `boolean`
+    [ ] It has no type until we display it
+    ```
+
+4. What kind of error is it when a name has no value?
+
+    ```{mcq}
+    Nothing in the program is called `price`, and the engine is asked to run `console.log(price);`. What kind of error is that?
+    correct: Correct! The line is written correctly, so the engine reads it without trouble and fails only when it tries to carry it out.
+    wrong: Ask yourself whether the engine could read the line at all. That is what separates the two kinds of error.
+    [x] A runtime error
+      correct: Right, the failure happens at the moment the engine runs the line.
+      wrong: The line follows JavaScript's rules, so the engine reads it fine and fails only when it goes looking for `price`. That is a runtime error.
+    [ ] A syntax error
+      wrong: A syntax error means the engine cannot read the code in the first place, and `console.log(price);` is written correctly.
+    [ ] Both at the same time
+      wrong: There is nothing wrong with the way the line is written, so its syntax is fine.
+    [ ] Neither: the engine skips the line and carries on
+      wrong: The engine cannot invent a value for a name it has never seen, so it stops and reports an error.
+    ```
+
+5. Which lines can the engine not even read?
+
+    ```{mcq}
+    Which of these lines produce a syntax error? (Select all that apply)
+    correct: Correct! A syntax error is about how the code is written, so the engine catches it before running anything.
+    wrong: A syntax error means the code breaks JavaScript's writing rules. Check each line for a missing character.
+    [x] `console.log(1 + 2`
+      correct: Right, the closing parenthesis is missing.
+      wrong: This line never closes its parenthesis, so the engine cannot read it.
+    [x] `console.log('Hello);`
+      correct: Right, the string opens with a quotation mark and never closes.
+      wrong: Look at the quotation marks: the string opens with `'` and is never closed, so the engine cannot read the line.
+    [ ] `console.log(total);`
+      wrong: This line is written correctly. It fails only when it runs and finds that nothing is called `total`, which makes it a runtime error rather than a syntax error.
+    [ ] `console.log('Hello' + ' World');`
+      wrong: This is the line from the table above. It is written correctly and logs `Hello World`.
+    ```
+
+## Resources
+
+- [MDN: Expressions and operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators)
+- [MDN: JavaScript data types and structures](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Data_structures)
+- [MDN: console.log()](https://developer.mozilla.org/en-US/docs/Web/API/console/log_static)

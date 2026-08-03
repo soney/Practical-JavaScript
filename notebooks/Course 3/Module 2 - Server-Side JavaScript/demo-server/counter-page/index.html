@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Hit counter</title>
+    <style>
+      body { font-family: sans-serif; max-width: 40em; margin: 2em auto; padding: 0 1em; }
+      footer { margin-top: 2em; color: #555; }
+    </style>
+  </head>
+  <body>
+    <h1>A server that remembers</h1>
+
+    <p>
+      Every request for this page adds one to a number the server keeps in a
+      file. Reload to watch it climb, then stop the server and start it again:
+      the number is still there.
+    </p>
+
+    <footer>
+      This page has been visited <span id="count">0</span> times.
+    </footer>
+
+    <script>
+      fetch('/getHitCount')
+        .then((response) => response.text())
+        .then((text) => {
+          document.querySelector('#count').innerText = text;
+        });
+    </script>
+  </body>
+</html>

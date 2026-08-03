@@ -1,0 +1,134 @@
+# Introduction to Accessibility and WCAG
+
+**Accessibility** (often abbreviated **a11y**, where the 11 stands for the 11 letters between the first `a` and the last `y`) means people with different abilities, devices, and contexts can perceive, understand, navigate, and interact with your application.
+
+Accessibility is not a single feature. It affects structure, text, colors, keyboard behavior, forms, media, and JavaScript interactions.
+
+## Why Accessibility Matters
+
+First, it gives everyone equal access to your content. Second, it is the law in many places: the United States has the Americans with Disabilities Act (ADA), Canada has the Accessible Canada Act, the European Union has the European Accessibility Act, and many other countries have similar laws.
+
+Accessibility also benefits everyone once you think of **disability as a spectrum** rather than a fixed category. The same barrier can affect different people in different ways:
+
+- **Permanent**: a person with one arm using a control that needs two hands.
+- **Temporary**: a person whose arm is in a cast after an injury.
+- **Situational**: a new parent holding a baby, who also only has one free hand.
+
+The same pattern applies to other senses. For hearing, a permanent case is being deaf, a temporary case is an ear infection, and a situational case is a loud bar. For sight, a permanent case is being blind, a temporary case is cataracts, and a situational case is a driver whose eyes are on the road. For speech, a permanent case is being non-verbal, a temporary case is laryngitis, and a situational case is a heavy accent a voice assistant cannot parse. Designing for the permanent case tends to help everyone in the temporary and situational cases too.
+
+## Use the Right Semantic Element
+
+The starting point, and the most important habit, is to use the semantically correct HTML element for each purpose. HTML has many element types; choose the one that matches the meaning, not the one that happens to look right. If the default appearance is wrong, fix the look with CSS. The meaning is what assistive technologies rely on.
+
+```{html}
+<main>
+  <h1>Account settings</h1>
+  <button>Save changes</button>
+</main>
+```
+
+A real `<button>` is focusable with the keyboard, announced as a button by screen readers, and clickable with Enter or Space, all for free. A `<div>` styled to look like a button gives you none of that unless you rebuild it by hand. Remember that people interact with your site in many ways: some without a mouse, some without a keyboard, some through a screen reader, and some (like search bots) without a screen at all.
+
+## WCAG: The Standard
+
+The main accessibility standard is the **Web Content Accessibility Guidelines** (WCAG, pronounced "wik-ag"). It is a written standard with versions; the latest at the time of writing is **2.2**.
+
+WCAG is organized around four principles. Content must be:
+
+- **Perceivable** - information and UI must be presentable in ways users can perceive.
+- **Operable** - UI components and navigation must be operable.
+- **Understandable** - information and how the UI works must be understandable.
+- **Robust** - content must be reliably interpreted by many user agents, including assistive technologies.
+
+You can remember these four as **POUR**.
+
+The standard is layered: each **principle** contains **guidelines**, and each guideline contains testable **success criteria**. For example, the Perceivable principle contains guideline 1.1 ("provide text alternatives for non-text content"), and that guideline contains individual success criteria you can check against a page.
+
+### Conformance Levels
+
+Each success criterion is tagged with a **conformance level**:
+
+- **A** - the lowest, most essential level.
+- **AA** - the middle level, and in most contexts the practical minimum to aim for.
+- **AAA** - the highest level, often not achievable for every piece of content.
+
+Most legal requirements and organizational policies target **AA**.
+
+### Checking Tools
+
+You do not have to evaluate every criterion by hand. Browser extensions and tools like **WAVE**, **Lighthouse** (built into Chrome DevTools), and **axe** can scan a page and flag many issues automatically. These tools catch a lot, but not everything, so they complement manual testing rather than replace it.
+
+## Exercises
+
+1. What does WCAG stand for?
+
+   ```{mcq}
+   Which of these is the standard's actual name?
+   correct: Correct. WCAG stands for Web Content Accessibility Guidelines.
+   wrong: Think about the accessibility guidelines for web content.
+   [x] Web Content Accessibility Guidelines.
+   [ ] Web Code Animation Generator.
+   [ ] Website Color Application Grid.
+   [ ] Window Console API Guide.
+   ```
+
+2. Use the semantically correct element. Replace the clickable `div` below with a real `button` element whose text is `Save`, inside the `main`.
+
+   ```{html}
+   <main>
+     <h1>Settings</h1>
+     <div class="btn">Save</div>
+   </main>
+   ```
+   ```+solution
+   <main>
+     <h1>Settings</h1>
+     <button>Save</button>
+   </main>
+   ```
+   ```+test
+   assert('button').should('exist').should('have.text', 'Save').run('Add a real `button` element with the text `Save`', 'A real button is keyboard-focusable and announced as a button');
+   ```
+
+3. Which of these is a **situational** disability?
+
+   ```{mcq}
+   Which one is situational rather than permanent or temporary?
+   correct: Correct! Nothing about that person has changed; their circumstances have. Designing for one-handed use helps the person with one arm, the person with a cast, and the parent holding a baby alike.
+   wrong: Sort each option into permanent, temporary, and situational. Which one is about circumstances rather than the person?
+   [x] A new parent holding a baby, with one hand free
+   [ ] A person who is blind
+   [ ] A person with a temporary ear infection
+   [ ] A person who is non-verbal because of a chronic condition
+   ```
+
+4. What do the four WCAG principles require?
+
+   ```{mcq}
+   Match the four principles to what each one asks for.
+   correct: Correct! Perceivable, operable, understandable, robust: information can be perceived, the interface can be used, both are clear, and the content works with a wide range of user agents including assistive technologies.
+   wrong: Recall the four names in order, and what each of them is about. The levels A, AA, and AAA are a separate idea.
+   [x] Information must be presentable; the interface and navigation must be usable; content and operation must be clear; content must work with a variety of assistive technologies
+   [ ] Robust, operable, understandable, perceivable, in that order
+   [ ] One principle each for screen readers, keyboard users, cognitive disabilities, and fast connections
+   [ ] They correspond to the conformance levels A, AA, AAA, and AAAA
+   ```
+
+5. Which conformance level is generally treated as the practical minimum to aim for?
+
+   ```{mcq}
+   WCAG defines three conformance levels: A, AA, and AAA. Which one is most often treated as the practical minimum target?
+   correct: Correct. AA is the middle level and the common minimum target for most policies and laws.
+   wrong: A is the lowest level and AAA is the highest and often not achievable for all content. Think about the level in the middle.
+   [ ] A, because it is the lowest level.
+   [x] AA, the middle level.
+   [ ] AAA, because it is the highest level.
+   [ ] There are no conformance levels in WCAG.
+   ```
+
+## Resources
+
+- [W3C: WCAG 2 Overview](https://www.w3.org/WAI/standards-guidelines/wcag/)
+- [MDN: Accessibility](https://developer.mozilla.org/en-US/docs/Web/Accessibility)
+- [MDN: HTML button element](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/button)
+- [WebAIM: WAVE evaluation tool](https://wave.webaim.org/)

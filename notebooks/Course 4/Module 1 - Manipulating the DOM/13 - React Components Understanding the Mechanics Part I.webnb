@@ -1,0 +1,234 @@
+# React Components: Understanding the Mechanics (Part I)
+
+React can feel mysterious. There are rules to follow whose reasons are not visible, and quirks that look arbitrary until you know what is underneath.
+
+So in the video, we started building one. Not real React, but a small fake version, enough to see the machinery. We call it **freact** ("fake react"), and it grows across several of these readings as we meet more React features. Nothing in it is something you would ship, and everything in it is something React genuinely does.
+
+The code from that video is in your workspace, in the `freact/01-elements/` folder next to this notebook, and this reading walks through it. To watch it run, find that folder in the file explorer, right-click `index.html`, and choose "Show Preview".
+
+One difference from the video: there, the project had a build step (Babel and webpack) that translated the JSX and wired up the `import` statements before the page ever loaded. The workspace copy has no build step, so you can run it with nothing but a preview. An in-browser compiler translates the JSX when the page loads, and the pieces of freact are shared as globals instead of exports. Comments in the files mark where the imports would go; everything else is the code from the video.
+
+## The Pipeline
+
+Start with the kind of line the whole library exists to serve:
+
+```jsx
+freact.render(<App name="Alice" />, document.querySelector('#root'));
+```
+
+Four things happen to it.
+
+1. **The JSX is translated.** `<App name="Alice" />` becomes `createElement(App, { name: 'Alice' })`. Babel did this in the video; here the in-browser compiler does.
+2. **`createElement` builds a description.** Not a DOM node: a plain object recording the type and the props.
+3. **`render` receives that object**, plus a real DOM element to render into.
+4. **A DOM node gets created from the description**, by a function called `_createDomNode`. That is where `document.createElement` finally happens.
+
+Every step is code we can now read.
+
+## What We Write: `App.jsx`
+
+```{walkthrough}
+title: The component file
+file: freact/01-elements/App.jsx
+This is the side of freact you already know how to write: ordinary JSX, and nothing in the file knows it is running on a fake React.
+@"function App": A component is a plain function. freact will call it, and the props written on the tag arrive as its one argument.
+@"className": The `id` and `className` props here are about to become attributes on a real element. Watch for the line in freact.js where `className` turns back into `class`.
+@"freact.render": The only line that runs immediately. `<App name="Alice" />` compiles to `createElement(App, { name: 'Alice' })`, and what comes back goes to `render` along with the `#root` element from index.html.
+```
+
+## `createElement` Builds a Description
+
+```{walkthrough}
+title: Elements are plain objects
+step: The shape of an element
+file: freact/01-elements/freact.js
+region: create-element
+This is the function every JSX tag becomes a call to. Read what it returns: an object with a `type` and a `props`. No DOM node is created here; that only happens inside `_createDomNode`, further down the file.
+@"...children) {": `...children` is a **rest parameter**, a piece of syntax we have not needed until now: it collects "all the remaining arguments" into an array. The compiler calls `createElement` with the type, the props, and then one argument per child, however many there are, and the rest parameter catches them all.
+@"children.flat()": `.flat()` unpacks a child that is itself an array of elements. That case is the subject of Part II.
+@"...props": Object **spread**: copy every property of `props` into a new object, then add `children`. The props object belongs to the caller, so freact copies it rather than writing into it. This idea returns in "Avoiding Common React State Mistakes".
+
+step: Text children are elements too
+file: freact/01-elements/freact.js
+region: text-element
+A child can be another element object, or it can be a bare string, like the `'Hello, '` inside our `h1`. Two possible shapes would mean special cases in every loop downstream, so `createElement` normalizes: a string child is wrapped in an element of its own, with a special type.
+@"TEXT_ELEMENT": Not a real tag name; a marker the renderer checks for. After this wrapping, every child is an object with a `type`, and one recursive function can handle all of them.
+```
+
+You can hold one of these descriptions in your hands. This cell is freact's `createElement` reduced to its shape; run it and read what comes back:
+
+```{javascript autorun}
+function createElement(type, props, ...children) {
+  return {
+    type: type,
+    props: { ...props, children: children }
+  };
+}
+
+const element = createElement('h1', { id: 'title' }, 'Hello');
+
+console.log(JSON.stringify(element, null, 1));
+console.log('is this a DOM node? ' + (element.tagName !== undefined));
+```
+
+Try adding a `className` prop, or a second child after `'Hello'`, and run it again. The description records whatever you ask for, and no DOM node appears anywhere.
+
+## `_createDomNode` Makes It Real
+
+This is the heart of the file: the function that takes a description and returns an actual DOM node.
+
+```{walkthrough}
+title: Where document.createElement finally happens
+step: _createDomNode
+file: freact/01-elements/freact.js
+region: create-dom-node
+Read it top to bottom as a series of questions about the element, the way the video built it up. Is it missing? Is it a component? Is it text? Only after all of those does the ordinary case run.
+@"typeof element.type === 'function'": The component branch. `element.type` is usually a string like `'h1'`; when it is a **function**, that is a component, and the way to find out what it renders is to call it with its props. What comes back is another description, so the same function handles it. Calling your component is all React does with it.
+@"document.createTextNode": Text is a genuinely different kind of DOM node, so it takes a different call: `createTextNode`, not `createElement`.
+@"document.createElement(element.type)": Step 4 of the pipeline. Everything before this line was plain objects.
+@"setAttribute('class'": `class` is a reserved word in JavaScript, which is why JSX makes you write `className`. This line is where the rename is undone, on its way into the real DOM.
+@"_createDomNode(child)": **Recursion**: the function calls itself for each child and trusts the call to hand back a node. A tree of descriptions becomes a tree of DOM nodes because the function that handles one element handles all of them.
+```
+
+Two details in there answer questions you may already have had. The `children` prop is skipped in the attribute loop because children are appended as nodes, not written as text. And props whose names start with `__` are skipped because the JSX compiler adds bookkeeping props (`__self`, `__source`) while developing; React ignores them, and so does freact.
+
+## `render` Puts It on the Page
+
+```{walkthrough}
+title: The entry point
+step: render
+file: freact/01-elements/freact.js
+region: render
+After the machinery above, `render` is almost an anticlimax: clear the container, build the node, append it.
+@"innerHTML = ''": freact re-renders by wiping and rebuilding. Real React is smarter, and a later reading shows why that matters.
+
+step: Pointing React at freact
+file: freact/01-elements/freact.js
+region: globals
+The compiler knows nothing about React. It turns every tag into a call to `React.createElement`, whoever `React` happens to be. So this line is the whole trick: point `React` at freact, and every component on the page renders through our fake version.
+@"window.React = freact": In the video, this file ended with an export and main.jsx imported it. With no build step, the pieces become globals instead, and this assignment is what routes the compiled JSX to freact.
+
+step: The page that loads it all
+file: freact/01-elements/index.html
+The order of the script tags is the dependency order: freact first, so `React` exists; then the compiler; then the component file for the compiler to translate.
+@"text/babel": A script with this type is not run by the browser. The compiler finds it, fetches the file, translates the JSX into `createElement` calls, and runs the result.
+```
+
+Now open the folder yourself, preview `index.html`, and change something in `App.jsx`: the name that gets passed, the text in the paragraph, the `className`. Save and reload the preview to see your edit go through the whole pipeline you just read.
+
+## What This Explains
+
+A React element is a **description**, and `document.createElement` happens later, inside React, if it happens at all. Between describing and creating, React is free to compare your new description with the previous one and change only what differs. That gap is where nearly everything else in React lives.
+
+## Exercises
+
+1. Complete `createElement` so it returns a description object with a `type` and a `props` that includes the children.
+
+    ```{javascript}
+    function createElement(type, props, ...children) {
+      // TODO: return an object with a `type` property and a `props` property.
+      // props should be a copy of the props argument, plus a `children`
+      // property holding the children array.
+    }
+
+    const element = createElement('h1', { id: 'title' }, 'Hello');
+
+    console.log(JSON.stringify(element));
+    ```
+    ```+solution
+    function createElement(type, props, ...children) {
+      return {
+        type: type,
+        props: { ...props, children: children }
+      };
+    }
+
+    const element = createElement('h1', { id: 'title' }, 'Hello');
+
+    console.log(JSON.stringify(element));
+    ```
+    ```+test
+    wrap(element.type).should('equal', 'h1').run('Record the element type on a `type` property', 'Recorded the type');
+    wrap(element.props && element.props.id).should('equal', 'title').run('Copy the passed props onto `props`', 'Copied the props');
+    wrap(element.props && element.props.children && element.props.children[0]).should('equal', 'Hello').run('Put the collected children on `props.children`', 'Stored the children');
+    wrap(element.tagName === undefined).should('equal', true).run('`createElement` should return a plain description object, not a DOM node', '`createElement` returned a description, not a node');
+    ```
+
+2. Complete the attribute loop from `_createDomNode` so that `className` is written to the DOM as `class`, and `children` is skipped. (In notebook cells, `document` is the cell's own output area and has no `createElement`, so this cell reaches the real one as `window.document`; in a real project you would just write `document`.)
+
+    ```{javascript}
+    const realDocument = window.document;
+
+    const element = {
+      type: 'h1',
+      props: { id: 'my_id', className: 'header', children: [] }
+    };
+
+    const dom = realDocument.createElement(element.type);
+
+    for (const propName in element.props) {
+      // TODO: skip the children property, translate className to class,
+      // and set every other attribute as it is
+    }
+
+    console.log(dom.outerHTML);
+    ```
+    ```+solution
+    const realDocument = window.document;
+
+    const element = {
+      type: 'h1',
+      props: { id: 'my_id', className: 'header', children: [] }
+    };
+
+    const dom = realDocument.createElement(element.type);
+
+    for (const propName in element.props) {
+      if (propName === 'children') {
+        continue;
+      }
+
+      const attributeName = propName === 'className' ? 'class' : propName;
+
+      dom.setAttribute(attributeName, element.props[propName]);
+    }
+
+    console.log(dom.outerHTML);
+    ```
+    ```+test
+    wrap(dom.getAttribute('id')).should('equal', 'my_id').run('Ordinary props become attributes with the same name', 'Set the id attribute');
+    wrap(dom.getAttribute('class')).should('equal', 'header').run('`className` should be written to the DOM as `class`, since `class` is reserved in JavaScript', 'Translated className to class');
+    wrap(dom.getAttribute('className')).should('equal', null).run('There should be no `className` attribute left on the element', 'Did not leave a className attribute');
+    wrap(dom.getAttribute('children')).should('equal', null).run('Skip the `children` property; children are appended, not set as an attribute', 'Skipped the children property');
+    ```
+
+3. The function-component branch
+
+    ```{mcq}
+    In `_createDomNode`, `element.type` turns out to be a function rather than a string. What happens next?
+    correct: Correct! It calls that function with the element's props. The return value is another element description, so the same function runs again on it. Calling your component is all React does with it.
+    wrong: A component describes UI rather than being UI, so something has to happen before there is anything to build a node from. Look back at the component branch in Step 2.
+    [x] It calls the function with the props, then builds a node from what the function returns
+    [ ] It creates a DOM element whose tag name is the function's name
+    [ ] It skips the element, because functions cannot become DOM nodes
+    [ ] It converts the function to a string and inserts it as text
+    ```
+
+4. Why text children get wrapped
+
+    ```{mcq}
+    In `createElement`, a child can arrive as an object or as a bare string, and strings get wrapped in a `TEXT_ELEMENT`. Why normalize them?
+    correct: Correct! Once every child is an object with a `type`, the code that turns descriptions into nodes is one recursive function with no special cases for strings.
+    wrong: Think about what `_createDomNode` would have to do for each child if some were objects and some were plain strings.
+    [x] So every child has the same shape and one recursive function handles all of them
+    [ ] Because strings cannot be stored in an array
+    [ ] Because the DOM has no way to display text
+    [ ] To translate the text into the user's language
+    ```
+
+## Resources
+
+- [React Docs: Render and commit](https://react.dev/learn/render-and-commit)
+- [React Docs: createElement](https://react.dev/reference/react/createElement)
+- [MDN: Rest parameters](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/rest_parameters)
+- [MDN: Document.createTextNode()](https://developer.mozilla.org/en-US/docs/Web/API/Document/createTextNode)

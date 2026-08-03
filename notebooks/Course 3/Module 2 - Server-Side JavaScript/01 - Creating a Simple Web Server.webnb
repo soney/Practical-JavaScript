@@ -1,0 +1,256 @@
+# Creating a Simple Web Server
+
+Every page we have built has come from somewhere. Something handed the browser that HTML, and those CSS and JavaScript files: a **web server**. In Module 1 that was GitHub Pages. Now we write it ourselves.
+
+The exchange is short to state. The **client**, a browser, makes a **request** for a URL. The **server** sends back a **response**.
+
+There are many tools for writing servers in many languages. We will use **Node.js**, which means the server is JavaScript too, the same language as everything else in this specialization.
+
+One thing to be clear about up front: the client and the server in these examples run on **the same computer**. That is what `http://localhost:3000` means, `localhost` being a name for the machine you are sitting at. It is useful to picture them as two separate things exchanging messages, and they are two programs rather than two machines.
+
+## Five Lines of Server
+
+```javascript
+// simple-server.js
+const http = require('http');
+
+const server = http.createServer((request, response) => {
+  console.log('Got a request!');
+
+  response.end('Hello client');
+});
+
+server.listen(3000);
+```
+
+Run it:
+
+```
+$ node simple-server.js
+```
+
+Nothing prints, and notice that the command **does not finish**. A server's job is to sit there waiting, so the process stays alive until you stop it with Ctrl+C. Visit `http://localhost:3000` in a browser and `Got a request!` appears in the terminal.
+
+Now the parts.
+
+### `require('http')`
+
+Node has a built-in **`http` module** for this, so there is nothing to install. This is the [CommonJS `require`](<../Module 1 - Libraries and Modules/20 - CommonJS Modules.webnb>) from Module 1, which is what server files use.
+
+### `http.createServer`
+
+It takes one argument: a **callback that runs on every request**. Two arguments are passed to it:
+
+- **`request`** holds information about what the client asked for.
+- **`response`** is how you reply.
+
+You will very often see these shortened to `req` and `res`, including in this module's assignments. They are the same two objects.
+
+### `server.listen(3000)`
+
+Creating the server does not start it. `listen` does, and the number is the **port**.
+
+A port is how one machine keeps many network services apart. The defaults for the web are **80** for HTTP and **443** for HTTPS, and you usually will not use them in development: programs often need special permission to listen on those, and something else may already be there. Development ports are conventionally **3000**, **8000**, **8080**, **3030**, or **8888**. Pass no argument at all and Node picks one for you.
+
+## Forgetting to Respond
+
+Take the `response.end(...)` line out and the terminal still logs `Got a request!`, and the browser tab **spins forever**. Nothing failed, exactly. The server received the request and never answered, so the browser is still waiting.
+
+Every request needs a response. **`response.end(text)`** sends the text and closes the connection, and it is the simplest way to answer.
+
+## Why Two Requests?
+
+Load the page once and you may see the handler run **twice**. Open the Network tab and you find what happened: the browser requested the page, and then requested `/favicon.ico` on its own, looking for the little icon shown in the tab.
+
+We never created a favicon, so that request gets whatever our handler happens to say. It is worth recognizing, because it will otherwise confuse your logging, and we will handle it properly once we can respond differently to different URLs.
+
+## Knowing When It Is Listening
+
+Starting to listen takes a moment, so this logs a little too eagerly:
+
+```javascript
+server.listen(3000);
+
+console.log('Listening on port 3000');   // not necessarily true yet
+```
+
+`listen` takes an optional second argument, a callback that runs **once the server really is listening**:
+
+```javascript
+server.listen(3000, () => {
+  console.log('Listening on port 3000');
+});
+```
+
+Functionally you see the same output. The difference is that the message is now true when it appears, and this is the form you will find in most real code.
+
+## One Port at a Time
+
+Leave that server running, open a second terminal, and start it again:
+
+```
+$ node simple-server.js
+Error: listen EADDRINUSE: address already in use :::3000
+```
+
+**Only one program can listen on a port at a time.** Here the culprit is our own server, already running in the other terminal. The fix is either to stop that one or to use a different port.
+
+`EADDRINUSE` is worth recognizing on sight. It is nearly always a server you forgot to stop.
+
+## Running It Yourself
+
+That file is not hypothetical. It sits next to this notebook in `demo-server/simple-server.js`, along with two more servers we build in the next two readings. Click the file name or any line number below to open the real file beside the notebook:
+
+```{walkthrough}
+title: demo-server/simple-server.js
+file: demo-server/simple-server.js
+region: setup
+Node's `http` module is built in, so there is nothing to install before this line works.
+
+step: The request handler
+file: demo-server/simple-server.js
+region: handler
+`createServer` does not answer anything itself. It takes the function that will run once per request, and hands that function the two objects the reply is built from.
+@"console.log": Prints in the terminal where you started the server, not in the browser. Server-side `console.log` goes to the server's own output.
+@"response.end": Sends the body and closes the connection. Delete this line and the browser tab spins forever.
+
+step: Starting it
+file: demo-server/simple-server.js
+region: listen
+Creating the server and starting it are two separate steps. Until `listen` runs, nothing is accepting connections.
+@"3000": The port. Change it to `3001`, restart, and the server moves to `http://localhost:3001`.
+```
+
+To run it, open a terminal (Terminal > New Terminal), move into the folder, and start Node:
+
+```
+$ cd "demo-server"
+$ node simple-server.js
+Listening on port 3000
+```
+
+The command does not come back to a prompt, which is the point: the process stays alive waiting for requests. Open `http://localhost:3000` and `Got a request!` appears in the terminal. Press Ctrl+C there to stop the server.
+
+Try each of these and watch what happens in the terminal:
+
+1. Reload the page a few times and count the log lines.
+2. Visit `http://localhost:3000/anything-at-all`. The same reply comes back, because this server does not look at the URL yet.
+3. Comment out the `response.end(...)` line, restart the server, and reload. The log still prints and the tab spins.
+
+## Trying a Handler Without a Server
+
+A notebook cell cannot open a port, so we cannot run the server here. We can do something almost as useful: pull the handler out as a named function and call it with stand-in objects, which is also how you would test a handler for real.
+
+```{node autorun}
+function handleRequest(request, response) {
+  console.log('Got a request for ' + request.url);
+
+  response.end('Hello client');
+}
+
+// Stand-ins for what Node would pass in.
+let bodySent = '';
+
+const fakeResponse = {
+  end: function (text) {
+    bodySent = text;
+  }
+};
+
+handleRequest({ url: '/' }, fakeResponse);
+
+console.log('the client would receive: ' + bodySent);
+```
+
+That is the same function `http.createServer` would call, with the same two arguments, and here we get to watch what it does.
+
+## Exercises
+
+1. Start `demo-server/simple-server.js` in a real terminal, leave it running, then open a second terminal and start it again. The second one fails with `EADDRINUSE`, because the first is still holding port 3000. Practice the commands here:
+
+    ```{external}
+    title: Running a server
+    interval: off
+    - command: cd demo-server | Move into the folder holding the demo servers
+    - command: node simple-server.js | Start the server; note that the command does not return
+    - command: node simple-server.js | Run it again in a second terminal to see EADDRINUSE
+    ```
+    ```+terminal
+    welcome: Run the commands, then run the cell to check them.
+    prompt: $
+    ```
+
+2. Complete the request handler so that every request is logged and answered with the exact text `Hello, World!`.
+
+    ```{node}
+    function handleRequest(request, response) {
+      // TODO: log 'Got a request!' and respond with 'Hello, World!'
+    }
+
+    let bodySent = '';
+    let ended = false;
+
+    const fakeResponse = {
+      end: function (text) {
+        bodySent = text;
+        ended = true;
+      }
+    };
+
+    handleRequest({ url: '/' }, fakeResponse);
+    ```
+    ```+solution
+    function handleRequest(request, response) {
+      console.log('Got a request!');
+
+      response.end('Hello, World!');
+    }
+
+    let bodySent = '';
+    let ended = false;
+
+    const fakeResponse = {
+      end: function (text) {
+        bodySent = text;
+        ended = true;
+      }
+    };
+
+    handleRequest({ url: '/' }, fakeResponse);
+    ```
+    ```+test
+    check.consoleLogged('Got a request!').run('Log `Got a request!` inside the handler', 'Logged the request');
+    wrap(ended).should('equal', true).run('Call `response.end(...)`, or the browser would wait forever', 'Ended the response');
+    wrap(bodySent).should('equal', 'Hello, World!').run('The response body should be exactly `Hello, World!`', 'Sent the right body');
+    ```
+
+3. What two arguments does the `createServer` callback receive?
+
+    ```{mcq}
+    What gets passed to the function you give `http.createServer`?
+    correct: Correct! One describes what the client asked for, and the other is what you use to answer. They are commonly named `req` and `res`.
+    wrong: The callback runs once per request. What would it need in order to answer one?
+    [x] `request` and `response`
+    [ ] `port` and `address`
+    [ ] `client` and `server`
+    [ ] `html` and `javascript`
+    ```
+
+4. Starting your server prints `EADDRINUSE: address already in use :::3000`. What is wrong?
+
+    ```{mcq}
+    What causes that error?
+    correct: Correct! A port can only have one listener. Usually it is your own server, still running in another terminal from last time.
+    wrong: The message is about an address being in use. Who else might be using it?
+    [x] Something else is already listening on port 3000, often another copy of your own server
+    [ ] Your computer has no internet connection
+    [ ] There is a typo in your JavaScript
+    [ ] Port 3000 is reserved for the browser
+    ```
+
+## Resources
+
+- [Node.js: the http module](https://nodejs.org/api/http.html)
+- [Node.js: http.createServer()](https://nodejs.org/api/http.html#httpcreateserveroptions-requestlistener)
+- [MDN: an overview of HTTP](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Overview)
+- [MDN: localhost](https://developer.mozilla.org/en-US/docs/Glossary/localhost)

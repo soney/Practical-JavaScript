@@ -1,0 +1,370 @@
+# Peer-to-Peer Video Chat with WebRTC
+
+The previous reading connected two browsers directly and sent nothing over the connection. Now we send something: a video call.
+
+The code is in `p2p-demo/02-video-chat/` next to this notebook, and it is the previous project one step further along. The server is untouched, the handshake is untouched, and everything new in this reading is about media: asking for it, sending it, and showing it.
+
+## Getting the Camera and Microphone
+
+A page cannot help itself to your camera. It has to ask, and the asking is one function: **`navigator.mediaDevices.getUserMedia(constraints)`** prompts the user for permission and returns a promise for a **stream**, a live object representing whatever the camera and microphone are capturing.
+
+```{walkthrough}
+title: Asking for the camera
+step: getMedia
+file: p2p-demo/02-video-chat/static/main.js
+region: get-media
+@"getUserMedia": The built-in browser function that shows the permission prompt, with Allow and Don't Allow. Nothing about media can happen until it resolves.
+@"video: true": The constraints say what you are asking for. Here both, and you can ask for one without the other: `{ audio: true }` alone would be a voice call.
+@"localVideo.srcObject": Displays the stream. Note `srcObject` rather than `src`: `src` takes a URL, and this is a live object, not an address.
+@"catch (error)": Not optional. This call fails for ordinary reasons: the user clicks Don't Allow, there is no camera, another program already has it. A failed camera request should not take the page down with it.
+
+step: Called on load
+file: p2p-demo/02-video-chat/static/main.js
+region: on-load
+@"getMedia()": Runs the moment the page loads, so the permission prompt appears right away and you can see yourself before calling anybody.
+```
+
+## Attaching It to the Connection
+
+A stream is made of **tracks**, typically one for video and one for audio, and tracks are what a peer connection actually carries. The file's setup grabs `querySelector` references to the two video elements, `localVideo` and `remoteVideo`, and then `createPeerConnection` is the function from the previous reading with two additions, one for each direction:
+
+```{walkthrough}
+title: Media in both directions
+step: Sending yours
+file: p2p-demo/02-video-chat/static/main.js
+region: send-tracks
+@"if (!localStream)": The connection needs the stream. If permission has not come through yet on this side, ask again and wait right here.
+@"getTracks()": All of the stream's tracks, so the loop attaches both the video and the audio.
+@"addTrack(track, localStream)": The line that causes media to flow to the other side once the connection is up. Without it, the handshake still succeeds and carries nothing.
+
+step: Receiving theirs
+file: p2p-demo/02-video-chat/static/main.js
+region: receive-tracks
+@"addEventListener('track'": Fires when media starts arriving from the other side. The video calls this listener `peerConnection.ontrack`, which is the property spelling of the same event.
+@"streams[0]": The event carries the streams the track belongs to. Point the second video element at the first one and their camera appears, audio included.
+```
+
+Two directions, and the same `srcObject` assignment at the end of each: your stream into one video element, theirs into the other.
+
+## The Page
+
+```{walkthrough}
+title: The page
+step: The button and the videos
+file: p2p-demo/02-video-chat/static/index.html
+region: button
+@"start-button": Disabled until the WebSocket to the signaling server opens, exactly like the Connect button last time.
+
+step: Two video elements
+file: p2p-demo/02-video-chat/static/index.html
+region: videos
+Both boxes carry `autoplay`, so a stream plays the moment it arrives instead of sitting in a paused element, and `playsinline`, so phone browsers do not take it full screen. The third attribute appears on only one of them:
+@"muted": On your own video only. Without it, your microphone plays through your speakers, your speakers reach your microphone, and everyone on the call hears the loop.
+@"remote-video": Not muted, because hearing the other side is the point of the call. Otherwise identical to the local element; which stream each box shows is decided in JavaScript, not in the markup.
+
+step: The styles
+file: p2p-demo/02-video-chat/static/index.html
+region: style
+@"background-color: black": Black boxes at a fixed size, so the page looks intentional instead of broken during the seconds before video arrives, and the layout does not jump when it does.
+@"display: flex": The container puts the two boxes side by side, from the Flexbox reading in Course 1.
+```
+
+## What Did Not Change
+
+Everything from the previous reading, the offer, the answer, the ICE candidates, is still here and still identical. **Adding video did not change the handshake.**
+
+```{walkthrough}
+title: The unchanged parts
+step: The dispatch
+file: p2p-demo/02-video-chat/static/main.js
+region: handle-messages
+This is the message listener from the previous reading, line for line. The only difference in behavior is what rides on the connection it negotiates.
+@"await createPeerConnection()": The one visible difference: `createPeerConnection` is now `async`, because it may need to wait for `getMedia` before it can attach tracks.
+
+step: The server
+file: p2p-demo/02-video-chat/server.js
+region: relay
+The signaling server is byte for byte the one from stage 1. It forwards text without reading it, so it neither knows nor cares that the clients are now negotiating video. The video itself never touches this server; it flows browser to browser.
+```
+
+That is the shape of WebRTC: negotiate a connection, then attach media to it. Extending this application is mostly more of the same. More participants means more peer connections, one per pair. Screen sharing is `getDisplayMedia` in place of `getUserMedia`, and the rest of the code does not change.
+
+## The Media Wiring, Running
+
+The two directions are the part to be sure of, so here they are against stand-ins:
+
+```{javascript autorun}
+// Stand-ins for a media stream and a peer connection.
+function makeStream(name, trackNames) {
+  const stream = { name: name };
+
+  stream.getTracks = function () {
+    return trackNames;
+  };
+
+  return stream;
+}
+
+const localVideo = { srcObject: null };
+const remoteVideo = { srcObject: null };
+
+const peerConnection = { added: [], listeners: {} };
+
+peerConnection.addTrack = function (track, stream) {
+  peerConnection.added.push(track);
+};
+
+peerConnection.addEventListener = function (name, callback) {
+  peerConnection.listeners[name] = callback;
+};
+
+const localStream = makeStream('mine', ['video', 'audio']);
+
+localVideo.srcObject = localStream;
+
+peerConnection.addEventListener('track', (trackEvent) => {
+  remoteVideo.srcObject = trackEvent.streams[0];
+});
+
+for (const track of localStream.getTracks()) {
+  peerConnection.addTrack(track, localStream);
+}
+
+console.log('tracks sent: ' + peerConnection.added);
+
+// Media starts arriving from the other side.
+peerConnection.listeners.track({ streams: [makeStream('theirs', ['video', 'audio'])] });
+
+console.log('local video shows:  ' + localVideo.srcObject.name);
+console.log('remote video shows: ' + remoteVideo.srcObject.name);
+```
+
+Both tracks were sent, and each video element ended up pointed at the right stream.
+
+## Running It Yourself
+
+Two people seeing each other is the point, and it takes two windows:
+
+```
+$ cd "p2p-demo"
+$ node 02-video-chat/server.js
+Listening on http://localhost:3000
+```
+
+Open `http://localhost:3000` in **two** browser windows. Each asks for camera and microphone permission as it loads; allow both, and each window shows its own camera in the left box. Then click **Start Call** in one window:
+
+1. Both windows fill in the right box too. You are looking at the same camera twice, once locally and once after a round trip through the peer connection.
+2. The consoles now show ICE candidate traffic that the previous reading's empty connection never produced: attaching media is what gave the browsers something to route.
+3. Watch the Network tab's WebSocket messages: offer, answer, candidates, then silence. The call is running and the signaling server is carrying nothing, because the video is traveling directly between the browsers.
+
+In the video, this is the moment Grace joins from the next room, camera to camera, with the media flowing browser to browser. If one of your windows cannot open the camera (some systems give it to one program at a time), run one of the two windows in a different browser.
+
+Video is not the only thing these connections can carry. Next, we use the same peer-to-peer connections to share a *document*, with the Yjs library doing the heavy lifting.
+
+## Exercises
+
+1. Complete `getMedia` so it asks for the camera and microphone, shows the result locally, and survives a refusal.
+
+    ```{node}
+    const localVideo = { srcObject: null };
+
+    let localStream = null;
+    let failureLogged = false;
+
+    // Stands in for the browser. This one refuses unless BOTH video and
+    // audio are requested.
+    const navigator = {
+      mediaDevices: {
+        getUserMedia: function (constraints) {
+          if (constraints.video && constraints.audio) {
+            return Promise.resolve({ name: 'camera and microphone' });
+          }
+
+          return Promise.reject(new Error('NotAllowedError'));
+        }
+      }
+    };
+
+    async function getMedia() {
+      // TODO: request video and audio, store the stream in localStream, and
+      // set it as localVideo.srcObject. If the request fails, set
+      // failureLogged to true instead of letting the error escape.
+    }
+
+    getMedia();
+
+    console.log(localStream, failureLogged);
+    ```
+    ```+solution
+    const localVideo = { srcObject: null };
+
+    let localStream = null;
+    let failureLogged = false;
+
+    // Stands in for the browser. This one refuses unless BOTH video and
+    // audio are requested.
+    const navigator = {
+      mediaDevices: {
+        getUserMedia: function (constraints) {
+          if (constraints.video && constraints.audio) {
+            return Promise.resolve({ name: 'camera and microphone' });
+          }
+
+          return Promise.reject(new Error('NotAllowedError'));
+        }
+      }
+    };
+
+    async function getMedia() {
+      try {
+        localStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true
+        });
+
+        localVideo.srcObject = localStream;
+      } catch (error) {
+        failureLogged = true;
+      }
+    }
+
+    getMedia();
+
+    console.log(localStream, failureLogged);
+    ```
+    ```+test
+    wrap(/getUserMedia\s*\(/.test(source.split('async function getMedia')[1] || '')).should('equal', true).run('Call `navigator.mediaDevices.getUserMedia(...)` inside `getMedia`', 'Asked for the media');
+    wrap(/video\s*:\s*true/.test(source) && /audio\s*:\s*true/.test(source)).should('equal', true).run('Ask for both `video: true` and `audio: true`', 'Requested both kinds of media');
+    wrap(/try\s*\{/.test(source.split('async function getMedia')[1] || '') && /catch/.test(source.split('async function getMedia')[1] || '')).should('equal', true).run('Wrap the request in `try`/`catch`: the user may refuse, or there may be no camera', 'Handled a refusal');
+    wrap(/srcObject\s*=/.test(source)).should('equal', true).run('Show the stream by assigning it to `localVideo.srcObject`', 'Displayed the local stream');
+    ```
+
+2. Complete the peer connection wiring so your tracks are sent and theirs are displayed.
+
+    ```{node}
+    function makeStream(name, trackNames) {
+      const stream = { name: name };
+
+      stream.getTracks = function () {
+        return trackNames;
+      };
+
+      return stream;
+    }
+
+    const remoteVideo = { srcObject: null };
+
+    const peerConnection = { added: [], listeners: {} };
+
+    peerConnection.addTrack = function (track, stream) {
+      peerConnection.added.push(track);
+    };
+
+    peerConnection.addEventListener = function (name, callback) {
+      peerConnection.listeners[name] = callback;
+    };
+
+    const localStream = makeStream('mine', ['video', 'audio']);
+
+    // TODO: when a track arrives from the other side, point remoteVideo at
+    // the first stream on the event. Then add every track of localStream to
+    // the peer connection.
+
+    // Media starts arriving from the other side.
+    peerConnection.listeners.track({ streams: [makeStream('theirs', ['video', 'audio'])] });
+
+    console.log(peerConnection.added, remoteVideo.srcObject);
+    ```
+    ```+solution
+    function makeStream(name, trackNames) {
+      const stream = { name: name };
+
+      stream.getTracks = function () {
+        return trackNames;
+      };
+
+      return stream;
+    }
+
+    const remoteVideo = { srcObject: null };
+
+    const peerConnection = { added: [], listeners: {} };
+
+    peerConnection.addTrack = function (track, stream) {
+      peerConnection.added.push(track);
+    };
+
+    peerConnection.addEventListener = function (name, callback) {
+      peerConnection.listeners[name] = callback;
+    };
+
+    const localStream = makeStream('mine', ['video', 'audio']);
+
+    peerConnection.addEventListener('track', (trackEvent) => {
+      remoteVideo.srcObject = trackEvent.streams[0];
+    });
+
+    for (const track of localStream.getTracks()) {
+      peerConnection.addTrack(track, localStream);
+    }
+
+    // Media starts arriving from the other side.
+    peerConnection.listeners.track({ streams: [makeStream('theirs', ['video', 'audio'])] });
+
+    console.log(peerConnection.added, remoteVideo.srcObject);
+    ```
+    ```+test
+    wrap(peerConnection.added).should('equal', ['video', 'audio']).run('Loop over `localStream.getTracks()` and add each track with `peerConnection.addTrack(track, localStream)`', 'Sent both tracks');
+    wrap(remoteVideo.srcObject && remoteVideo.srcObject.name).should('equal', 'theirs').run('In the `track` listener, set `remoteVideo.srcObject` to `trackEvent.streams[0]`', 'Displayed the remote stream');
+    wrap(/addEventListener\s*\(\s*['"]track['"]/.test(source)).should('equal', true).run('Listen for the `track` event to know when media starts arriving', 'Listened for arriving media');
+    ```
+
+3. The remote box stays black
+
+    ```{mcq}
+    Your own video shows fine and the consoles show the handshake completing, but the remote box stays black in both windows. `createPeerConnection` looks like this. Which piece is missing?
+
+    ~~~js
+    async function createPeerConnection() {
+      peerConnection = new RTCPeerConnection(configuration);
+
+      peerConnection.addEventListener('icecandidate', (iceEvent) => {
+        if (iceEvent.candidate) {
+          ws.send(JSON.stringify({ type: 'candidate', candidate: iceEvent.candidate }));
+        }
+      });
+    }
+    ~~~
+
+    correct: Correct! A connection carries only what you attach to it. `addTrack` is what sends your media, and the `track` listener is what displays theirs; with neither, the handshake still completes and the connection carries nothing.
+    wrong: The handshake completed, so the signaling and the descriptions are fine. What puts media ON a finished connection, and what displays media coming off it?
+    [x] The media wiring: no `addTrack` calls and no `track` listener
+    [ ] The `muted` attribute is missing from the remote video element
+    [ ] The STUN server is refusing to carry the video
+    [ ] `JSON.stringify` cannot handle video data
+    ```
+
+4. Muting the right video
+
+    ```{mcq}
+    In the page, the local video element has `muted` and the remote one does not. Why that way around?
+
+    ~~~html
+    <video id="local-video" autoplay playsinline muted></video>
+    <video id="remote-video" autoplay playsinline></video>
+    ~~~
+
+    correct: Correct! Muting your own video stops your microphone from playing through your speakers and back into your microphone as feedback. The remote video must stay unmuted, because hearing the other person is the point of the call.
+    wrong: Think about where each element's audio comes from, and what happens when a microphone can hear its own speakers.
+    [x] Muting your own video prevents a feedback loop; the remote audio is the call itself
+    [ ] `muted` stops your camera from recording until the call starts
+    [ ] It hides the local video element until a stream arrives
+    [ ] The browser requires the first video element on a page to be muted
+    ```
+
+## Resources
+
+- [MDN: MediaDevices.getUserMedia()](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)
+- [MDN: RTCPeerConnection.addTrack()](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/addTrack)
+- [MDN: RTCPeerConnection track event](https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/track_event)
+- [MDN: HTMLMediaElement.srcObject](https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/srcObject)

@@ -1,0 +1,179 @@
+# React Event Objects
+
+So far we have responded to the fact that an event happened. Often we also want details about it: not just that a button was clicked, but where the click landed; not just that a key was pressed, but which key. React passes an **event object** to every event handler that carries this information.
+
+The event object is the first argument to your handler. You name a parameter for it (commonly `event` or `e`) and read properties off of it.
+
+```jsx
+function handleClick(event) {
+  console.log(event.target);      // the element that was clicked
+  console.log(event.clientX);     // horizontal position of the click
+}
+
+<button onClick={handleClick}>Click me</button>
+```
+
+## Synthetic Events
+
+The object React hands you is a **synthetic event**. It is a lightweight wrapper around the browser's native DOM event, giving you a consistent set of properties and methods across browsers. It carries the most useful pieces of the native event, including `target`, along with methods like `preventDefault()` and `stopPropagation()` that we have used before.
+
+When you do need the underlying browser event, it is available at `event.nativeEvent`.
+
+```jsx
+function handleClick(event) {
+  console.log(event);              // the React SyntheticEvent
+  console.log(event.nativeEvent);  // the original DOM event it wraps
+}
+```
+
+Most of the time the synthetic event has everything you need, so reaching for `event.nativeEvent` is rare.
+
+## Input Change Events
+
+For an `onChange` handler on an input, `event.target` is the input element and `event.target.value` is the text currently in it. That is how we keep a piece of state in sync with what the user types.
+
+```{react}
+function NamePreview() {
+  const [name, setName] = React.useState('');
+
+  function handleChange(event) {
+    setName(event.target.value);
+  }
+
+  return (
+    <section>
+      <input aria-label="Name" value={name} onChange={handleChange} />
+      <p>{name}</p>
+    </section>
+  );
+}
+
+renderReact(<NamePreview />);
+```
+
+- `event.target` is the element that fired the event (the input).
+- `event.target.value` is the current text in that input.
+
+## Keyboard Events
+
+Different event types carry different properties. A keyboard event exposes `event.key`, the value of the key that was pressed, while a mouse event exposes things like `event.clientX` and `event.clientY`. Here we use an `onKeyDown` handler to read which key was pressed, and when the user presses Enter we read the full value from `event.target.value`.
+
+```{react}
+function KeyLogger() {
+  const [message, setMessage] = React.useState('Press a key in the box.');
+
+  function handleKeyDown(event) {
+    if (event.key === 'Enter') {
+      setMessage('You submitted: ' + event.target.value);
+    } else {
+      setMessage('You pressed: ' + event.key);
+    }
+  }
+
+  return (
+    <section>
+      <input aria-label="Keys" onKeyDown={handleKeyDown} />
+      <p>{message}</p>
+    </section>
+  );
+}
+
+renderReact(<KeyLogger />);
+```
+
+- `event.key` is the pressed key as a string, for example `'a'`, `'Enter'`, or `'ArrowUp'`.
+- Because event types differ, a keyboard handler has `event.key` while a mouse handler does not. Read the properties that match the event you are handling.
+
+## Preventing Default Behavior
+
+For form submissions, you often call `event.preventDefault()` so the browser does not reload the page and React can handle the submit itself.
+
+```jsx
+function handleSubmit(event) {
+  event.preventDefault();
+  // handle the form data here
+}
+```
+
+## Exercises
+
+1. Which property of a keyboard event tells you which key was pressed?
+
+   ```{mcq}
+   Which property of a keyboard event tells you which key was pressed?
+   correct: Correct. A keyboard event exposes the pressed key as `event.key`.
+   wrong: Recall that keyboard events and mouse events carry different properties.
+   [x] `event.key`
+   [ ] `event.value`
+   [ ] `event.clientX`
+   [ ] `event.pressed`
+   ```
+
+2. Finish `handleChange` so the preview updates as the user types.
+
+   ```{react}
+   function Preview() {
+     const [text, setText] = React.useState('');
+
+     function handleChange(event) {
+       setText('');
+     }
+
+     return (
+       <section>
+         <input aria-label="Preview text" value={text} onChange={handleChange} />
+         <p>{text}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Preview />);
+   ```
+   ```+solution
+   function Preview() {
+     const [text, setText] = React.useState('');
+
+     function handleChange(event) {
+       setText(event.target.value);
+     }
+
+     return (
+       <section>
+         <input aria-label="Preview text" value={text} onChange={handleChange} />
+         <p>{text}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Preview />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('input').should('exist').run('The input should render', 'The input renders');
+     // lite-cy's type() assigns the input's value directly, which React's value
+     // tracker ignores for a controlled input, so the handler is checked by shape.
+     wrap(/setText\s*\(\s*event\.target\.value\s*\)/.test(source)).should('equal', true).run('Read the typed text from `event.target.value` and pass it to `setText`', 'Read the value from the event');
+     wrap(/setText\s*\(\s*['\"]{2}\s*\)/.test(source)).should('equal', false).run('`setText(\'\')` throws the typed text away; pass the event\'s value instead', 'Stopped clearing the text');
+   }, 50);
+   ```
+
+3. React passes a synthetic event to your handler. How do you reach the original browser event it wraps?
+
+   ```{mcq}
+   React passes a synthetic event to your handler. How do you reach the original browser event it wraps?
+   correct: Correct. The native DOM event is available at `event.nativeEvent`.
+   wrong: The React event wraps the native one and exposes it on a property.
+   [x] `event.nativeEvent`
+   [ ] `event.original`
+   [ ] `event.dom`
+   [ ] `event.rawEvent`
+   ```
+
+## Resources
+
+- [React Docs: Responding to events](https://react.dev/learn/responding-to-events)
+- [React Docs: Common components (SyntheticEvent)](https://react.dev/reference/react-dom/components/common#react-event-object)
+- [MDN: KeyboardEvent.key](https://developer.mozilla.org/en-US/docs/Web/API/KeyboardEvent/key)
+- [MDN: Event](https://developer.mozilla.org/en-US/docs/Web/API/Event)

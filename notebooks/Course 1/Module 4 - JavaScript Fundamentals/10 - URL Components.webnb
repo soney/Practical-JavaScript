@@ -1,0 +1,182 @@
+# URL Components
+
+The **URL**, the location you type into a browser's address bar, has several components, and understanding them matters as we start deploying pages publicly. Here is one with every part present:
+
+```text
+https://blueserver.com:8000/path?type=example#section2
+```
+
+## The Protocol
+
+`https` is the **protocol**: the language the browser uses to talk to whatever is serving the content. It is followed by `://`.
+
+Browsing the web, the protocol is almost always `http` (Hypertext Transfer Protocol) or `https`, a secure version that encrypts the data sent and received. During development you may also see `file`, which means the browser is reading from your own computer's file system rather than from a server at all.
+
+## The Host Name
+
+`blueserver.com` is the **host name**: the name of the computer or server we are talking to. There are a great many servers in the world, and the host name says which one to fetch from.
+
+When you run a server on your own machine, the host name is usually `localhost`, which is a name for your own computer.
+
+## The Path
+
+After the host name comes a `/` and then, optionally, the **path**: the location of what we are asking for on that server. The server has a file system somewhere, perhaps with a `home` directory and a `path` directory, and the path says which part of it we want.
+
+If the path points at a directory rather than a file, the browser looks for a file named `index.html` there by default. That is why `https://blueserver.com/` and `https://blueserver.com/index.html` usually show the same page.
+
+Those three parts together are the shape of most of the URLs you meet:
+
+![The URL https://blueserver.com/path, with a bracket under each part and a label beneath it: https is labeled Protocol, blueserver.com is labeled Host Name, and path is labeled Path. The separators, the colon slash slash and the slash, are drawn in gray and left unlabeled.](images/protocol-host-path.png)
+
+## The Query
+
+After a `?` comes the **query**, which gives the server more specifics about what we are asking for. The server reads the query and decides exactly what content to send back.
+
+The University of Michigan events site is a good example. Visiting the page for this month gives a path like `/month`, and then filtering by event type adds a query such as `?type=7`. What `7` means is internal to that site: it is a message from the page to its own server, and the server decides what to do with it.
+
+## The Port
+
+`:8000` after the host name is the **port**. If the server is a house, the port is which door to knock on.
+
+You rarely write one, because each protocol has a default that is assumed when you leave it out:
+
+- `http` defaults to port **80**.
+- `https` defaults to port **443**.
+
+Development tools, though, open servers on all sorts of ports, so locally you write the port explicitly. Common ones are `3000`, `8000`, `8080`, and `8888`. An address like `http://localhost:3000/` says "the server running on my own computer, listening on door 3000".
+
+The port goes after the host name, separated by a colon, which gives the other shape you will see constantly while developing:
+
+![The URL http://localhost:8000/path, with a bracket under each part and a label beneath it: http is labeled Protocol, localhost is labeled Host Name, 8000 is labeled Port, and path is labeled Path.](images/protocol-host-port-path.png)
+
+## The Fragment
+
+Finally, after a `#`, comes the **fragment**, which says which part of the document the browser should show. The browser typically uses it to scroll to a particular section.
+
+You will not see all of these in every URL. Often it is just a protocol, a host name, and maybe a path.
+
+## Developing Locally
+
+While building a page on your own machine, you will see two shapes of address:
+
+- **`localhost` with a port**, such as `http://localhost:3000/`. There is a real server running, and it behaves like any other server; it is just that only your computer can reach it.
+- **The `file` protocol**, such as `file:///Users/you/project/index.html`. No server is involved at all; the browser is reading the file straight off your disk. Open the parent directory this way and most browsers show a file navigator you can click through.
+
+Deploying, which is the subject of the next two lessons, means moving the page off `localhost` and onto a server anyone can reach.
+
+## Reading the Parts From JavaScript
+
+We met `window.location` back when we looked at [the `window` object](<04 - Built-in Objects window and document.webnb#the-window-object>). It is not just a string: it is an object with a property for each of the components above.
+
+```{javascript autorun}
+console.log(window.location.href);
+console.log(window.location.protocol);
+console.log(window.location.hostname);
+console.log(window.location.port);
+console.log(window.location.pathname);
+console.log(window.location.search);
+console.log(window.location.hash);
+```
+
+Run that and compare the values with the address this notebook is loaded from. A few details are worth knowing:
+
+- `href` is the whole URL as one string.
+- `protocol` includes the trailing colon, so it reads `https:` rather than `https`.
+- `port` is an empty string when the URL relies on the default, and something like `3000` when a port is written out.
+- `pathname` is only the path, with no query or fragment.
+- `search` is the query *including* the leading `?`, and `hash` is the fragment including the `#`.
+
+### Parsing Any URL
+
+JavaScript also gives us a `URL` object that breaks apart any URL string, not only the page we happen to be on:
+
+```{javascript autorun}
+const url = new URL('https://blueserver.com:8000/path?type=example#section2');
+
+console.log(url.protocol);
+console.log(url.hostname);
+console.log(url.port);
+console.log(url.pathname);
+console.log(url.search);
+console.log(url.hash);
+```
+
+The `new` keyword there is how JavaScript builds certain kinds of object; you will see much more of it later in the specialization. For now, treat `new URL(someString)` as "give me an object with all the pieces of this URL", and read each logged value against the string above it.
+
+## Exercises
+
+1. Read three parts of the current page's address into variables: the protocol, the host name, and the path.
+
+    ```{javascript}
+    const currentProtocol = /* Your code here */;
+    const currentHost = /* Your code here */;
+    const currentPath = /* Your code here */;
+
+    console.log(currentProtocol, currentHost, currentPath);
+    ```
+    ```+solution
+    const currentProtocol = window.location.protocol;
+    const currentHost = window.location.hostname;
+    const currentPath = window.location.pathname;
+
+    console.log(currentProtocol, currentHost, currentPath);
+    ```
+    ```+test
+    wrap(currentProtocol).should('equal', window.location.protocol).run('`currentProtocol` should be `window.location.protocol`', 'Read the protocol');
+    wrap(currentHost).should('equal', window.location.hostname).run('`currentHost` should be `window.location.hostname`', 'Read the host name');
+    wrap(currentPath).should('equal', window.location.pathname).run('`currentPath` should be `window.location.pathname`', 'Read the path');
+    ```
+
+2. Complete `describeURL` so that it returns an object holding the `hostname`, `port`, and `pathname` of whatever URL string it is given.
+
+    ```{javascript}
+    function describeURL(urlString) {
+      const url = new URL(urlString);
+
+      return {
+        hostname: /* the host name */,
+        port: /* the port */,
+        pathname: /* the path */
+      };
+    }
+
+    console.log(describeURL('http://localhost:3000/dashboard/index.html'));
+    ```
+    ```+solution
+    function describeURL(urlString) {
+      const url = new URL(urlString);
+
+      return {
+        hostname: url.hostname,
+        port: url.port,
+        pathname: url.pathname
+      };
+    }
+
+    console.log(describeURL('http://localhost:3000/dashboard/index.html'));
+    ```
+    ```+test
+    wrap(describeURL('http://localhost:3000/dashboard/index.html').hostname).should('equal', 'localhost').run('`hostname` should be `localhost`', 'Read the host name');
+    wrap(describeURL('http://localhost:3000/dashboard/index.html').port).should('equal', '3000').run('`port` should be `3000`', 'Read the port');
+    wrap(describeURL('http://localhost:3000/dashboard/index.html').pathname).should('equal', '/dashboard/index.html').run('`pathname` should be `/dashboard/index.html`', 'Read the path');
+    wrap(describeURL('https://umich.edu/about').port).should('equal', '').run('`port` should be an empty string when the URL leaves the port out', 'Handled the default port');
+    ```
+
+3. A URL is served over `https` and does not write out a port. Which port is used?
+
+    ```{mcq}
+    `https://umich.edu/about` has no port in it. Which port does the browser connect to?
+    correct: Correct! `https` defaults to port 443, and `http` defaults to port 80, which is why those two are almost never written out.
+    wrong: Look back at "The Port" and the two protocol defaults listed there.
+    [x] 443
+    [ ] 80
+    [ ] 3000
+    [ ] None; a URL without a port uses no port at all
+    ```
+
+## Resources
+
+- [MDN: What is a URL?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL)
+- [MDN: Window.location](https://developer.mozilla.org/en-US/docs/Web/API/Window/location)
+- [MDN: URL](https://developer.mozilla.org/en-US/docs/Web/API/URL)
+- [MDN: localhost](https://developer.mozilla.org/en-US/docs/Glossary/localhost)

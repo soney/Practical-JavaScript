@@ -1,0 +1,266 @@
+# Optimizing Your Bundle
+
+A bundle contains your code and every library it needs, which is the point of it and also its problem: the file can get large, and everything in it is downloaded before the page can work. This reading is three ways to make that smaller, built around one small application.
+
+## The Application
+
+We will use **canvas-confetti**, a library that fires confetti across the page. Setting it up uses everything from this lesson:
+
+```
+$ npm init -y
+$ npm install canvas-confetti
+$ npm install webpack webpack-cli html-webpack-plugin --save-dev
+$ mkdir src
+```
+
+```javascript
+// webpack.config.js
+const path = require('path');
+const HtmlWebpackPlugin = require('html-webpack-plugin');
+
+module.exports = {
+  plugins: [
+    new HtmlWebpackPlugin({
+      filename: 'index.html',
+      template: './src/index.html'
+    })
+  ]
+};
+```
+
+```html
+<!-- src/index.html -->
+<body>
+  <button id="confetti">Yay!</button>
+</body>
+```
+
+```javascript
+// src/index.js
+import confetti from 'canvas-confetti';
+
+const button = document.querySelector('button#confetti');
+
+button.addEventListener('click', () => {
+  confetti({
+    origin: { y: 1.0 }
+  });
+});
+```
+
+`npx webpack`, open `dist/index.html`, click the button, and confetti comes up from the bottom of the page. `origin.y` is how far down the page it starts, so `1.0` is the bottom.
+
+Then make the color random, using Lodash's `sample`, which picks a random item from an array:
+
+```
+$ npm i lodash
+```
+
+```javascript
+// src/index.js
+import confetti from 'canvas-confetti';
+import _ from 'lodash';
+
+const COLORS = ['#ff0000', '#00ff00', '#0000ff'];
+
+const button = document.querySelector('button#confetti');
+
+button.addEventListener('click', () => {
+  confetti({
+    origin: { y: 1.0 },
+    colors: [_.sample(COLORS)]
+  });
+});
+```
+
+Those are hex color codes from Course 1: red, green, and blue.
+
+Now the bundle. `dist/main.js` contains our fifteen lines plus the whole of Lodash plus the whole of canvas-confetti: **556 KB**.
+
+## Optimization One: Externals
+
+Lodash is a large, extremely common library, and the CDN reading gave us a reason to load it from jsDelivr instead: a visitor may already have that exact file cached from another site.
+
+Two changes. Load it in the HTML:
+
+```html
+<!-- src/index.html -->
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+<body>
+  <button id="confetti">Yay!</button>
+</body>
+```
+
+And tell Webpack not to bundle it:
+
+```javascript
+module.exports = {
+  externals: {
+    lodash: '_'
+  }
+};
+```
+
+Read that as: when my code imports `lodash`, do not include it; assume a global variable named `_` already exists. The key is the module name you import, and the value is the global to use instead.
+
+Bundle size after rebuilding: **24 KB**, down from 556. The code still works, because `_` really is there, supplied by the script tag.
+
+## Optimization Two: Mode
+
+```javascript
+  mode: 'production'
+```
+
+`production` minifies as aggressively as it can; `development` builds faster and stays readable. Webpack defaults to `production` when you do not say, which means the video's earlier bundles were already minified, and it is still worth stating explicitly so that anyone reading the configuration knows which build they are getting.
+
+## Optimization Three: Dynamic Imports
+
+Look at what the page actually needs. The confetti library is only used **if the user clicks the button**, and plenty of visitors will not. Yet every visitor downloads it, because a top-level `import` is unconditional.
+
+A **dynamic import** is an import written as a function call:
+
+```javascript
+import('canvas-confetti')
+```
+
+Unlike the statement form, this runs when the line runs, and it returns a **Promise** for the module. So it can go inside the click handler:
+
+```javascript
+// src/index.js
+const button = document.querySelector('button#confetti');
+
+button.addEventListener('click', () => {
+  import('canvas-confetti').then((confettiModule) => {
+    const confetti = confettiModule.default;
+
+    confetti({ origin: { y: 1.0 } });
+  });
+});
+```
+
+The `.default` is there because we want the module's default export, which is what `import confetti from 'canvas-confetti'` was giving us before. You will often see this written more compactly, pulling `default` out of the module object and naming it in one step:
+
+```javascript
+  import('canvas-confetti').then(({ default: confetti }) => {
+    confetti({ origin: { y: 1.0 } });
+  });
+```
+
+Those braces are destructuring, the same shape as `const { join } = require('path')`, with the extra `: confetti` renaming the property as it comes out. Both versions do exactly the same thing.
+
+Rebuild and Webpack splits the output: `main.js` no longer contains canvas-confetti, which now lives in a **separate file** alongside it. Load the page with the Network tab open and only `main.js` is fetched. Click the button and the second file is downloaded, right then.
+
+That is **lazy loading**, and the trade-off is honest: a visitor who never clicks saves the whole download, and a visitor who does click may wait a moment between the click and the confetti.
+
+`import()` returning a promise means everything from Course 2 Module 3 applies to it, `await` included:
+
+```{javascript autorun}
+// The runtime here provides a `path` module, so this dynamic import really runs.
+import('path').then((pathModule) => {
+  console.log('loaded on demand: ' + pathModule.basename('/src/app.js'));
+});
+
+console.log('this line runs first, before the module has arrived');
+```
+
+Notice the order of the output. The import does not block; the code after it runs, and the callback happens later.
+
+## Exercises
+
+1. Write a configuration that keeps Lodash out of the bundle, expecting the global `_`, and builds for deployment.
+
+    ```{node}
+    // webpack.config.js
+
+    module.exports = {
+      entry: './src/index.js'
+      // Add your optimizations here
+    };
+
+    console.log(module.exports);
+    ```
+    ```+solution
+    // webpack.config.js
+
+    module.exports = {
+      entry: './src/index.js',
+      externals: {
+        lodash: '_'
+      },
+      mode: 'production'
+    };
+
+    console.log(module.exports);
+    ```
+    ```+test
+    wrap(typeof module.exports.externals === 'object' && module.exports.externals !== null).should('equal', true).run('Add an `externals` object to the configuration', 'Added the externals option');
+    wrap(module.exports.externals && module.exports.externals.lodash).should('equal', '_').run('The key is the module name you import, `lodash`, and the value is the global to use instead, `_`', 'Mapped lodash to its global');
+    wrap(module.exports.mode).should('equal', 'production').run('Set `mode` to `production` for a deployment build', 'Chose the production mode');
+    wrap(module.exports.entry).should('equal', './src/index.js').run('Leave the entry point as it was', 'Kept the entry point');
+    ```
+
+2. Rewrite this so the library is downloaded only when the button is clicked.
+
+    ```html id=page1
+    <button id="confetti">Yay!</button>
+    ```
+
+    ```{javascript}
+    import confetti from 'canvas-confetti';
+
+    const button = document.querySelector('button#confetti');
+
+    button.addEventListener('click', () => {
+      confetti({ origin: { y: 1.0 } });
+    });
+    ```
+    ```+id=page1
+    ```
+    ```+solution
+    const button = document.querySelector('button#confetti');
+
+    button.addEventListener('click', () => {
+      import('canvas-confetti').then((confettiModule) => {
+        const confetti = confettiModule.default;
+
+        confetti({ origin: { y: 1.0 } });
+      });
+    });
+    ```
+    ```+test
+    wrap(/import\s*\(\s*['"]canvas-confetti['"]\s*\)/.test(source)).should('equal', true).run('Call `import(\'canvas-confetti\')` as a function, which returns a promise for the module', 'Used a dynamic import');
+    wrap(/^\s*import\s+confetti\s+from/m.test(source)).should('equal', false).run('Remove the top-level `import` statement, or the library is still downloaded up front', 'Removed the static import');
+    wrap(/addEventListener[\s\S]*import\s*\(/.test(source)).should('equal', true).run('The dynamic import belongs inside the click handler, so it only runs when the button is clicked', 'Moved the import into the handler');
+    wrap(/\.then\s*\(|await\s+import/.test(source)).should('equal', true).run('The promise has to be handled, with `.then(...)` or `await`, before you can use the module', 'Handled the promise');
+    ```
+
+3. Moving Lodash to `externals` took the bundle from 556 KB to 24 KB. What is the point of doing that?
+
+    ```{mcq}
+    Why is the external copy preferable here?
+    correct: Correct! The library comes from a CDN, which is fast and may already be in the visitor's cache from another site, and your bundle shrinks to just your own code.
+    wrong: Lodash still has to be downloaded from somewhere. What is different about where it comes from?
+    [x] The browser fetches Lodash from a fast, cacheable CDN, and the bundle holds only your own code
+    [ ] It is more secure, because Lodash is hidden from the user
+    [ ] Webpack cannot bundle Lodash, so a CDN is the only option
+    [ ] It makes the user download Lodash again on every refresh
+    ```
+
+4. Why write `import('canvas-confetti').then(...)` instead of importing it at the top of the file?
+
+    ```{mcq}
+    What does the dynamic form buy you?
+    correct: Correct! This is lazy loading: the library is fetched only if the user does the thing that needs it, so the initial page load stays small. The cost is a possible pause at the moment they click.
+    wrong: Think about a visitor who loads the page and never clicks the button.
+    [x] The library is only downloaded if the user triggers the action that needs it, keeping the first load fast
+    [ ] Static imports do not work in production mode
+    [ ] It is the only way to use CSS from JavaScript
+    [ ] It renames variables to make them shorter
+    ```
+
+## Resources
+
+- [Webpack: externals](https://webpack.js.org/configuration/externals/)
+- [Webpack: code splitting](https://webpack.js.org/guides/code-splitting/)
+- [Webpack: production](https://webpack.js.org/guides/production/)
+- [MDN: dynamic import()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import)

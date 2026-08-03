@@ -1,0 +1,447 @@
+# Sending Data with WebSockets
+
+In the last reading we opened a WebSocket: the browser asked to upgrade, the server answered `101`, and a connection stayed open between them. Now the conversation.
+
+Both sides do the same two things, **listen** for messages and **send** them, and the method names differ a little between the two sides, which is the main thing to keep straight. One picture to hold while reading: client code on one side, server code on the other. On `localhost` they happen to run on the same machine, but they are two separate programs, and every word between them crosses the connection.
+
+## The Round Trip
+
+The demo for this reading is `ws-demo/echo-server.js` and the page in `ws-demo/echo-page/`, next to this notebook. The HTTP half and the `new WebSocket.Server({ server })` line are exactly as in the last reading, so the walkthrough picks up where the new code starts:
+
+```{walkthrough}
+title: One message up, one message back
+step: The server waits, then answers
+file: ws-demo/echo-server.js
+region: reply
+Everything the server does with one client lives inside the `connection` callback, because `socket` is that one client.
+@"wss.on('connection'": From the last reading: runs once per client, handing us that client's socket.
+@"addEventListener('message'": The server-side "someone said something" event. This listener runs once per message, however many arrive.
+@"messageEvent.data": The listener receives an event object, and the payload rides on its `data` property.
+@"socket.send('got message": Answering is sending on the same socket the message came in on, so this reply goes to that one client only.
+
+step: Noticing when a client leaves
+file: ws-demo/echo-server.js
+region: goodbye
+One more listener, also inside the `connection` callback.
+@"'close'": Fires when the connection ends for any reason, including the client closing its tab. In the next reading, this is how a server knows to stop counting someone.
+@"websocket disconnected": Watch the terminal for this line when you close the page.
+
+step: The client greets and listens
+file: ws-demo/echo-page/index.html
+region: script
+The whole client side of the conversation is a handful of statements in the page's script.
+@"binaryType": Asks for any binary message as an `ArrayBuffer` rather than a `Blob`, which is what makes the decode two lines below possible. See "Text or Binary" below.
+@"addEventListener('open'": Creating the WebSocket starts the connection but does not finish it, so anything to be sent at startup waits in here. More on this below.
+@"ws.send('Hello server'": The first word of the conversation. On the server, this fires the `message` listener we walked above.
+@"addEventListener('message'": The browser-side mirror of the server's listener. Here it catches the reply.
+@"messageEvent.data": The same shape as the server side, and the same as the `EventSource` messages two readings ago: an event object carrying the payload in `data`. The `typeof` check reads that payload whether it arrived as text or as binary.
+```
+
+## Why `send` Goes Inside `open`
+
+This is the part to get right:
+
+```javascript
+const ws = new WebSocket(wsProtocol + '//' + location.host + location.pathname);
+
+ws.send('Hello server');    // wrong: the connection is not ready
+```
+
+Constructing a `WebSocket` **starts** the connection; it does not finish it. Handshakes take time, so for a moment there is an object with nothing usable behind it. Sending then either throws an error or goes nowhere. The **`open`** event is the notification that the handshake is done, so everything you want to send at startup belongs in that listener.
+
+## Reading a Message: Two Shapes
+
+On the server, the `ws` library gives you two ways to hear a message, and the video reaches for the second one on purpose.
+
+The first is **`socket.on('message', ...)`**, which hands your callback the payload directly. It arrives as raw bytes rather than a string, so it needs `toString()`:
+
+```javascript
+socket.on('message', (rawData) => {
+  const message = rawData.toString();
+});
+```
+
+The second is **`socket.addEventListener('message', ...)`**, the same method the client uses. The callback receives an event object with more information on it, and the payload sits on its `data` property:
+
+```javascript
+socket.addEventListener('message', (messageEvent) => {
+  const message = messageEvent.data;
+});
+```
+
+Our demo files use the `addEventListener` shape on both sides, which keeps the two halves looking alike. Either is fine; be aware of which one you are using, because `rawData.data` and `messageEvent.toString()` are both quietly wrong.
+
+The client has no such choice: it is `addEventListener`, an event object, and `.data`.
+
+## Text or Binary
+
+A WebSocket can carry two kinds of message, text and binary, and every message says which one it is. Sending a string sends text, and text arrives in the browser as a string, which is the case our demos are built around.
+
+Binary is the other case. By default the browser hands it to you as a `Blob`, an object rather than a string, and dropping one into the page produces the useless `[object Blob]` instead of the message. Setting `binaryType` asks for an `ArrayBuffer` instead, which `TextDecoder` turns straight back into text:
+
+```javascript
+ws.binaryType = 'arraybuffer';
+
+ws.addEventListener('message', (messageEvent) => {
+  const data = typeof messageEvent.data === 'string'
+    ? messageEvent.data
+    : new TextDecoder().decode(messageEvent.data);
+});
+```
+
+Reading it this way costs one `typeof` check and works no matter which of the two shapes shows up. That matters more than it sounds: a message sent as text does not always stay text on the way to the browser. Some of the machinery a connection passes through on its way across the internet reads each message and sends it onward itself, and if it forwards the bytes without also forwarding the "this is text" flag, a string leaves the server and a binary message reaches the page. The check above absorbs that.
+
+## The Order Things Happen
+
+Run both halves and this is the sequence, top to bottom:
+
+```
+server starts, waiting
+client connects                      -> server's 'connection' fires
+client's 'open' fires
+client sends 'Hello server'          -> server's 'message' fires
+server sends 'got message Hello ...' -> client's 'message' fires
+client closes the tab                -> server's 'close' fires
+```
+
+Notice how much of this is waiting. Neither side ever calls the other directly; each registers listeners and reacts when the other speaks. The timing of who can say what, and when, is a real part of working with WebSockets, and managing that communication is something frameworks and experience both help with. The exercises below are the experience part starting.
+
+## Watching It Happen
+
+Here are both halves again, with a stand-in socket pair standing in for the network so the exchange can run right here in the notebook:
+
+```{node autorun}
+// A pair of connected sockets. Sending on one delivers to the other.
+function makeSocket(label) {
+  const eventListeners = {};
+  const dataListeners = {};
+
+  const socket = { label: label, peer: null };
+
+  // The client style: the callback gets an event object.
+  socket.addEventListener = function (name, callback) {
+    eventListeners[name] = callback;
+  };
+
+  // The `ws` server style: a 'message' callback gets the payload itself.
+  socket.on = function (name, callback) {
+    dataListeners[name] = callback;
+  };
+
+  socket.send = function (data) {
+    console.log(label + ' sends: ' + data);
+
+    if (socket.peer) {
+      socket.peer.receive(data);
+    }
+  };
+
+  socket.receive = function (data) {
+    if (eventListeners.message) {
+      eventListeners.message({ data: data });
+    }
+
+    if (dataListeners.message) {
+      dataListeners.message(data);
+    }
+  };
+
+  socket.fire = function (name) {
+    if (eventListeners[name]) {
+      eventListeners[name]();
+    }
+
+    if (dataListeners[name]) {
+      dataListeners[name]();
+    }
+  };
+
+  return socket;
+}
+
+const clientSocket = makeSocket('client');
+const serverSocket = makeSocket('server');
+
+clientSocket.peer = serverSocket;
+serverSocket.peer = clientSocket;
+
+// --- server code ---
+serverSocket.on('message', (rawData) => {
+  const message = rawData.toString();
+
+  serverSocket.send('got message ' + message);
+});
+
+serverSocket.on('close', () => {
+  console.log('websocket disconnected');
+});
+
+// --- client code ---
+clientSocket.addEventListener('open', () => {
+  clientSocket.send('Hello server');
+});
+
+clientSocket.addEventListener('message', (messageEvent) => {
+  console.log('client received: ' + messageEvent.data);
+});
+
+// The connection finishes opening, and the tab is closed later.
+clientSocket.fire('open');
+serverSocket.fire('close');
+```
+
+Read the output top to bottom and it is the sequence from the table: one message out, one message back, then a disconnect. This stand-in pair understands both server shapes, and its server half uses `on` with `toString()`, so both forms from the previous section are on this page.
+
+## Run It Yourself
+
+Now the real thing. Start the echo server (if you have not yet run `npm install` inside `ws-demo`, do that first):
+
+```
+$ cd "ws-demo"
+$ node echo-server.js
+Listening on port 3000
+```
+
+Open `http://localhost:3000` with the browser console showing, and match what happens to the sequence above:
+
+1. The terminal prints `client said: Hello server`, and the console prints `server said: got message Hello server`. One round trip, driven entirely by listeners.
+2. The page keeps its socket in the variable `ws`, and the console can reach it: type `ws.send('another message')` there. The terminal and the console both answer immediately. The connection is still open, and either side may speak at any time.
+3. In the Network tab, the `101` request's **Messages** pane now lists every message from both directions, in order.
+4. Close the tab, and the terminal prints `websocket disconnected`.
+
+Stop the server with `Ctrl+C` when you are done.
+
+These are toy conversations on purpose: one client, one server, a greeting each way. The next reading makes it real, with many clients at once and a server passing messages between them.
+
+## Exercises
+
+1. Write both halves of the conversation. The client should greet the server as soon as the connection opens and remember what comes back; the server should reply to any message with `got message ` followed by what it received.
+
+    ```{node}
+    function makeSocket(label) {
+      const eventListeners = {};
+      const dataListeners = {};
+
+      const socket = { label: label, peer: null };
+
+      socket.addEventListener = function (name, callback) {
+        eventListeners[name] = callback;
+      };
+
+      socket.on = function (name, callback) {
+        dataListeners[name] = callback;
+      };
+
+      socket.send = function (data) {
+        if (socket.peer) {
+          socket.peer.receive(data);
+        }
+      };
+
+      socket.receive = function (data) {
+        if (eventListeners.message) {
+          eventListeners.message({ data: data });
+        }
+
+        if (dataListeners.message) {
+          dataListeners.message(data);
+        }
+      };
+
+      socket.fire = function (name) {
+        if (eventListeners[name]) {
+          eventListeners[name]();
+        }
+
+        if (dataListeners[name]) {
+          dataListeners[name]();
+        }
+      };
+
+      return socket;
+    }
+
+    const clientSocket = makeSocket('client');
+    const serverSocket = makeSocket('server');
+
+    clientSocket.peer = serverSocket;
+    serverSocket.peer = clientSocket;
+
+    let received = '';
+
+    // --- server code ---
+    // TODO: when a message arrives on serverSocket, send back 'got message '
+    // plus the payload. Either listener shape from the reading works.
+
+    // --- client code ---
+    // TODO: when the connection opens, send 'Hello server'.
+    // When a message arrives, store its data in `received`.
+
+    clientSocket.fire('open');
+
+    console.log(received);
+    ```
+    ```+solution
+    function makeSocket(label) {
+      const eventListeners = {};
+      const dataListeners = {};
+
+      const socket = { label: label, peer: null };
+
+      socket.addEventListener = function (name, callback) {
+        eventListeners[name] = callback;
+      };
+
+      socket.on = function (name, callback) {
+        dataListeners[name] = callback;
+      };
+
+      socket.send = function (data) {
+        if (socket.peer) {
+          socket.peer.receive(data);
+        }
+      };
+
+      socket.receive = function (data) {
+        if (eventListeners.message) {
+          eventListeners.message({ data: data });
+        }
+
+        if (dataListeners.message) {
+          dataListeners.message(data);
+        }
+      };
+
+      socket.fire = function (name) {
+        if (eventListeners[name]) {
+          eventListeners[name]();
+        }
+
+        if (dataListeners[name]) {
+          dataListeners[name]();
+        }
+      };
+
+      return socket;
+    }
+
+    const clientSocket = makeSocket('client');
+    const serverSocket = makeSocket('server');
+
+    clientSocket.peer = serverSocket;
+    serverSocket.peer = clientSocket;
+
+    let received = '';
+
+    // --- server code ---
+    serverSocket.addEventListener('message', (messageEvent) => {
+      serverSocket.send('got message ' + messageEvent.data);
+    });
+
+    // --- client code ---
+    clientSocket.addEventListener('open', () => {
+      clientSocket.send('Hello server');
+    });
+
+    clientSocket.addEventListener('message', (messageEvent) => {
+      received = messageEvent.data;
+    });
+
+    clientSocket.fire('open');
+
+    console.log(received);
+    ```
+    ```+test
+    wrap(received).should('equal', 'got message Hello server').run('The client should send `Hello server` from its `open` listener, and the server should answer with `got message ` plus what it received', 'The round trip works');
+    clientSocket.send('Ping');
+    wrap(received).should('equal', 'got message Ping').run('The server should answer every message, not only the first: reply from inside its `message` listener', 'The server answers every message');
+    ```
+
+2. Add a listener so the server notices when this client disconnects.
+
+    ```{node}
+    const listeners = {};
+
+    const socket = {};
+
+    socket.addEventListener = function (name, callback) {
+      listeners[name] = callback;
+    };
+
+    let log = '';
+
+    // TODO: when the socket closes, set `log` to 'websocket disconnected'
+
+    // The client closes its tab.
+    if (listeners.close) {
+      listeners.close();
+    }
+
+    console.log(log);
+    ```
+    ```+solution
+    const listeners = {};
+
+    const socket = {};
+
+    socket.addEventListener = function (name, callback) {
+      listeners[name] = callback;
+    };
+
+    let log = '';
+
+    socket.addEventListener('close', () => {
+      log = 'websocket disconnected';
+    });
+
+    // The client closes its tab.
+    if (listeners.close) {
+      listeners.close();
+    }
+
+    console.log(log);
+    ```
+    ```+test
+    wrap(typeof listeners.close).should('equal', 'function').run('The event that fires when a connection ends is `close`; register a listener for it with `socket.addEventListener`', 'Listening for the close event');
+    wrap(log).should('equal', 'websocket disconnected').run('The close listener should set `log` to `websocket disconnected`', 'Detected the disconnect');
+    ```
+
+3. A message that never arrives
+
+    ```{mcq}
+    A learner writes this client code, and the greeting never reaches the server. Sometimes the browser even reports an error.
+
+    ~~~js
+    const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const ws = new WebSocket(wsProtocol + '//' + location.host + location.pathname);
+
+    ws.send('hello!');
+    ~~~
+
+    What went wrong?
+    correct: Correct! Constructing the socket begins the handshake but does not complete it, so at that line the connection is not usable yet. Move the `send` into a listener for the `open` event, which fires once the connection is ready.
+    wrong: The URL is fine, and the server never saw a thing. Think about how much time passes between `new WebSocket(...)` and the connection actually being ready.
+    [x] The connection was still being established; the `send` belongs inside an `open` listener
+    [ ] The URL must use `http://` for the first message and `ws://` only afterwards
+    [ ] `send` may only be called from inside the server's `connection` callback
+    [ ] Strings must be converted with `toString()` before they can be sent
+    ```
+
+4. Logging who leaves
+
+    ```{mcq}
+    Your server should print a line in the terminal whenever a user closes their tab. Which listener does that job?
+    correct: Correct! The `close` event fires on that client's socket when the connection ends, however it ended. `connection` fires when someone arrives, and `message` fires when someone speaks.
+    wrong: One of these fires when a client arrives, one when a client speaks, and one when a client goes. And one of them is not on the server at all.
+    [x] `socket.addEventListener('close', ...)` on that client's socket
+    [ ] `socket.addEventListener('message', ...)` waiting for a goodbye message
+    [ ] `wss.on('connection', ...)` on the WebSocket server
+    [ ] `ws.addEventListener('open', ...)` in the client's page
+    ```
+
+## Resources
+
+- [MDN: WebSocket.send()](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/send)
+- [MDN: WebSocket message event](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/message_event)
+- [MDN: WebSocket close event](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket/close_event)
+- [ws: server API](https://github.com/websockets/ws/blob/master/doc/ws.md)

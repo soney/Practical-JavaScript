@@ -1,0 +1,182 @@
+# Course 2 Welcome
+
+Hello, and welcome to this specialization on JavaScript programming. Whether you are new to programming, moving into web development, or want more depth on the JavaScript you already know, I hope you get something meaningful out of it.
+
+In Course 1 we learned the foundations of HTML, CSS, and JavaScript. From here on, we build **interactive systems**.
+
+## Why JavaScript
+
+It is not an exaggeration to say you can build pretty much anything with JavaScript. It runs in browsers, on servers, on phones, on tablets, in virtual reality headsets, and more.
+
+Being able to write good front-end code is valuable because the front end is the *face* of any system you build. It is what users actually interact with, and it often determines whether they stick around. It is also rewarding work: your output is something you can see, try out, and share with other people.
+
+Here is the kind of thing this course is about. Run the cell and click the button a few times.
+
+```html id=page1
+<button id="welcome-button">Click me</button>
+<p id="welcome-message">Nothing yet.</p>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#welcome-button');
+const message = document.querySelector('#welcome-message');
+
+let clicks = 0;
+
+function handleClick() {
+  clicks++;
+  message.innerText = 'You have clicked ' + clicks + ' times.';
+}
+
+button.addEventListener('click', handleClick);
+```
+```+id=page1
+```
+
+That is Course 1 material. Course 2 takes it much further:
+
+- **[Manipulating the DOM](<Module 1 - Manipulating the DOM/01 - The DOM.webnb>)**: selecting elements, changing content and attributes, and creating or removing elements while the page is running.
+- **[Events and callbacks](<Module 2 - Events and Callbacks/01 - Events.webnb>)**: responding to clicks, typing, timers, and other browser events.
+- **[Asynchronous data and fetching](<Module 3 - Asynchronous Data and Fetching/01 - Synchronous vs Asynchronous.webnb>)**: Promises, `fetch`, `async` and `await`, query strings, and JSON.
+- **[Animation](<Module 4 - Animation/01 - Animations Introduction.webnb>)**: manual animation, easing, CSS transitions and animations, and the Web Animations API.
+- **[SVGs and custom drawings](<Module 5 - SVGs and Custom Drawings/01 - SVG Introduction.webnb>)**: scalable graphics written by hand and generated from JavaScript.
+
+By the end you should understand not only how to write JavaScript, but how to think like a front-end engineer: how to solve problems with interactivity, improve the user experience, and design systems that are responsive and robust.
+
+## Practice Is the Point
+
+I want to emphasize hands-on learning. Like learning a language or a musical instrument, you get better by practicing: by solving problems, by making mistakes, and by figuring things out. So there is a lot of practice in this specialization, and there is a lot of it in these notebooks too.
+
+Every notebook is meant to be poked at. Run the examples, change the values, break them on purpose and see what the error says. A cell you have edited teaches more than a paragraph you agreed with.
+
+## Learning Programming in the Age of Generative AI
+
+Generative AI has changed, and will keep changing, the way we write code. It is worth saying up front how I think you should use it while learning.
+
+Some terminology first:
+
+- **Generative AI**, or Gen AI, is artificial intelligence that can create new content: text, images, audio, and, most relevant for us, code.
+- **Large language models**, or LLMs, are AI models trained to understand and generate text, including code. ChatGPT, Claude, and Gemini are examples.
+- A **prompt** is the instruction or input you give one of these systems.
+
+### Why Learn to Program At All?
+
+It is a fair question: why learn programming if an AI can write it for me? You could ask the analogous question, why learn addition if I have a calculator?
+
+A few reasons:
+
+- It develops problem-solving and logical thinking, which make you write better code whether or not you use AI.
+- AI models still have real limitations, and knowing how to program is how you get past them.
+- Understanding the fundamentals is what lets you **guide and evaluate** AI-generated code, rather than hoping it is right.
+- And if you are the sort of person who wants to know how things work under the hood, this is how you find out.
+
+That third point deserves a picture. Imagine a graph with program complexity across the bottom and how hard something is to create up the side.
+
+Writing code with an LLM *alone* starts out very easy. Simple things need only a prompt. As complexity grows you have to be much more specific about how you prompt, and past a certain point, coming up with the right prompt is almost as hard as programming, but with extra steps. The difficulty ramps up sharply.
+
+A person writing code *without* an LLM has a curve that also rises, but more gently, and it does not have that cliff.
+
+The interesting curve is a programmer working *with* an LLM. On the easy end you save time even on things you know how to do. In the middle, you prompt better because you know exactly what you want and can adjust the result yourself. At the complex end you can use it for boilerplate and reference and immediately spot and correct the parts it got wrong.
+
+The topics in this specialization sit toward the simpler end of that graph. An LLM could probably do most of them for you. But these are the fundamentals you have to know before the complex things become possible at all, so there is real value in understanding them yourself. It is also worth noting that not many people get hired purely to prompt, without foundational knowledge of what they are prompting about.
+
+### Using AI While Learning
+
+Most programmers will, and should, work with AI. While you are *learning*, though, you have to be selective, because an AI will by default try to solve the problem for you, and having the problem solved is not the same as learning to solve it.
+
+If you use AI here, prompt it to **explain** rather than to answer:
+
+- "Explain how I could do this."
+- "Can you break down this function definition?"
+- "Give me some practice problems to test this concept."
+
+Ask it to explain concepts, help you debug when you are stuck, or suggest a different approach. Then make sure you are still thinking through the code yourself. Used thoughtfully, it is a good partner. Used as a shortcut, it quietly skips the part where you get better.
+
+```{mcq}
+Which of these is a good way to use an LLM while learning to program? (Select all that apply)
+correct: Correct! Explaining, debugging help, and generating extra practice all leave the thinking to you. Pasting in a problem and submitting whatever comes back skips the part where you learn.
+wrong: Look back at "Using AI While Learning". The useful prompts are the ones that leave you doing the thinking.
+[x] Asking it to explain a concept you found confusing
+[x] Asking it to help you understand an error message you are stuck on
+[x] Asking it for extra practice problems on a topic
+[ ] Pasting the assignment in and submitting whatever it produces
+```
+
+## Submitting Assignments
+
+Practice is a fundamentally important part of learning to program, so beyond the graded assessments there are plenty of practice problems. Here is how they work.
+
+Open a practice problem and you get a page with a **Launch lab** button. Clicking it takes you to an instance of Visual Studio Code running inside Coursera.
+
+Every problem has instructions, and some labs have several problems. The **Instructions** tab, also reachable from the navigation button, tells you what to do.
+
+You will see a **Mark as completed** button. That is only a note to yourself. To get credit, you have to click **Submit assignment**.
+
+The workflow is:
+
+1. Write your code in VS Code. The **preview** button shows what your page looks like.
+2. Re-read the instructions and check that you have done what they asked.
+3. Click **Submit assignment**, confirm that the work is your own, and check that the files listed are the ones you edited and that the assignment is the one you expect.
+4. Click **Submit assignment** again to send it.
+
+An automatic grader then runs your code, which takes a little while. Click **View grades**, and you will first see "grading your submission", and then a test results pane showing how many tests ran, how many passed, and how many failed.
+
+Scroll down for detail. You get the error message for each failing test, such as "we did not find an `h1` element with the text Hello World", and often screenshots of the page the grader actually saw. That last part is worth looking at closely; it is the fastest way to see the difference between the page you meant to build and the page you built.
+
+Then go back, fix it, and submit again. When everything passes you will see "Passed, grade received 100%". After that you can mark the problem completed and move on to the next problem, video, or reading.
+
+Because practice matters so much, I strongly encourage you to attempt every practice problem you can, not only the assessments.
+
+## Exercises
+
+1. A quick check that Course 1 is still with you: update the paragraph so it reads exactly `Course 2 is interactive!`.
+
+    ```html id=page2
+    <p id="message">Course 2 starts here.</p>
+    ```
+
+    ```{javascript}
+    const message = document.querySelector('#message');
+
+    // Write your code here
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const message = document.querySelector('#message');
+
+    message.innerText = 'Course 2 is interactive!';
+    ```
+    ```+test
+    assert('#message').should('have.text', 'Course 2 is interactive!').run('The paragraph should read exactly `Course 2 is interactive!`', 'Updated the paragraph');
+    ```
+
+2. You have finished a practice problem and clicked "Mark as completed". Have you received credit for it?
+
+    ```{mcq}
+    Does marking a problem as completed submit it for grading?
+    correct: Correct! "Mark as completed" is only a note to yourself. Credit comes from "Submit assignment", which sends your files to the automatic grader.
+    wrong: Look back at "Submitting Assignments" and the difference between the two buttons.
+    [x] No. You still have to click "Submit assignment" to be graded.
+    [ ] Yes. Marking it completed runs the grader.
+    [ ] Yes, but only for practice problems, not assessments.
+    [ ] No, because practice problems are never graded at all.
+    ```
+
+3. Your submission comes back with failing tests. What is the most useful thing to look at?
+
+    ```{mcq}
+    The results pane says one test failed. Where do you look first?
+    correct: Correct! The detailed feedback names what the grader was looking for and could not find, and the screenshots show the page it actually saw, which is usually the quickest route to the difference.
+    wrong: Revisit the description of the test results pane and what scrolling down shows you.
+    [x] The error message for the failing test, and the screenshots of the page the grader saw
+    [ ] The total number of tests, and nothing else
+    [ ] The "Mark as completed" button
+    [ ] Nothing; resubmitting unchanged code usually fixes it
+    ```
+
+## Resources
+
+- [MDN: Manipulating documents](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/DOM_scripting)
+- [MDN: Introduction to events](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Events)
+- [MDN: Asynchronous JavaScript](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS)

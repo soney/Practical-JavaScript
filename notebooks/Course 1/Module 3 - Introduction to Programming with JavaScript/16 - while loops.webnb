@@ -1,0 +1,243 @@
+# `while` Loops
+
+**While loops** let us run a piece of code repeatedly. That is useful more often than it may sound: we might have code that outputs a number and want it to output every number from 1 to 100, or code that handles one item and want it to handle every item in a list, or code that plays one round of a game and want it to keep going as long as the game is not over.
+
+## A Loop Is an `if` That Goes Back Around
+
+Recall the shape of an `if`: run the code before it, check the condition, run the guarded block only when the condition is true, then carry on with the code after it.
+
+![Flow diagram of an if statement. An arrow comes down from a code block above and arrives at the line if ({A}) {. Two paths leave that point: a red one labeled {A} enters the guarded block, which reads "code that only gets run if {A} is true", and leaves it at the closing brace; a blue one labeled !{A} curves around the block without entering it. Both paths rejoin below the closing brace and continue down into the code block that follows.](images/if-control-flow.png)
+
+A `while` loop has the same shape, with one difference. After the block runs, the engine **loops back to the top and checks the condition again**. If it is still true, the block runs again. That repeats until the condition is false, at which point the loop is finished and the code after it runs.
+
+![Flow diagram of a while loop, drawn like the if diagram above. An arrow comes down from a code block above and arrives at the line while ({A}) {. A red path labeled {A} enters the block, which reads "code that only gets run if {A} is true", and at the closing brace it curves back up to the top of the while line to check the condition again. A blue path labeled !{A} skips the block and continues down into the code block that follows.](images/while-control-flow.png)
+
+*The only difference is the red path at the bottom. In the `if` it moves on; in the `while` it goes back up to the condition.*
+
+```javascript
+while (condition) {
+  // code that runs over and over, as long as condition is true
+}
+```
+
+Notice the consequence: the condition is checked before every pass, including the first. If it is false to begin with, the block never runs at all.
+
+## Counting
+
+Here is the smallest useful loop:
+
+```{javascript autorun}
+let i = 0;
+
+while (i < 5) {
+  console.log(i);
+  i = i + 1;
+}
+```
+
+Walking through it: `i` starts at `0`. Is `0 < 5`? Yes, so we log `0` and set `i` to `1`. Is `1 < 5`? Yes, so we log `1` and set `i` to `2`. This keeps going until we log `4` and set `i` to `5`. Now `5 < 5` is false, so the loop ends and the engine moves on. The output is `0`, `1`, `2`, `3`, `4`: every number below five.
+
+Try changing `5` to `3` and running it again.
+
+That last line inside the loop, the one that changes `i`, is doing essential work. Increasing a variable by one is so common that there is a shorthand for it: `i++` means exactly the same thing as `i = i + 1`.
+
+The code around the loop runs the way it always does:
+
+```{javascript autorun}
+let i = 0;
+
+console.log('before');
+
+while (i < 3) {
+  console.log(i);
+  i++;
+}
+
+console.log('after');
+```
+
+## Looping Over an Array
+
+Combining a loop with array indexing is how we visit every item in a list. We keep a variable holding the current index, use it to pull out an item, and step it forward each time.
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie'];
+let index = 0;
+
+while (index < L.length) {
+  const item = L[index];
+  console.log(index, item);
+  index = index + 1;
+}
+```
+
+`index` starts at `0`, so `item` is `L[0]`, which is `Alice`. Then `index` becomes `1` and `item` is `Bob`, then `2` and `Charlie`. When `index` reaches `3`, the condition `3 < 3` is false and the loop ends. The last index visited is `L.length - 1`, which is exactly the rule we learned in the last lesson.
+
+The condition uses `L.length` rather than the number `3` on purpose. Try adding `'Dana'` to the array and running the cell again: the loop picks it up with no other change. Had we written `while (index < 3)` the fourth name would silently never be visited.
+
+## Infinite Loops
+
+Here is the mistake that is unfortunately easy to make. If the condition never becomes false, the loop never stops. This is called an **infinite loop**, and in a browser it will keep running until the page runs out of resources and may well crash the tab. Getting out of one usually means closing the page, fixing the code, and reopening it.
+
+The two cells below are deliberately not runnable, because running them would hang this notebook.
+
+```javascript
+let i = 0;
+
+while (i < 5) {
+  console.log(i);
+  // the line that changes i is missing, so i is always 0
+}
+```
+
+`i` starts at `0` and nothing inside the loop ever changes it, so `0 < 5` is true forever.
+
+The condition does not have to be literally `true` to cause this. It only has to be an expression whose value is always true:
+
+```javascript
+const L = ['Alice', 'Bob', 'Charlie'];
+let index = 0;
+
+while (index < L.length) {
+  console.log(L[index]);
+  index = index * 1;   // a typo: this never changes index
+}
+```
+
+`0 * 1` is still `0`, so `index` never moves and the condition holds forever. Whenever you write a `while` loop, find the line that makes progress toward ending it, and check that it really does.
+
+## `break` and `continue`
+
+Two special statements give us extra control inside a loop.
+
+**`break`** immediately exits the loop. Everything after it in the block is skipped, and so is every remaining pass.
+
+![Flow diagram of break inside a while loop. Inside the block of while ({A}) {, some statements run, then a line reading break; is reached. A red arrow leaves that line, curves around the rest of the block, which is marked "...(skipped)", passes the closing brace, and lands on the code block below the loop. A label beside the arrow reads "break out of the loop".](images/break-control-flow.png)
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie', 'Dana'];
+let index = 0;
+
+console.log('before');
+
+while (index < L.length) {
+  const item = L[index];
+  index++;
+
+  if (item === 'Bob') {
+    break;
+  }
+
+  console.log(index, item);
+}
+
+console.log('after');
+```
+
+We log `Alice`, then reach `Bob`, break out, and go straight to `after`. `Charlie` and `Dana` are never looked at.
+
+**`continue`** does something different: it jumps back to the top of the loop and checks the condition again, skipping the rest of the current pass but not ending the loop.
+
+![Flow diagram of continue inside a while loop. Inside the block of while ({A}) {, some statements run, then a line reading continue; is reached. A red arrow leaves that line and curves up and back to the top of the while line, bypassing the rest of the block, which is marked "...(skipped)", and the closing brace. A label beside the arrow reads "continue at the start of the loop".](images/continue-control-flow.png)
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie', 'Dana'];
+let index = 0;
+
+while (index < L.length) {
+  const item = L[index];
+  index++;
+
+  if (item === 'Bob') {
+    continue;
+  }
+
+  console.log(index, item);
+}
+```
+
+This time we get `Alice`, `Charlie`, and `Dana`. Only `Bob` is skipped.
+
+If the logged indices look one higher than you expected, that is because `index++` happens *before* the `console.log` in this example. That ordering is deliberate: the increment has to run before the `continue`, or skipping `Bob` would leave `index` stuck and we would be back to an infinite loop.
+
+While loops are not the only kind of loop in JavaScript. In practice we will reach for a `for` loop much more often, and that is the next lesson.
+
+## Exercises
+
+1. Write a `while` loop that adds the numbers from `1` to `5` into `sum`, leaving `sum` equal to `15`.
+
+    ```{javascript}
+    let sum = 0;
+    let i = 1;
+
+    // Write your loop here
+
+    console.log(sum);
+    ```
+    ```+solution
+    let sum = 0;
+    let i = 1;
+
+    while (i <= 5) {
+      sum = sum + i;
+      i++;
+    }
+
+    console.log(sum);
+    ```
+    ```+test
+    wrap(sum).should('equal', 15).run('`sum` should end up as `15`, which is 1 + 2 + 3 + 4 + 5', 'Summed the numbers');
+    wrap(source.includes('while')).should('equal', true).run('Use a `while` loop rather than adding the numbers by hand', 'Used a while loop');
+    ```
+
+2. The loop below logs every score. Add a `continue` so that it skips any score below `60` and logs only the passing ones.
+
+    ```{javascript}
+    const scores = [98, 45, 85, 30, 100];
+    let index = 0;
+
+    while (index < scores.length) {
+      const score = scores[index];
+      index++;
+
+      console.log(score);
+    }
+    ```
+    ```+solution
+    const scores = [98, 45, 85, 30, 100];
+    let index = 0;
+
+    while (index < scores.length) {
+      const score = scores[index];
+      index++;
+
+      if (score < 60) {
+        continue;
+      }
+
+      console.log(score);
+    }
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', '98,85,100').run('The loop should log only `98`, `85`, and `100`', 'Skipped the failing scores');
+    wrap(source.includes('continue')).should('equal', true).run('Use a `continue` statement to skip the low scores', 'Used a continue statement');
+    ```
+
+3. Which of these loops never ends?
+
+    ```{mcq}
+    One of these `while` loops is infinite. Which one?
+    correct: Correct! `count * 1` is always the same value as `count`, so `count` never reaches `5` and the condition stays true forever. A loop is infinite whenever nothing inside it makes progress toward ending it.
+    wrong: For each loop, ask what the variable in the condition is after one pass, and whether that gets it any closer to making the condition false.
+    [x] `let count = 0; while (count < 5) { count = count * 1; }`
+    [ ] `let count = 0; while (count < 5) { count = count + 1; }`
+    [ ] `let count = 0; while (count < 5) { count++; }`
+    [ ] `let count = 10; while (count < 5) { count++; }`
+    ```
+
+## Resources
+
+- [MDN: while](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/while)
+- [MDN: Loops and iteration](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Loops_and_iteration)
+- [MDN: break](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/break)
+- [MDN: continue](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/continue)

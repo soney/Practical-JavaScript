@@ -1,0 +1,220 @@
+# Modules Overview
+
+As a codebase grows, it has to be split across files. We already know one way to do that: several `<script>` tags, all sharing one global scope. That sharing is convenient right up to the moment it is a problem.
+
+## The Problem: One Shared Scope
+
+Take a shopping site with two files:
+
+```html
+<script src="cart.js"></script>
+<script src="auth.js"></script>
+```
+
+`cart.js` tracks what is in the basket:
+
+```javascript
+// cart.js
+let count = 0;
+
+function addItem(item) {
+  count = count + 1;
+}
+
+function clear() {
+  count = 0;
+}
+```
+
+And `auth.js` tracks failed logins:
+
+```javascript
+// auth.js
+let count = 0;
+
+function recordFailedLogin() {
+  count = count + 1;
+}
+```
+
+Both files chose the name `count`, for entirely different things. Since they share one global scope, there is only *one* `count`, and adding an item to the cart now also counts as a failed login attempt. That is a **name collision**.
+
+Depending on how the variables are declared, it either overwrites silently or fails outright. Here is the silent version, with two "files" in one scope:
+
+```{javascript autorun}
+// cart.js
+var count = 3;
+
+// auth.js
+var count = 0;
+
+console.log('the cart thinks it holds ' + count + ' items');
+```
+
+The cart's `3` is gone. Nothing warned us, and in a real application this surfaces later as a bug that makes no sense.
+
+## The Fix: Give Each File Its Own Scope
+
+A **module** is a file with its own private scope. Names declared inside it are not global, so two modules can both use `count` without knowing or caring about each other.
+
+You mark a script as a module with the `type="module"` attribute:
+
+```html
+<script type="module" src="cart.js"></script>
+<script type="module" src="auth.js"></script>
+```
+
+The idea is the one we already know from [Module 2 of Course 2](<../../Course 2/Module 2 - Events and Callbacks/12 - Variable Scope.webnb>): an enclosing scope keeps names private. This cell uses blocks to stand in for two module files, since a notebook cell cannot be two files:
+
+```{javascript autorun}
+{
+  // like cart.js as a module
+  const count = 3;
+
+  console.log('cart count: ' + count);
+}
+
+{
+  // like auth.js as a module
+  const count = 0;
+
+  console.log('auth count: ' + count);
+}
+```
+
+Two variables named `count`, both correct, no interference. That is what `type="module"` buys.
+
+Modules are the modern way to split JavaScript up, and "modern" here does not mean strictly better in every case. Plenty of code is not written as modules and does not need to be, and you will meet situations that call for a plain script.
+
+## Sharing on Purpose
+
+Privacy has a price: things you *do* want to share now have to be shared deliberately.
+
+Suppose `auth.js` should empty the cart when a user logs in. As plain scripts, `clear()` was simply in scope. As modules, it is not:
+
+```javascript
+// auth.js
+clear();   // ReferenceError: clear is not defined
+```
+
+The fix is two keywords. `cart.js` **exports** what it offers:
+
+```javascript
+// cart.js
+export function clear() {
+  count = 0;
+}
+```
+
+And `auth.js` **imports** it:
+
+```javascript
+// auth.js
+import { clear } from './cart.js';
+
+clear();
+```
+
+The next three readings cover the syntax of both properly. For now the shape is the point: **export to offer, import to receive.**
+
+## Modules Load Their Own Dependencies
+
+There is a consequence of that import worth noticing.
+
+```html
+<script type="module" src="cart.js"></script>
+<script type="module" src="auth.js"></script>
+```
+
+Once `auth.js` says `import { clear } from './cart.js'`, the first tag is redundant. The browser loads `auth.js`, sees what it imports, and fetches `cart.js` itself. So the HTML shrinks to:
+
+```html
+<script type="module" src="auth.js"></script>
+```
+
+This is how real projects look: one script tag as an entry point, and a graph of modules importing each other underneath it. You are no longer listing every file in your HTML and getting the order right by hand, which is a large part of why modules exist.
+
+One more practical detail: a module script does not block parsing and does not run until the document has been parsed. It behaves as though it had `defer` on it, without your writing it.
+
+## Exercises
+
+1. Turn both of these scripts into modules.
+
+    ```{html}
+    <h1>Shop</h1>
+    <script src="cart.js"></script>
+    <script src="auth.js"></script>
+    ```
+    ```+solution
+    <h1>Shop</h1>
+    <script type="module" src="cart.js"></script>
+    <script type="module" src="auth.js"></script>
+    ```
+    ```+test
+    wrap((source.match(/type\s*=\s*["']module["']/g) || []).length).should('equal', 2).run('Add `type="module"` to both script tags', 'Made both scripts modules');
+    assert('script').should('have.length', 2).run('There should still be exactly two script tags', 'Kept both tags');
+    ```
+
+2. These two "files" collide on the name `total`, so the second log is wrong. Give each one its own scope with a block, so both logs report the right number.
+
+    ```{javascript}
+    // cart.js
+    var total = 12;
+
+    // shipping.js
+    var total = 5;
+
+    console.log('cart total: ' + total);
+    console.log('shipping total: ' + total);
+    ```
+    ```+solution
+    {
+      // cart.js
+      const total = 12;
+
+      console.log('cart total: ' + total);
+    }
+
+    {
+      // shipping.js
+      const total = 5;
+
+      console.log('shipping total: ' + total);
+    }
+    ```
+    ```+test
+    check.consoleLogged('cart total: 12').run('The cart should still report `12`', 'Cart total is right');
+    check.consoleLogged('shipping total: 5').run('Shipping should report `5`, which means the two values cannot share one variable', 'Shipping total is right');
+    wrap(console.history().length).should('equal', 2).run('Log exactly two lines', 'Logged both totals');
+    ```
+
+3. Two ordinary scripts, not modules, both declare `const user = 'Guest';`. What happens?
+
+    ```{mcq}
+    Both files declare the same name at the top level. What does the browser do?
+    correct: Correct! Ordinary scripts share one global scope, so the two declarations are competing for one name. You get either an error about the name already being declared or the second value quietly replacing the first.
+    wrong: Think about how many scopes are involved when two plain scripts run on the same page.
+    [x] A name collision, since both scripts share the global scope
+    [ ] Each file keeps its own private `user`, so there is no conflict
+    [ ] The browser renames one of them automatically
+    [ ] The browser skips the second script to avoid the problem
+    ```
+
+4. After `auth.js` imports from `cart.js`, the `<script src="cart.js">` tag can be deleted. Why does that work?
+
+    ```{mcq}
+    Why does the browser still load `cart.js`?
+    correct: Correct! A module declares what it needs, and the browser follows those declarations, fetching each imported file in turn. Listing them all in the HTML stops being necessary.
+    wrong: Think about what the browser does when it reads an `import` statement inside a module.
+    [x] Modules load their own dependencies, so importing `cart.js` makes the browser fetch it
+    [ ] `import` copies the file into the browser's permanent storage
+    [ ] `type="module"` makes every file in the folder load anyway
+    [ ] It does not work; both tags are always required
+    ```
+
+## Resources
+
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)
+- [MDN: script type=module](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script/type/module)
+- [MDN: export](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export)
+- [MDN: import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)

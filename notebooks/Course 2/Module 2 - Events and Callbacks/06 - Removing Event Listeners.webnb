@@ -1,0 +1,232 @@
+# Removing Event Listeners
+
+Just as we can add event listeners, we can remove them, to say that we no longer want a callback run when an event occurs.
+
+The method is **`el.removeEventListener(event, callback)`**, and it mirrors `addEventListener` exactly:
+
+```javascript
+const btn = document.querySelector('button');
+
+function callback() {
+  console.log('clicked');
+}
+
+btn.addEventListener('click', callback);
+
+// ...later...
+
+btn.removeEventListener('click', callback);
+```
+
+Same element, same event name, same callback. After that last line, clicking the button does nothing.
+
+## The Callback Has to Be the *Same* Function
+
+This is the part that trips people up. `removeEventListener` finds the listener to remove by matching the **function object**, not by comparing what the function does.
+
+So this does not work, even though the two functions are identical in behavior:
+
+```javascript
+function callback() {
+  console.log('clicked');
+}
+
+function callback2() {
+  console.log('clicked');
+}
+
+btn.addEventListener('click', callback);
+btn.removeEventListener('click', callback2);   // does nothing
+```
+
+`callback` and `callback2` are two different function objects that happen to contain the same code. The browser is looking for the first one and does not find it.
+
+And for the same reason, this does not work either:
+
+```javascript
+btn.addEventListener('click', () => {
+  console.log('clicked');
+});
+
+btn.removeEventListener('click', () => {
+  console.log('clicked');
+});                                             // does nothing
+```
+
+Each of those arrow functions creates a brand new function object at the moment the line runs. They are not the same object, so nothing is removed.
+
+**The practical consequence: if you might ever want to remove a listener, do not write its callback inline.** Give it a name, or store it in a variable, so you have something to hand to `removeEventListener` later.
+
+You can watch the difference:
+
+```html id=page1
+<button id="removable">Named callback</button>
+<button id="stuck">Inline callback</button>
+```
+
+```{javascript autorun}
+const removable = document.querySelector('#removable');
+const stuck = document.querySelector('#stuck');
+
+function onRemovable() {
+  console.log('removable listener fired');
+}
+
+removable.addEventListener('click', onRemovable);
+removable.removeEventListener('click', onRemovable);
+
+stuck.addEventListener('click', () => {
+  console.log('inline listener fired');
+});
+
+stuck.removeEventListener('click', () => {
+  console.log('inline listener fired');
+});
+```
+```+id=page1
+```
+
+Click both. The first button is silent, because its listener really was removed. The second still logs, because the attempted removal referred to a different function.
+
+## A Worked Example: Dragging
+
+Here is a real use for removal. We want a block the user can drag around, which means the block should follow the pointer *only between* pressing the mouse down and releasing it.
+
+The shape of the solution: `mousedown` adds a `mousemove` listener, and `mouseup` removes it.
+
+```html id=page2
+<div id="block"></div>
+```
+
+```{javascript autorun}
+const block = document.querySelector('#block');
+
+function onMouseMove(event) {
+  block.style.left = event.pageX + 'px';
+  block.style.top = event.pageY + 'px';
+}
+
+function onMouseDown() {
+  window.addEventListener('mousemove', onMouseMove);
+}
+
+function onMouseUp() {
+  window.removeEventListener('mousemove', onMouseMove);
+}
+
+block.addEventListener('mousedown', onMouseDown);
+window.addEventListener('mouseup', onMouseUp);
+```
+```+id=page2
+```
+```+css
+#block { width: 50px; height: 50px; background-color: red; position: absolute; }
+```
+
+Press the mouse down on the red square and drag. Release, and it stops following.
+
+Two details in that code are worth pointing out.
+
+**`position: absolute`** in the CSS is what lets us place the block anywhere on the page by setting `left` and `top`. Without it, those properties would have no effect.
+
+**`mouseup` is on the `window`, not on the block.** That is deliberate. While dragging quickly, the block lags slightly behind the pointer, so when the user lets go, the pointer may not be over the block at all. A `mouseup` listener on the block would miss that release and the block would keep following the pointer forever. Listening on the window catches the release wherever it happens.
+
+There is plenty this example does not handle. Most visibly, the block always jumps so its top-left corner is under the pointer, rather than staying where you grabbed it. The point here is the add-then-remove pattern, which is what makes a drag a drag.
+
+## Exercises
+
+1. Add a click listener and then remove it, so that clicking the button leaves `count` at `0`.
+
+    ```html id=page3
+    <button id="once">Click</button>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#once');
+
+    let count = 0;
+
+    function handleClick() {
+      count = count + 1;
+    }
+
+    // Write your code here
+    ```
+    ```+id=page3
+    ```
+    ```+solution
+    const button = document.querySelector('#once');
+
+    let count = 0;
+
+    function handleClick() {
+      count = count + 1;
+    }
+
+    button.addEventListener('click', handleClick);
+    button.removeEventListener('click', handleClick);
+    ```
+    ```+test
+    wrap(source.includes('addEventListener')).should('equal', true).run('Add the listener first', 'Added the listener');
+    wrap(source.includes('removeEventListener')).should('equal', true).run('Then remove it with `removeEventListener`', 'Removed the listener');
+    assert('#once').click().run('Could not find the `#once` button', 'Clicked the button');
+    wrap(count).should('equal', 0).run('`count` should still be `0`, because the listener was removed before the click', 'The listener really was removed');
+    ```
+
+2. Make a button that works exactly once: the first click sets the message to `Claimed`, and every later click does nothing. Remove the listener from inside the callback.
+
+    ```html id=page4
+    <button id="claim">Claim your prize</button>
+    <p id="message">Unclaimed</p>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#claim');
+    const message = document.querySelector('#message');
+
+    let clicks = 0;
+
+    // Write your code here
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const button = document.querySelector('#claim');
+    const message = document.querySelector('#message');
+
+    let clicks = 0;
+
+    function onClaim() {
+      clicks = clicks + 1;
+      message.textContent = 'Claimed';
+      button.removeEventListener('click', onClaim);
+    }
+
+    button.addEventListener('click', onClaim);
+    ```
+    ```+test
+    assert('#claim').click().run('Could not find the `#claim` button', 'Clicked once');
+    assert('#message').should('have.text', 'Claimed').run('The first click should set the message to `Claimed`', 'The first click works');
+    wrap(clicks).should('equal', 1).run('The callback should have run once', 'The callback ran once');
+    assert('#claim').click().click().run('Could not click again', 'Clicked twice more');
+    wrap(clicks).should('equal', 1).run('Later clicks should do nothing. Call `removeEventListener` from inside the callback, passing the same named function', 'Later clicks are ignored');
+    ```
+
+3. You added a listener with an inline arrow function and now you need to remove it. What has to change?
+
+    ```{mcq}
+    `el.addEventListener('click', () => { ... });` needs to become removable. What do you do?
+    correct: Correct! `removeEventListener` matches on the function object, so you need a reference to the exact function you passed in. Naming it, or storing it in a variable, gives you one.
+    wrong: Revisit "The Callback Has to Be the Same Function", and why passing an identical-looking arrow function to `removeEventListener` does nothing.
+    [x] Give the callback a name, or store it in a variable, and pass that to both calls
+    [ ] Pass an identical arrow function to `removeEventListener`
+    [ ] Call `removeEventListener` with only the event name
+    [ ] Nothing; inline arrow listeners are removed automatically
+    ```
+
+## Resources
+
+- [MDN: EventTarget.removeEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/removeEventListener)
+- [MDN: EventTarget.addEventListener()](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget/addEventListener)
+- [MDN: Element mousedown event](https://developer.mozilla.org/en-US/docs/Web/API/Element/mousedown_event)
+- [MDN: CSS position](https://developer.mozilla.org/en-US/docs/Web/CSS/position)

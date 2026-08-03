@@ -1,0 +1,224 @@
+# Changing Attributes
+
+Recall from Module 1 of Course 1 that an element's **attributes** give more information about it, controlling how it looks and how it behaves. Now we will change them from JavaScript, which lets us do things like swap the image a page is showing, or disable a form control after it has been used.
+
+Written in HTML, an attribute is a name and a value inside the opening tag, and an element can have as many as it needs:
+
+```html
+<img src="images/cat.jpg" alt="A cat">
+```
+
+Here `src` is one attribute name with the value `images/cat.jpg`, and `alt` is another.
+
+## The Four Methods
+
+Every element object has four methods for working with attributes:
+
+- **`el.setAttribute(name, value)`** adds an attribute, or changes it if it is already there.
+- **`el.getAttribute(name)`** gives back the value of that attribute.
+- **`el.hasAttribute(name)`** returns a boolean: does this element have that attribute?
+- **`el.removeAttribute(name)`** deletes the attribute entirely.
+
+Here they are on an image:
+
+```html id=page1
+<img id="animal" src="images/cat.jpg" alt="A cat" width="200">
+```
+
+```{javascript autorun}
+const image = document.querySelector('#animal');
+
+console.log(image.getAttribute('src'));
+console.log(image.hasAttribute('alt'));
+console.log(image.getAttribute('alt'));
+```
+```+id=page1
+```
+
+### Attribute Values Are Always Strings
+
+One detail that catches people out: `getAttribute` always hands back a **string**, even when the attribute looks like a number.
+
+```html id=page2
+<input type="text" maxlength="20">
+```
+
+```{javascript autorun}
+const input = document.querySelector('input');
+
+const raw = input.getAttribute('maxlength');
+
+console.log(raw, typeof raw);
+console.log(raw + 5);
+```
+```+id=page2
+```
+
+`raw + 5` gives `205`, not `25`, because `+` with a string concatenates, exactly as we saw back in Course 1.
+
+To do arithmetic with it, convert it to a number first with the built-in **`parseInt`** function, which reads a whole number out of the front of a string:
+
+```{javascript autorun}
+const input = document.querySelector('input');
+
+const maxChars = parseInt(input.getAttribute('maxlength'));
+
+console.log(maxChars, typeof maxChars);
+console.log(maxChars + 5);
+```
+```+id=page2
+```
+
+Now `maxChars` is the number `20` and the arithmetic works. Any time you read a numeric attribute and then do math with it, `parseInt` is the step in between.
+
+## Changing What an Image Shows
+
+An `<img>` element's `src` attribute says which image to display. Change the attribute and the picture on the page changes with it, which is how image carousels and galleries work.
+
+Click the button:
+
+```html id=page3
+<img id="animal" src="images/cat.jpg" alt="A cat" width="200">
+<button>I like dogs</button>
+```
+
+```{javascript autorun}
+const image = document.querySelector('#animal');
+const button = document.querySelector('button');
+
+function changeToDog() {
+  image.setAttribute('src', 'images/puppy.jpg');
+  image.setAttribute('alt', 'A puppy sitting in the grass');
+}
+
+button.addEventListener('click', changeToDog);
+```
+```+id=page3
+```
+
+Nothing about the element was replaced; we changed one attribute value and the browser redrew. Open the inspector while you click and you can watch `src` change from `images/cat.jpg` to `images/puppy.jpg`.
+
+Notice that we changed the `alt` text too. An image whose `src` changes but whose `alt` still describes the old picture is worse than no `alt` at all.
+
+## Disabling a Button
+
+Another everyday use: after someone clicks a submit button, disable it so they cannot submit twice.
+
+```{javascript autorun}
+const image = document.querySelector('#animal');
+const button = document.querySelector('button');
+
+function changeToDog() {
+  image.setAttribute('src', 'images/puppy.jpg');
+  image.setAttribute('alt', 'A puppy sitting in the grass');
+  button.setAttribute('disabled', '');
+}
+
+button.addEventListener('click', changeToDog);
+```
+```+id=page3
+```
+
+Click it once and it stops responding. To re-enable it we would call `button.removeAttribute('disabled')`.
+
+### Boolean Attributes
+
+Look closely at that call: we set `disabled` to an empty string. Not `true`. That is not a mistake.
+
+`disabled` is a **boolean attribute**, which means that *its presence alone* is what counts. The value is ignored. All of these disable the button just as thoroughly:
+
+```javascript
+button.setAttribute('disabled', 'true');
+button.setAttribute('disabled', 'yes');
+button.setAttribute('disabled', 'false');
+button.setAttribute('disabled', '');
+```
+
+Yes, including `'false'`. If you want the button enabled, the attribute must not be there at all, and the only way to achieve that is `removeAttribute`. This surprises people, and it is worth remembering, because `setAttribute('disabled', 'false')` looks exactly like it should work.
+
+## Exercises
+
+1. Set the image's `alt` attribute to exactly `Course logo`.
+
+    ```html id=page4
+    <img id="logo" src="images/cat.jpg" width="120">
+    ```
+
+    ```{javascript}
+    const logo = document.querySelector('#logo');
+
+    // Write your code here
+    ```
+    ```+id=page4
+    ```
+    ```+solution
+    const logo = document.querySelector('#logo');
+
+    logo.setAttribute('alt', 'Course logo');
+    ```
+    ```+test
+    assert('#logo').should('have.attribute', 'alt').run('Add an `alt` attribute to the image with `setAttribute`', 'Added the alt attribute');
+    wrap(logo.getAttribute('alt')).should('equal', 'Course logo').run('Set `alt` to exactly `Course logo`', 'Set the correct alt text');
+    ```
+
+2. The button below is disabled. Enable it.
+
+    ```html id=page5
+    <button id="save" disabled>Save</button>
+    ```
+
+    ```{javascript}
+    const button = document.querySelector('#save');
+
+    // Write your code here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const button = document.querySelector('#save');
+
+    button.removeAttribute('disabled');
+    ```
+    ```+test
+    wrap(button.hasAttribute('disabled')).should('equal', false).run('The `disabled` attribute has to be removed entirely. Setting it to `false` would leave the button disabled', 'Removed the disabled attribute');
+    ```
+
+3. Make the button swap the link's destination. Clicking it should change the link's `href` to `https://www.umich.edu/` and its text to `University of Michigan`.
+
+    ```html id=page6
+    <a id="site-link" href="https://example.com/">Example</a>
+    <button id="swap">Swap</button>
+    ```
+
+    ```{javascript}
+    const link = document.querySelector('#site-link');
+    const button = document.querySelector('#swap');
+
+    // Write your code here
+    ```
+    ```+id=page6
+    ```
+    ```+solution
+    const link = document.querySelector('#site-link');
+    const button = document.querySelector('#swap');
+
+    function swapLink() {
+      link.setAttribute('href', 'https://www.umich.edu/');
+      link.textContent = 'University of Michigan';
+    }
+
+    button.addEventListener('click', swapLink);
+    ```
+    ```+test
+    wrap(link.getAttribute('href')).should('equal', 'https://example.com/').run('The link should keep its original destination until the button is clicked', 'The link starts unchanged');
+    assert('#swap').click().run('Could not find the `#swap` button', 'Clicked the button');
+    wrap(link.getAttribute('href')).should('equal', 'https://www.umich.edu/').run('Clicking the button should set the link\'s `href` to `https://www.umich.edu/`', 'Changed the destination');
+    assert('#site-link').should('have.text', 'University of Michigan').run('Clicking the button should also change the link text to `University of Michigan`', 'Changed the link text');
+    ```
+
+## Resources
+
+- [MDN: Element.setAttribute()](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute)
+- [MDN: Element.getAttribute()](https://developer.mozilla.org/en-US/docs/Web/API/Element/getAttribute)
+- [MDN: Element.removeAttribute()](https://developer.mozilla.org/en-US/docs/Web/API/Element/removeAttribute)
+- [MDN: Boolean attributes](https://developer.mozilla.org/en-US/docs/Glossary/Boolean/HTML)

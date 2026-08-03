@@ -1,0 +1,204 @@
+# React Linters
+
+So far we have caught mistakes with the console, React Developer Tools, and our own reading of the code. Some React mistakes can be caught even earlier, before we ever open a browser. A **linter** is a tool that reads our source code and warns us about patterns that are likely to be bugs or that break a rule.
+
+Linters are especially useful for React because many React bugs come from breaking React's rules and guidelines. A linter can catch problems such as:
+
+- missing hook dependencies,
+- hooks called conditionally instead of in the same order every render,
+- unused variables,
+- inconsistent code style.
+
+A linter does not make our code correct by itself. It is good at catching the kinds of mistakes that are hard to notice while writing and hard to debug later.
+
+## Installing ESLint
+
+The linting tool most React developers reach for is ESLint together with the ESLint React plugin. We stop the dev server and install the recommended packages with `npm`:
+
+```bash
+npm install --save-dev eslint @eslint/js @eslint-react/eslint-plugin globals
+```
+
+The `--save-dev` flag records these as development dependencies, since the linter is a build-time tool and is not shipped to users.
+
+## Configuring ESLint
+
+Next we tell ESLint what to check by creating a file named `eslint.config.js` in the project root. A typical React config extends the recommended JavaScript and React rule sets, enables JSX parsing, and includes the browser globals (`window`, `document`, and so on):
+
+```javascript
+import globals from "globals";
+import eslintJs from "@eslint/js";
+import eslintReact from "@eslint-react/eslint-plugin";
+import { defineConfig } from "eslint/config";
+
+export default defineConfig(
+  {
+    // Only lint our own source files
+    files: ["src/**/*.js", "src/**/*.jsx"],
+
+    // Turn on recommended JavaScript and React rules
+    extends: [
+      eslintJs.configs.recommended,
+      eslintReact.configs.recommended
+    ],
+
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+      },
+      parserOptions: {
+        ecmaFeatures: {
+          jsx: true, // Enable JSX syntax
+        },
+      },
+    },
+
+    // Custom overrides go here
+    rules: {
+      "@eslint-react/no-missing-key": "warn"
+    },
+  },
+);
+```
+
+The `files` array is worth calling out. Without it, ESLint may also lint files we do not care about, such as the Webpack config. The globs `src/**/*.js` and `src/**/*.jsx` restrict linting to the `src` directory, where our components live.
+
+## Running ESLint
+
+To check the code on demand, we run the linter from the terminal:
+
+```bash
+npx eslint
+```
+
+ESLint prints one entry per problem it finds, with the file, the line, and the rule name. For example, if we accidentally call `useState` inside an `if` statement, ESLint reports that a hook is called conditionally:
+
+```jsx
+function Counter({ enabled }) {
+  if (enabled) {
+    // ESLint error: React Hook "useState" is called conditionally.
+    // React Hooks must be called in the exact same order in every render.
+    const [count, setCount] = React.useState(0);
+    return <p>Count: {count}</p>;
+  }
+  return <p>Disabled</p>;
+}
+```
+
+We fix it by moving the hook out of the `if`, so it runs on every render:
+
+```jsx
+function Counter({ enabled }) {
+  const [count, setCount] = React.useState(0);
+  if (!enabled) {
+    return <p>Disabled</p>;
+  }
+  return <p>Count: {count}</p>;
+}
+```
+
+ESLint also catches plainer mistakes. If we declare a variable and never read it, we get a `no-unused-vars` error, and code that can never run (for example, a statement after a `return`) is flagged as unreachable.
+
+## Seeing Lint Feedback in the Editor
+
+Running `npx eslint` by hand every time is slow. The **ESLint extension** for VS Code (published by Microsoft) shows the same messages inline as red squiggly underlines while we type. Hovering over an underline shows the rule name and the explanation, so the linter runs automatically as we edit instead of only when we ask.
+
+The rule name in each message (like `react-hooks/exhaustive-deps` or `no-unused-vars`) is the key to understanding it: you can search the rule name to find its documentation.
+
+## Turning a Rule Off
+
+Sometimes a rule is stricter than we want. Suppose we intentionally keep `const x = 1` that we do not use yet. By default that triggers the `no-unused-vars` error. We have two ways to silence it.
+
+To turn the rule off everywhere, we set it to `"off"` in the config's `rules`:
+
+```javascript
+rules: {
+  "no-unused-vars": "off"
+}
+```
+
+To disable it for a single file only, we add a comment at the top of that file:
+
+```javascript
+/* eslint-disable no-unused-vars */
+```
+
+`no-unused-vars` is one of many rules you can configure this way. Disabling a rule is a deliberate choice: prefer fixing the underlying issue, and turn a rule off only when you understand why it is firing.
+
+## Exercises
+
+1. Configure the linter. Fill in the `files` array so ESLint only checks the `src` directory (both `.js` and `.jsx` files), and add a `rules` override that turns the `no-unused-vars` rule off.
+
+   ```{javascript}
+   const eslintConfig = {
+     files: [],
+     rules: {}
+   };
+   ```
+   ```+solution
+   const eslintConfig = {
+     files: ['src/**/*.js', 'src/**/*.jsx'],
+     rules: {
+       'no-unused-vars': 'off'
+     }
+   };
+   ```
+   ```+test
+   wrap(eslintConfig.files.join(',')).should('equal', 'src/**/*.js,src/**/*.jsx').run('List both src globs in files: src/**/*.js and src/**/*.jsx', 'files restricted to src');
+   wrap(eslintConfig.rules['no-unused-vars']).should('equal', 'off').run('Set the no-unused-vars rule to the string off', 'Rule override set');
+   ```
+
+2. Practice running the linter from the terminal.
+
+   ```{external}
+   title: Lint command practice
+   interval: off
+   - command: npx eslint | Run ESLint over the project
+   ```
+   ```+terminal
+   welcome: Run the linter the way the video does.
+   prompt: $
+   ```
+
+3. ESLint reports that a hook is called conditionally. What is the correct fix?
+
+   ```{mcq}
+   ESLint says "React Hook useState is called conditionally." How do you fix it?
+   correct: Correct. Hooks must run in the same order every render, so the call has to move out of the conditional.
+   wrong: Remember that React Hooks must be called in the exact same order on every render.
+   [x] Move the `useState` call out of the `if` so it runs on every render.
+   [ ] Delete the component entirely.
+   [ ] Move the hook into a CSS file.
+   [ ] Turn off every ESLint rule.
+   ```
+
+4. Which of these statements about linters is **false**?
+
+   ```{mcq}
+   Three of these are true. Is the fourth?
+   correct: Correct! All three are accurate: a linter reads code and flags likely-erroneous patterns, React linters focus on violations of React's rules and guidelines, and an editor extension runs ESLint for you instead of you rerunning it in the terminal.
+   wrong: Check each statement against what the reading said, including the part about not having to rerun the linter by hand.
+   [x] All of the choices are true
+   [ ] A linter is a tool that reads our code and flags potentially erroneous patterns
+   [ ] The patterns React linters focus on include violations of React's rules and guidelines
+   [ ] There are ways to run ESLint automatically instead of rerunning it in the terminal every time
+   ```
+
+5. You want `no-unused-vars` silenced in one file only, leaving it on everywhere else. What do you write?
+
+   ```{mcq}
+   Config change, or something in the file itself?
+   correct: Correct! A `/* eslint-disable no-unused-vars */` comment at the top of the file turns the rule off for that file alone. Setting it to `"off"` in the config would silence it across the whole project.
+   wrong: One of these affects every file in the project, and one affects only the file it appears in.
+   [x] `/* eslint-disable no-unused-vars */` at the top of that file
+   [ ] `"no-unused-vars": "off"` in `eslint.config.js`
+   [ ] Remove that file from the `files` array
+   [ ] Uninstall the ESLint editor extension
+   ```
+
+## Resources
+
+- [ESLint Documentation](https://eslint.org/docs/latest/)
+- [ESLint React plugin](https://eslint-react.xyz/)
+- [React Docs: eslint-plugin-react-hooks](https://react.dev/reference/eslint-plugin-react-hooks)
+- [ESLint: Configuring rules](https://eslint.org/docs/latest/use/configure/rules)

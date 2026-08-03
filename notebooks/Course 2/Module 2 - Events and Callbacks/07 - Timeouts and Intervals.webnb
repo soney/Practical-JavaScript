@@ -1,0 +1,279 @@
+# Timeouts and Intervals
+
+So far we have reacted to things the *user* does. Now we react to time passing: run some code after five seconds, or every five seconds.
+
+The two functions are **`setTimeout`** and **`setInterval`**, and it is worth noticing how much they have in common with `addEventListener`. In both cases we supply two things:
+
+- **When to react.** For a listener that is an event name; for a timer it is a delay in milliseconds.
+- **What to do.** A callback function, in both cases.
+
+One second is 1,000 milliseconds, so a three-second delay is `3000`.
+
+## `setTimeout`
+
+`setTimeout(callback, delay)` runs the callback **once**, after the delay.
+
+![A green panel standing for a timeout, drawn like the event listener panel but with a stopwatch on top instead of an ear. Beside the stopwatch is a hexagon reading 3000, the delay in milliseconds, and the panel holds a gray box labeled callback.](images/settimeout-listener.png =x220)
+
+```{javascript autorun}
+function callback() {
+  console.log('three seconds have passed');
+}
+
+console.log('starting the timer');
+
+setTimeout(callback, 3000);
+
+console.log('this line runs immediately');
+```
+
+Run it. The first and third messages appear at once, and the middle one arrives three seconds later. The script did not pause and wait; it registered a timer with the browser and carried straight on, exactly as `addEventListener` does.
+
+Note the argument order. With `addEventListener` the *when* comes first and the callback second. With `setTimeout` it is the other way round: the **callback comes first** and the delay second. That inconsistency is mildly annoying and easy to get backwards.
+
+Here it is driving the page rather than the console:
+
+```html id=page1
+<button id="timer-button">Start three second timer</button>
+<div id="timer-feedback">Not started.</div>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#timer-button');
+const feedback = document.querySelector('#timer-feedback');
+
+button.addEventListener('click', () => {
+  feedback.textContent = 'started timer';
+
+  setTimeout(() => {
+    feedback.textContent = 'timer is done';
+  }, 3000);
+});
+```
+```+id=page1
+```
+
+## `setInterval`
+
+`setInterval(callback, delay)` is the same idea, except it runs the callback **repeatedly**, every `delay` milliseconds, and keeps going until the page closes or we stop it.
+
+![A green panel standing for an interval, matching the timeout panel except that a pair of looping repeat arrows sits above the stopwatch. The hexagon beside it reads 1000, the gap between runs in milliseconds, and the panel holds a gray box labeled function.](images/setinterval-listener.png =x220)
+
+Here is a rough stopwatch:
+
+```html id=page2
+<button id="stopwatch-button">Start stopwatch</button>
+<div id="stopwatch-feedback">0</div>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#stopwatch-button');
+const feedback = document.querySelector('#stopwatch-feedback');
+
+button.addEventListener('click', () => {
+  let secondsPassed = 0;
+
+  setInterval(() => {
+    secondsPassed++;
+    feedback.textContent = secondsPassed;
+  }, 1000);
+});
+```
+```+id=page2
+```
+
+Click the button and the number climbs once a second.
+
+Now click it a second time and watch it go wrong: the count starts jumping by two, because there are now two intervals running, each incrementing the same display. Nothing ever stopped the first one. Which brings us to the other half of the lesson.
+
+## Canceling: `clearTimeout` and `clearInterval`
+
+Both `setTimeout` and `setInterval` **return a timer ID**, a number that uniquely identifies the timer they created. Hand that ID to `clearTimeout` or `clearInterval` and the timer is canceled.
+
+```{javascript autorun}
+const timeoutId = setTimeout(() => {
+  console.log('you will never see this');
+}, 500);
+
+console.log('the timer ID is a number: ' + timeoutId);
+
+clearTimeout(timeoutId);
+```
+
+The callback never runs, because we canceled the timer before it fired.
+
+That fixes the stopwatch. Keep the interval's ID, and clear it when the user presses Stop:
+
+```html id=page3
+<button id="start">Start</button>
+<button id="stop">Stop</button>
+<div id="sw-feedback">0</div>
+```
+
+```{javascript autorun}
+const startButton = document.querySelector('#start');
+const stopButton = document.querySelector('#stop');
+const feedback = document.querySelector('#sw-feedback');
+
+let intervalId;
+let secondsPassed = 0;
+
+startButton.addEventListener('click', () => {
+  clearInterval(intervalId);
+
+  intervalId = setInterval(() => {
+    secondsPassed++;
+    feedback.textContent = secondsPassed;
+  }, 1000);
+});
+
+stopButton.addEventListener('click', () => {
+  clearInterval(intervalId);
+});
+```
+```+id=page3
+```
+
+Notice the `clearInterval` at the top of the start handler. Clicking Start twice now clears the old interval before creating a new one, so there is only ever one running.
+
+### Clearing an Invalid ID Is Safe
+
+You may be wondering about that first `clearInterval(intervalId)`. The very first time Start is clicked, `intervalId` has never been assigned, so it is `undefined`.
+
+That is fine. **`clearTimeout` and `clearInterval` do nothing when given an ID that is undefined or refers to a timer that has already finished.** They do not throw an error. So you never need to guard these calls with an `if`, which keeps this kind of code much tidier than it would otherwise be.
+
+## A Worked Example: Undo Send
+
+Here is the pattern in a shape you have used yourself. Many email clients wait a few seconds before actually sending, and offer an Undo button in the meantime.
+
+```html id=page4
+<textarea placeholder="Write your message"></textarea>
+<button id="send">Send</button>
+<div id="feedback" class="hidden">Sending... <button id="undo">Undo send</button></div>
+```
+
+```{javascript autorun}
+const body = document.querySelector('textarea');
+const sendButton = document.querySelector('#send');
+const feedbackDiv = document.querySelector('#feedback');
+const undoButton = document.querySelector('#undo');
+
+let timeoutId;
+
+function sendMessage() {
+  feedbackDiv.classList.add('hidden');
+  sendButton.disabled = false;
+  console.log('Sending message: ' + body.value);
+}
+
+sendButton.addEventListener('click', () => {
+  feedbackDiv.classList.remove('hidden');
+  sendButton.disabled = true;
+
+  timeoutId = setTimeout(sendMessage, 3000);
+});
+
+undoButton.addEventListener('click', () => {
+  clearTimeout(timeoutId);
+  feedbackDiv.classList.add('hidden');
+  sendButton.disabled = false;
+  console.log('Send canceled');
+});
+```
+```+id=page4
+```
+```+css
+.hidden { display: none; }
+```
+
+Type a message and click Send. You get three seconds during which the Undo button is showing and the Send button is disabled. Click Undo within that window and `clearTimeout` cancels the send. Leave it alone and the message goes.
+
+## Exercises
+
+1. After a `200` millisecond delay, set the paragraph's text to `Done`. (Real code would use a longer delay; we keep it short here so the exercise finishes quickly.)
+
+    ```html id=page5
+    <p id="out">Waiting</p>
+    ```
+
+    ```{javascript}
+    const output = document.querySelector('#out');
+
+    // Write your code here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const output = document.querySelector('#out');
+
+    setTimeout(() => {
+      output.textContent = 'Done';
+    }, 200);
+    ```
+    ```+test
+    assert('#out').should('have.text', 'Waiting').run('The paragraph should still read `Waiting` immediately after the cell runs', 'The callback has not run yet');
+    setTimeout(() => {
+      assert('#out').should('have.text', 'Done').run('After 200 milliseconds the paragraph should read `Done`. Use `setTimeout`', 'The delayed callback ran');
+    }, 350);
+    ```
+
+2. Cancel the timeout so its callback never runs. Store the ID that `setTimeout` returns, then clear it.
+
+    ```{javascript}
+    const output = document.querySelector('#out');
+
+    setTimeout(() => {
+      output.textContent = 'This should never appear';
+    }, 200);
+
+    // Write your code here
+    ```
+    ```+id=page5
+    ```
+    ```+solution
+    const output = document.querySelector('#out');
+
+    const timeoutId = setTimeout(() => {
+      output.textContent = 'This should never appear';
+    }, 200);
+
+    clearTimeout(timeoutId);
+    ```
+    ```+test
+    wrap(source.includes('clearTimeout')).should('equal', true).run('Use `clearTimeout` to cancel the timer', 'Called clearTimeout');
+    setTimeout(() => {
+      assert('#out').should('have.text', 'Waiting').run('The paragraph should still read `Waiting`, because the timeout was canceled. You need to keep the ID that `setTimeout` returned', 'The timeout was canceled');
+    }, 350);
+    ```
+
+3. Count to three. Start an interval that adds one to `ticks` every `100` milliseconds, and clear it once `ticks` reaches `3`.
+
+    ```{javascript}
+    let ticks = 0;
+
+    // Write your code here
+    ```
+    ```+solution
+    let ticks = 0;
+
+    const intervalId = setInterval(() => {
+      ticks++;
+
+      if (ticks === 3) {
+        clearInterval(intervalId);
+      }
+    }, 100);
+    ```
+    ```+test
+    wrap(ticks).should('equal', 0).run('`ticks` should still be `0` immediately after the cell runs', 'Nothing has ticked yet');
+    setTimeout(() => {
+      wrap(ticks).should('equal', 3).run('`ticks` should stop at exactly `3`. Store the interval ID and call `clearInterval` once it reaches 3', 'The interval counted to three and stopped');
+    }, 600);
+    ```
+
+## Resources
+
+- [MDN: setTimeout()](https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout)
+- [MDN: setInterval()](https://developer.mozilla.org/en-US/docs/Web/API/Window/setInterval)
+- [MDN: clearTimeout()](https://developer.mozilla.org/en-US/docs/Web/API/Window/clearTimeout)
+- [MDN: clearInterval()](https://developer.mozilla.org/en-US/docs/Web/API/Window/clearInterval)

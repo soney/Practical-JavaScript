@@ -1,0 +1,118 @@
+# Introduction to JavaScript
+
+We have spent two modules on HTML and CSS, and we can now build a page that has real structure and looks the way we want it to. In this module we finally get to the third piece: **JavaScript**, the language that makes our pages *interactive*. This lesson is a short orientation: what JavaScript is for, what this module is going to teach, and who it is written for.
+
+## The Three Languages of the Web
+
+Back in Module 1 we used the analogy of a person: **HTML** is the skeleton (structure and shape), **CSS** is the skin and clothes (appearance), and **JavaScript** is the muscles (movement). Said more plainly:
+
+- HTML controls the **content** of our pages: what text, images, and links are on them.
+- CSS controls how our pages are **rendered**: what they look like.
+- JavaScript controls how our pages **react** to user input and to other events: what happens when someone clicks a button, types in a box, or when a timer goes off.
+
+So far we have built pages that are static: they look the same no matter what the user does. JavaScript is the language that makes them dynamic: it can change the page in response to user actions, and it can also make things happen on a schedule or in response to other events.
+
+## Running Your First JavaScript
+
+The cells below are JavaScript cells rather than HTML cells, so the code inside them runs as JavaScript. Run this one:
+
+```{javascript autorun}
+console.log('Hello from JavaScript!');
+```
+
+`console.log(...)` displays a value in the output area under the cell. We will look at the console properly in a couple of lessons, but it is the fastest way to see what a piece of code produced, so we will lean on it constantly from here on.
+
+JavaScript can also compute things.
+
+```{javascript autorun}
+console.log(1 + 1);
+```
+
+That is the idea behind these notebooks: the code is live, so poke at it. You cannot break anything, and a cell you have edited teaches more than a cell you have read.
+
+## Imperative Programming
+
+This module is not only an introduction to JavaScript. It is also an introduction to **imperative programming**. In an imperative language we write **commands**: instructions that spell out *how* to do something, step by step.
+
+That is a real change from HTML and CSS. Those are **declarative** languages: we describe *what* we want (this text is a heading; headings are 32 pixels tall) and leave it to the browser to work out how to produce it. We never told the browser how to draw a heading. In JavaScript we do give the steps, and the computer carries them out one at a time, in the order they are written, finishing one **statement** before starting the next.
+
+Run this cell and watch the order of the output.
+
+```{javascript autorun}
+console.log('First');
+console.log('Second');
+console.log('Third');
+```
+
+The lines came out in the order they were written. Try retyping the three lines in a different order and running the cell again: the output order changes to match. That may sound obvious, but it is the foundation for everything else. When we get to conditionals and loops later in this module, all we are doing is changing *which* statements run and *how many times*, and the top-to-bottom rule still holds inside each piece.
+
+## Who This Module Is For
+
+I am going to introduce JavaScript from the very beginning and make no assumptions about prior programming knowledge. If you have never written a line of code in your life, you are in the right place, and nothing in this module expects you to have seen a variable or a loop before.
+
+If you *have* programmed before in a language like Java, Python, C, or anything else with C-like syntax, a lot of the next few lessons will look familiar. JavaScript's syntax was deliberately designed to resemble Java, so curly braces group code, semicolons end statements, and parentheses call functions, much as you would expect:
+
+```{javascript autorun}
+const city = 'Ann Arbor';
+
+if (city.length > 5) {
+  console.log(city + ' has a long name.');
+}
+```
+
+You are not expected to understand any of that yet, and we will get to every piece of it. The point is that if it already reads naturally to you, feel free to skim these readings (and the associated videos) and slow down at the parts that look new. JavaScript does have quirks of its own, and the next lesson explains where they came from, because a few of them make very little sense until you know the history.
+
+## Exercises
+
+1. Edit the cell below so that it reads:
+
+    ```javascript
+    console.log("I am learning JavaScript");
+    ```
+
+    When you run it, it should log the message `I am learning JavaScript` to the console.
+
+    ```{javascript}
+    console.log('...');
+    ```
+    ```+solution
+    console.log('I am learning JavaScript');
+    ```
+    ```+test
+    check.consoleLogged('I am learning JavaScript').run('The cell should log `I am learning JavaScript`', 'Logged the message');
+    ```
+
+2. Which language is responsible for how a page reacts to a button click?
+
+    ```{mcq}
+    A page has a button. Which of the three web languages decides what happens when a visitor clicks it?
+    correct: Correct! HTML provides the content, CSS controls how it is rendered, and JavaScript decides how the page reacts to user input and other events.
+    wrong: Look back at "The Three Languages of the Web" and at what happened when you clicked the button in that first cell.
+    [x] JavaScript
+    [ ] HTML
+    [ ] CSS
+    [ ] All three equally
+    ```
+
+3. What makes JavaScript imperative
+
+    ```{mcq}
+    What makes JavaScript an imperative language, unlike HTML and CSS?
+    correct: Correct! In an imperative language we write out the steps ourselves and the computer carries them out in order. HTML and CSS are declarative: we describe the result we want and leave the how to the browser.
+    wrong: Think about the difference between describing the result you want and spelling out the steps to get there. Revisit the "Imperative Programming" section.
+    [x] We write statements that spell out how to do something, step by step, and the computer carries them out in the order they are written.
+      correct: Right, an imperative program is a list of commands, carried out one after another.
+      wrong: This is the one: "imperative" means we give commands that spell out the steps.
+    [ ] We describe the result we want and leave it to the browser to work out how to produce it.
+      wrong: That describes a declarative language, which is how HTML and CSS work. JavaScript asks us for the steps.
+    [ ] All of the statements run at the same moment, so the order we write them in does not matter.
+      wrong: Order is central here: the statements run one at a time, from top to bottom.
+    [ ] The computer decides which statements are worth running and skips the rest.
+      wrong: The computer does not choose for us. Later we will use conditionals and loops to control which statements run, but that control is still something we write.
+    ```
+
+## Resources
+
+- [MDN: What is JavaScript?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/What_is_JavaScript)
+- [MDN: JavaScript first steps](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting)
+- [MDN: JavaScript guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide)

@@ -1,0 +1,145 @@
+# Foundational HTML Elements
+
+There are _many_ different types of HTML elements---far too many to fully cover in this (or any other) course. If you want to get a sense of how many  there are, [this page contains a list of all the different types of HTML elements](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements). We will cover the most essential ones here.
+
+## Document Structure
+
+Pretty much every HTML document will have the same top-level structure. This is the basic structure of an HTML document:
+
+```html
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body></body>
+</html>
+```
+
+- `<!DOCTYPE html>`: This tells the browser which version of HTML to use (the latest version, HTML 5).
+- `<html>`: This is the "root" element of every document, meaning all other elements are contained within this element.
+- `<head>`: This element contains metadata about the document, such as the title (using the `<title>` element). It is not displayed in the browser.
+- `<body>`: This element contains the content of the document, such as text, images, and links. It is displayed in the browser.
+
+In the small code examples here, we will often omit the `<!DOCTYPE html>`, `<html>`, `<head>`, and `<body>` elements for brevity. However, in a real HTML document, these elements should be included.
+
+## Content Elements
+
+These elements are used to display text in different ways. They can be used to create headings, paragraphs, lists, and more.
+
+- `<h1>` to `<h6>`: These are heading elements, with `<h1>` being "level 1" (the largest) and `<h6>` being "level 6" (the smallest). They are used to create headings and subheadings.
+- `<p>`: This is a paragraph element. It is used to create paragraphs of text.
+- `<strong>`: This element is used to create strong emphasis on text. It is typically displayed in **bold**.
+- `<em>`: This element is used to create emphasis on text. It is typically displayed in _italics_.
+
+For example:
+
+```{html autorun}
+<h1>My First Web Page</h1>
+<p>This is <em>one</em> <strong>paragraph.</strong></p>
+```
+
+### Lists
+
+- `<ul>`: This is an unordered list element. It is used to create a list of items that do not have a specific order. Each item in the list is contained within a `<li>` (list item) element.
+- `<ol>`: This is an ordered list element. It is used to create a list of items that have a specific order. Each item in the list is contained within a `<li>` (list item) element.
+- `<li>`: This is a list item element. It is used to create items in a list, either ordered (`ol`) or unordered (`ul`).
+
+For example:
+
+```{html autorun}
+<p>Unordered list:</p>
+<ul>
+    <li>Apples</li>
+    <li>Bananas</li>
+    <li>Cherries</li>
+</ul>
+<p>Ordered list:</p>
+<ol>
+    <li>Preheat the oven</li>
+    <li>Mix the ingredients</li>
+    <li>Bake for 30 minutes</li>
+</ol>
+```
+
+## Interactive Elements
+
+These elements are used to create interactive elements, such as links and buttons.
+
+- `<a>`: This is an anchor element. It is used to create links to other pages or sections of the same page.
+  - Note that links also need to have an `href` attribute to specify the URL to link to. We will cover attributes in more detail in the next section.
+- `<button>`: This element is used to create buttons that can be clicked to perform an action. It can contain text or other elements, such as images or icons.
+- `<input>`: This element is used to create input fields, such as text boxes, checkboxes, and radio buttons. It can be used to collect user input.
+
+```{html autorun}
+<a href="https://www.google.com">Google</a>
+<button>Click me</button>
+<input />
+```
+
+## Generic Containers
+
+These elements have no _semantic_ meaning (i.e., they don't convey any specific meaning about the content they contain). They are useful for grouping elements together, applying styles, or manipulating them with JavaScript.
+
+- `<div>`: A generic block-level container (think of "block-level" as meaning that it starts on a new line and takes up the full width). It has no semantic meaning, but is useful for grouping elements together.
+- `<span>`: A generic _inline_ container (think of "inline" as meaning that it only takes up as much width as its content needs). Like a `div`, it has no semantic meaning, but is useful for grouping elements together.
+
+```{html autorun}
+The content <div>here</div> is inside a div element. Note that the div element is a block-level element, so it takes up the full width of the page.
+
+<hr />
+
+The content <span>here</span> is inside a span element. Note that the span element is an inline element, so it only takes up as much width as its content needs. You probably wouldn't know it was a span element if I didn't tell you, since it doesn't have any special styling by default.
+```
+
+## Exercises
+
+1. Create a paragraph element (`p`) with the text "Apple".
+
+```{html}
+
+```
+
+```+solution
+<p>Apple</p>
+```
+
+```+test
+   assert('p').should('exist').run('Could not find a p element', 'Created a p element')
+   assert('p').should('have.text', 'Apple').run('The p element does not have the text "Apple"', 'Created a p element with the text "Apple"')
+```
+
+2. Create a button element (`button`) with the text "Submit".
+
+```{html}
+
+```
+
+```+solution
+<button>Submit</button>
+```
+
+```+test
+   assert('button').should('exist').run('Could not find a button element', 'Created a button element')
+   assert('button').should('have.text', 'Submit').run('The button element does not have the text "Submit"', 'Created a button element with the text "Submit"')
+```
+
+3. Create an emphasis element (`em`) with the text "Note".
+
+```{html}
+
+```
+
+```+solution
+<em>Note</em>
+```
+
+```+test
+   assert('em').should('exist').run('Could not find an em element', 'Created an em element')
+   assert('em').should('have.text', 'Note').run('The em element does not have the text "Note"', 'Created an em element with the text "Note"')
+```
+
+## Resources
+
+- [MDN: HTML elements reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements)
+- [MDN: The a element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/a)
+- [MDN: The img element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/img)
+- [MDN: The strong element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/strong)

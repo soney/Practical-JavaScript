@@ -1,0 +1,14 @@
+{
+  "name": "auth-demo",
+  "version": "1.0.0",
+  "description": "Staged servers for the User Authentication readings",
+  "type": "module",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
+    "lowdb": "^7.0.1",
+    "passport": "^0.7.0",
+    "passport-local": "^1.0.0"
+  }
+}

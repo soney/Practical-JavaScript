@@ -1,0 +1,263 @@
+# useContext: Sharing State Across Components
+
+Lifting state works, and it has a breaking point. It is worth seeing before the fix.
+
+## Prop Drilling
+
+Suppose the application knows whether buttons should be red, and the buttons are three levels down:
+
+```text
+App          holds hasRedButtons
+ |-- Layout          does not care, and must accept and forward it
+      |-- Sidebar    does not care, and must accept and forward it
+           |-- Button   actually uses it
+```
+
+Written out:
+
+```jsx
+function Button({ hasRedButtons }) {
+  return <button className={hasRedButtons ? 'red' : ''}>Click me</button>;
+}
+
+function Sidebar({ hasRedButtons }) {
+  return <Button hasRedButtons={hasRedButtons} />;
+}
+
+function Layout({ hasRedButtons }) {
+  return <Sidebar hasRedButtons={hasRedButtons} />;
+}
+```
+
+`Layout` and `Sidebar` have no interest in button colors. They accept the prop and pass it on, because they happen to sit between the component that has the value and the component that wants it. That is **prop drilling**, and it gets worse with depth, worse with each new value, and it means editing three files to add one.
+
+## Context
+
+**Context** is a shared value that any descendant can read directly, however deep it is. It has three pieces:
+
+1. **Create the context**, with `React.createContext(defaultValue)`. This is usually in its own file, since several components import it.
+2. **Provide a value**, by wrapping part of the tree in `<TheContext.Provider value={...}>`. Everything inside can read it.
+3. **Read it**, with `React.useContext(TheContext)`, in any component inside that provider.
+
+```{react autorun}
+const ThemeContext = React.createContext({ hasRedButtons: false });
+
+function Button() {
+  // No props at all: the value is read straight out of the context.
+  const theme = React.useContext(ThemeContext);
+
+  return (
+    <button style={theme.hasRedButtons ? { backgroundColor: 'darkred', color: 'white' } : {}}>
+      Click me
+    </button>
+  );
+}
+
+function Sidebar() {
+  return <Button />;
+}
+
+function Layout() {
+  return <Sidebar />;
+}
+
+function App() {
+  const [hasRedButtons, setHasRedButtons] = React.useState(false);
+
+  return (
+    <ThemeContext.Provider value={{ hasRedButtons: hasRedButtons }}>
+      <label>
+        <input
+          type="checkbox"
+          checked={hasRedButtons}
+          onChange={() => setHasRedButtons(!hasRedButtons)}
+        />
+        Red buttons
+      </label>
+
+      <Layout />
+    </ThemeContext.Provider>
+  );
+}
+
+renderReact(<App />);
+```
+
+Tick the checkbox and the button changes. `Layout` and `Sidebar` are back to knowing nothing, and `Button` takes no props at all.
+
+Two things this shows.
+
+**The value can be state.** The provider's `value` is `hasRedButtons` from `App`'s state, so changing the state changes what every reader sees. Context is a delivery mechanism, not a second kind of state.
+
+**It works at any depth.** Add ten more layers between `App` and `Button` and nothing in this code changes. Add a second `Button` somewhere else inside the provider and it reads the same value.
+
+## Reading Without a Provider
+
+The argument to `createContext` is the **default value**, used when a component reads the context with no provider above it:
+
+```{react autorun}
+const ThemeContext = React.createContext('light');
+
+function Label() {
+  const theme = React.useContext(ThemeContext);
+
+  return <p>Theme: {theme}</p>;
+}
+
+function App() {
+  return (
+    <div>
+      <ThemeContext.Provider value="dark">
+        <Label />
+      </ThemeContext.Provider>
+
+      <Label />
+    </div>
+  );
+}
+
+renderReact(<App />);
+```
+
+The first `Label` is inside the provider and reads `dark`. The second is outside it and falls back to `light`. A sensible default makes a component usable on its own, which matters for testing and for reuse.
+
+## When to Reach for It
+
+Context suits values that are genuinely **application-wide**: the theme, the current user, the locale, a shopping cart.
+
+It is not a replacement for props. Passing a value one or two levels is what props are for, and they are easier to follow, because you can see where data comes from by reading the markup. Context makes a value arrive from somewhere off-screen, which is a real cost in readability. Reach for it when the drilling is the bigger problem.
+
+## Exercises
+
+1. Provide the value `dark` so the label reads `Theme: dark`.
+
+   ```{react}
+   const ThemeContext = React.createContext('light');
+
+   function Toolbar() {
+     const theme = React.useContext(ThemeContext);
+
+     return <p>Theme: {theme}</p>;
+   }
+
+   function App() {
+     return (
+       <ThemeContext.Provider value="light">
+         <Toolbar />
+       </ThemeContext.Provider>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   const ThemeContext = React.createContext('light');
+
+   function Toolbar() {
+     const theme = React.useContext(ThemeContext);
+
+     return <p>Theme: {theme}</p>;
+   }
+
+   function App() {
+     return (
+       <ThemeContext.Provider value="dark">
+         <Toolbar />
+       </ThemeContext.Provider>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     assert('p').should('have.text', 'Theme: dark').run('Set the provider`s `value` to `dark`', 'Read the context value');
+   }, 50);
+   ```
+
+2. Remove the prop drilling. `Deep` should read the user name from context instead of receiving it through `Middle`.
+
+   ```{react}
+   const UserContext = React.createContext('guest');
+
+   function Deep({ user }) {
+     return <p>Signed in as {user}</p>;
+   }
+
+   function Middle({ user }) {
+     return <Deep user={user} />;
+   }
+
+   function App() {
+     return (
+       <div>
+         <Middle user="ada" />
+       </div>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+solution
+   const UserContext = React.createContext('guest');
+
+   function Deep() {
+     const user = React.useContext(UserContext);
+
+     return <p>Signed in as {user}</p>;
+   }
+
+   function Middle() {
+     return <Deep />;
+   }
+
+   function App() {
+     return (
+       <UserContext.Provider value="ada">
+         <Middle />
+       </UserContext.Provider>
+     );
+   }
+
+   renderReact(<App />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('p').should('have.text', 'Signed in as ada').run('The deep component should end up showing `ada`', 'Rendered the user name');
+     wrap(/React\.useContext\s*\(\s*UserContext\s*\)/.test(source)).should('equal', true).run('Read the value with `React.useContext(UserContext)` inside `Deep`', 'Read from context');
+     wrap(/UserContext\.Provider/.test(source)).should('equal', true).run('Wrap the tree in a `UserContext.Provider` that supplies the value', 'Provided the value');
+     wrap(/function Middle\(\s*\)/.test(source)).should('equal', true).run('`Middle` should no longer take a `user` prop, since it never needed one', 'Middle no longer forwards the prop');
+   }, 50);
+   ```
+
+3. What problem does context solve?
+
+   ```{mcq}
+   What is prop drilling, and how does context help?
+   correct: Correct! Without context, every component between the owner of a value and its user has to accept and forward a prop it does not care about. Context lets the descendant read the value directly, so the middle layers are left alone.
+   wrong: Look at what `Layout` and `Sidebar` had to do in the first example, and what they do in the second.
+   [x] Passing a value through components that do not use it; context lets a descendant read it directly
+   [ ] Having too many state variables; context merges them into one
+   [ ] Slow rendering; context skips re-renders
+   [ ] Naming collisions between props; context renames them
+   ```
+
+4. What does the argument to `createContext` do?
+
+   ```{mcq}
+   `React.createContext('light')` is called, and a component reads the context with no provider above it. What does it get?
+   correct: Correct! `light`, the default value. It applies only when there is no provider above the reader, which is what lets a component work on its own.
+   wrong: Try the second demo cell: one label sits inside the provider and one sits outside it. Compare what they show.
+   [x] `light`, the default given to `createContext`
+   [ ] `undefined`, because no provider supplied a value
+   [ ] An error, because reading requires a provider
+   [ ] The value from the most recent provider anywhere in the app
+   ```
+
+## Resources
+
+- [React Docs: Passing data deeply with context](https://react.dev/learn/passing-data-deeply-with-context)
+- [React Docs: useContext](https://react.dev/reference/react/useContext)
+- [React Docs: createContext](https://react.dev/reference/react/createContext)

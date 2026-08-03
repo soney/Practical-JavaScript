@@ -1,0 +1,178 @@
+# Accessible Rich Internet Applications (ARIA)
+
+**ARIA** stands for Accessible Rich Internet Applications. It is a specification for adding accessibility information to HTML so that assistive technology, such as a screen reader, can understand a custom interface.
+
+ARIA lets you describe three kinds of information about an element:
+
+- Its **role**: what the element is for (a button, a dialog, a slider).
+- Its **state and properties**: attributes like whether a menu is expanded or the current value of a slider.
+- **Live updates**: telling assistive technology to announce content that changes after the page loads.
+
+The most important rule is: **use native HTML first.** A real `<button>` already communicates that it is a button, is focusable, and responds to the keyboard. Reach for ARIA only when native HTML cannot describe the interface you have built.
+
+## Naming an Element with `aria-label`
+
+`aria-label` gives an element an accessible name. This matters when a control has no visible text a screen reader can read. A common case is an icon-only button, such as a close button whose only content is an `X`:
+
+```html
+<button aria-label="Close dialog">X</button>
+```
+
+Sighted users see the `X` and understand it closes the dialog because of its position. A screen reader has no position cue, so without `aria-label` it would announce only "X, button". With the label it announces "Close dialog, button".
+
+## Describing an Element with `role`
+
+A `role` tells assistive technology what an element is. If you build a control out of a `<div>`, the `<div>` has no built-in meaning, so you can supply one with `role`:
+
+```html
+<div role="button" tabindex="0">Toggle status</div>
+<div role="dialog" aria-label="Sign in">...</div>
+```
+
+Again, a real `<button>` or the `<dialog>` element is the better choice because it brings keyboard and focus behavior for free. Use `role` only when you cannot use the matching native element.
+
+## ARIA State: `aria-expanded` and `aria-valuenow`
+
+ARIA states describe the *current* condition of an element. This button uses `aria-expanded` to communicate whether its menu is open:
+
+```{html}
+<button aria-expanded="false" aria-controls="menu">Menu</button>
+<ul id="menu" hidden>
+  <li><a href="/profile">Profile</a></li>
+</ul>
+```
+
+A slider works the same way. If you build a custom volume control, you describe its range and current position with `aria-valuemin`, `aria-valuemax`, and `aria-valuenow`:
+
+```html
+<div role="slider" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" tabindex="0"></div>
+```
+
+The key idea for any ARIA state is that it must stay in sync with what the interface actually shows.
+
+## Updating ARIA State with JavaScript
+
+When JavaScript changes the interface, it must also update the ARIA state so the accessibility state matches the visible state. Here the menu button flips `aria-expanded` to `true`:
+
+```html id=page1
+<button id="menu-button" aria-expanded="false">Menu</button>
+```
+
+```{javascript autorun}
+const button = document.querySelector('#menu-button');
+
+button.setAttribute('aria-expanded', 'true');
+
+console.log('aria-expanded is now ' + button.getAttribute('aria-expanded'));
+```
+```+id=page1
+```
+
+A slider updates the same way, by writing the new value to `aria-valuenow`:
+
+```javascript
+slider.setAttribute('aria-valuenow', currentVolume);
+```
+
+## Announcing Dynamic Changes with `aria-live`
+
+When content changes without the user moving focus, a screen reader will not notice it on its own. Imagine a shopping page: you click "Add to cart", a confirmation appears at the bottom of the page, and the cart count goes up. A sighted user sees this, but a screen reader user gets no confirmation at all, because focus never moved to the new message.
+
+The `aria-live` attribute fixes this. It marks an element as a **live region**: when its content changes, assistive technology announces the change. It takes three values:
+
+- `polite` waits until the screen reader is idle, then announce the change without interrupting.
+- `assertive` interrupts whatever is being read and announce immediately. Reserve this for urgent messages, like errors.
+- `off` does nothing (the default behavior).
+
+A companion attribute, `aria-atomic`, controls how much is announced. Set to `true`, the screen reader reads the *entire* region; set to `false`, it reads only the part that changed.
+
+Here is a cart-status live region and the JavaScript that updates it. Because the `<div>` is a live region, writing to its `textContent` causes a screen reader to announce the new message:
+
+```html id=page2
+<div id="cart-status" aria-live="polite" aria-atomic="true"></div>
+```
+
+```{javascript autorun}
+const status = document.querySelector('#cart-status');
+
+status.textContent = 'Added Headphones to cart. Your cart now has 1 item.';
+```
+```+id=page2
+```
+
+The important detail: you do not move focus to the live region. You update its text, and the `aria-live` attribute takes care of announcing it.
+
+## Exercises
+
+1. Give the icon-only close button an accessible name. Add `aria-label="Close dialog"` to the button.
+
+   ```{html}
+   <button>X</button>
+   ```
+   ```+solution
+   <button aria-label="Close dialog">X</button>
+   ```
+   ```+test
+   wrap(source.includes('aria-label="Close dialog"') || source.includes("aria-label='Close dialog'")).should('equal', true).run('Add `aria-label=\"Close dialog\"` to the button', 'Added aria-label');
+   ```
+
+2. The page adds an item to the cart, but nothing is announced. Use JavaScript to write a confirmation into the live region so a screen reader announces it. Set the `#cart-status` element's `textContent` to `Added Keyboard to cart`.
+
+   ```{javascript}
+   const status = document.querySelector('#cart-status');
+
+   // Write the confirmation message here
+   ```
+   ```+id=page2
+   ```
+   ```+solution
+   const status = document.querySelector('#cart-status');
+
+   status.textContent = 'Added Keyboard to cart';
+   ```
+   ```+test
+   wrap(document.querySelector('#cart-status').textContent).should('equal', 'Added Keyboard to cart').run('Set the live region text to `Added Keyboard to cart`', 'The live region announces the change');
+   ```
+
+3. You want a status update announced only when the screen reader is not busy, so it does not interrupt what the user is reading. Which `aria-live` value should you use?
+
+   ```{mcq}
+   Which value waits for a pause rather than cutting in?
+   correct: Correct. `polite` waits until the screen reader is idle before announcing the change.
+   wrong: Think about which value waits for the screen reader to be idle instead of interrupting.
+   [x] `polite`
+   [ ] `assertive`
+   [ ] `off`
+   [ ] `atomic`
+   ```
+
+4. You are building a popup modal whose container is a `<div>`. Which attribute tells assistive technology that it is a dialog?
+
+   ```{mcq}
+   How do you give a plain `div` the meaning of a dialog?
+   correct: Correct! `role` states what an element *is*. `aria-label` would name it, and the live-region attributes are about announcing changes, neither of which says "this is a dialog".
+   wrong: One of these attributes is for the element's role, and the others do different jobs.
+   [x] `role="dialog"`
+   [ ] `aria-label="dialog"`
+   [ ] `aria-live="polite"`
+   [ ] `aria-atomic="true"`
+   ```
+
+5. When should you use ARIA?
+
+   ```{mcq}
+   What is ARIA for, and what is it not for?
+   correct: Correct. Use ARIA when native HTML does not communicate the needed accessibility information.
+   wrong: Think about using native HTML first.
+   [x] When native HTML does not communicate the needed accessibility information.
+   [ ] To replace every semantic HTML element.
+   [ ] To make labels invisible.
+   [ ] To avoid keyboard support.
+   ```
+
+## Resources
+
+- [MDN: ARIA](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA)
+- [MDN: aria-label](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-label)
+- [MDN: ARIA live regions](https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Guides/Live_regions)
+- [WAI-ARIA Authoring Practices Guide](https://www.w3.org/WAI/ARIA/apg/)

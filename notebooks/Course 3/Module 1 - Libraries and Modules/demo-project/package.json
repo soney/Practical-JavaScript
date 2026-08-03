@@ -1,0 +1,23 @@
+{
+  "name": "ann-arbor-facts",
+  "version": "1.2.0",
+  "description": "Prints a few random facts about Ann Arbor",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node show-facts.js",
+    "dev": "nodemon show-facts.js"
+  },
+  "keywords": [
+    "ann-arbor",
+    "facts"
+  ],
+  "author": "Your Name",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.21"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}

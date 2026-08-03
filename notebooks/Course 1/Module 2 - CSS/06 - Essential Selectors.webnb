@@ -1,0 +1,227 @@
+# Essential CSS Selectors
+
+CSS **selectors** are a way of selecting elements, or in other words, specifying which elements the CSS should apply to. Selectors can get fairly intricate but it is good to start with the essentials.
+
+## Tag Selectors
+
+First, the **tag selector**, also called an element selector or a type selector, which selects every element with a given tag. To select `<p>` elements, we write:
+
+```css
+p { color: red; } /* Applies to all paragraphs */
+```
+
+The selector `p` picks out every `<p>` element, the curly braces open and close the declarations that apply to them, and `color: red` is the one declaration, so every paragraph gets red text.
+
+To select every element with a given tag, write the tag name and nothing else: `a` for `<a>` elements, `h1` for `<h1>` elements, `div` for `<div>` elements, and so on.
+
+## Class Selectors
+
+Recall when we discussed attributes in HTML, we mentioned that elements can have a `class` attribute, which is a way to identify that they belong to some category. For example, we could have a `<p>` element with `class="highlighted"`:
+
+```{html autorun}
+<p class="highlighted">Hello, world! This paragraph has class highlighted.</p>
+<p>This paragraph is not highlighted.</p>
+<p>...and neither is this one.</p>
+```
+
+Setting the `class` attribute changes nothing on its own, and that is the point: it marks elements so that CSS can find them. So if we want to select all elements with `class="highlighted"`, we can do that with a **class selector**, which adds a `.` before the class name (like `.highlighted` selects all elements with `class="highlighted"`):
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      .highlighted { background-color: yellow; } /* Applies to everything with the "highlighted" class */
+    </style>
+  </head>
+  <body>
+    <p class="highlighted">Hello, world! This paragraph is highlighted.</p>
+    <p>This paragraph is not highlighted.</p>
+    <p>...and neither is this one.</p>
+    <div class="highlighted">Also highlighted.</div>
+    <p>This paragraph is not highlighted but we have a span with class highlighted: <span class="highlighted">This span is highlighted.</span></p>
+  </body>
+</html>
+```
+
+The selector `.highlighted` matches every element with that class, whatever its tag, which is why the `<div>` and the `<span>` are highlighted too.
+
+We added a `.` before the class name, which is how we specify that we want to select all elements with a given **class**. If we didn't have the `.`, it would be a tag selector and would look for all `<highlighted>` elements, which don't exist.
+
+### An Element Can Have Several Classes
+
+The `class` attribute holds a **list** of class names separated by spaces, so one element can belong to several categories at once. Each of those class selectors matches it independently:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      .intro { font-size: 20px; }
+      .highlight { background-color: yellow; }
+    </style>
+  </head>
+  <body>
+    <p class="intro highlight">This paragraph has class intro AND class highlight.</p>
+    <p class="highlight">This one only has class highlight.</p>
+    <p class="intro">And this one only has class intro.</p>
+  </body>
+</html>
+```
+
+The first paragraph is matched by `.intro` and by `.highlight`, so it gets both the larger text and the yellow background. Try adding a third class name inside the same attribute and writing a rule for it.
+
+## ID Selectors
+
+Similar to the class attribute, elements can also have an `id` attribute, which is a way to identify a specific element (unlike `class`, where any number of elements can have the same class, only one element should have a given `id`). For example, we could have a `<p>` element with `id="footer"`:
+
+```html
+<p id="footer">This is the footer.</p>
+```
+
+We could write a selector to find the element with `id="footer"` by adding a `#` before the ID name (`#footer`) like this:
+
+```{html autorun}
+<html>
+  <head>
+    <style>
+      #footer { color: red; } /* Applies to the element with id "footer" */
+    </style>
+  </head>
+  <body>
+    <p>This is a paragraph.</p>
+    <p id="footer">This is the footer.</p>
+  </body>
+</html>
+```
+
+Here, we added a `#` before the ID name. This is how we specify that we want to select the element with a given **ID**. If we didn't have the `#`, it would be a tag selector and would look for all `<footer>` elements. If we had a `.`, it would be a class selector and would look for all elements with `class="footer"`.
+
+## Exercises
+
+1. Write a CSS rule that gives every `.highlighted` element a yellow background (use the property `background-color` and the value `yellow`).
+
+    ```html id=page1
+    <p class="highlighted">Highlighted text</p>
+    <p>Normal text</p>
+    ```
+
+    ```{css}
+    /* Write your CSS here. No need to write a <style> tag. */
+    ```
+    ```+solution
+    .highlighted {
+      background-color: yellow;
+    }
+    ```
+    ```+id=page1
+    ```
+    ```+test
+    assert('.highlighted').should('exist').should('have.css', 'background-color: yellow').run('Failed to style the highlighted element', 'Styled the highlighted element');
+    ```
+
+2. Write a CSS rule that makes the element with `id="footer"` have red text (use the property `color` and the value `red`).
+
+    ```html id=page2
+    <p id="footer">Footer text</p>
+    <p>Ordinary text</p>
+    ```
+
+    ```{css}
+    /* Write your CSS here. No need to write a <style> tag. */
+    ```
+    ```+solution
+    #footer {
+      color: red;
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+test
+    assert('#footer').should('exist').should('have.css', 'color: red').run('Failed to style the footer element', 'Styled the footer element');
+    ```
+
+3. Write two rules at once: make every `<li>` element bold with `font-weight: bold`, and give the elements with `class="done"` the color `gray`.
+
+    ```html id=page3
+    <ul>
+      <li class="done">Buy milk</li>
+      <li>Write CSS</li>
+    </ul>
+    ```
+
+    ```{css}
+    /* Write two rules here: one tag selector and one class selector. */
+    ```
+    ```+solution
+    li {
+      font-weight: bold;
+    }
+
+    .done {
+      color: gray;
+    }
+    ```
+    ```+id=page3
+    ```
+    ```+test
+    assert('li').should('exist').should('have.css', 'font-weight: bold').run('Failed to make the list items bold. A tag selector is the plain tag name, `li`', 'Made the list items bold');
+    assert('.done').should('have.css', 'color: gray').run('Failed to gray out the done item. A class selector starts with a `.`', 'Grayed out the done item');
+    assert('li:last-child').should('have.css', 'font-weight: bold').run('Both list items should be bold, since the tag selector matches every `<li>`', 'Both items are bold');
+    ```
+
+4. What a class selector matches
+
+    ```{mcq}
+    Given this HTML, which elements does the selector `.note` select? (Select all that apply)
+
+    ~~~html
+    <p class="note">First</p>
+    <p>Second</p>
+    <div class="note">Third</div>
+    <span id="note">Fourth</span>
+    ~~~
+
+    shuffle: false
+    correct: Correct! A class selector matches every element with that class, no matter its tag.
+    wrong: Not quite. `.note` matches elements whose `class` attribute contains `note`, regardless of the tag. Look back at "Class Selectors".
+    [x] `<p class="note">First</p>`
+      correct: Right, this paragraph has `class="note"`.
+      wrong: This paragraph has `class="note"`, so `.note` does select it.
+    [ ] `<p>Second</p>`
+      wrong: This paragraph has no `class` attribute, so `.note` does not select it.
+    [x] `<div class="note">Third</div>`
+      correct: Right, class selectors are not limited to one kind of tag.
+      wrong: A class selector matches any tag, so this `<div>` is selected too.
+    [ ] `<span id="note">Fourth</span>`
+      wrong: This element has `id="note"`, not `class="note"`. It would be selected by `#note`.
+    ```
+
+5. An element with two classes
+
+    ```{mcq}
+    An element is written as `<p class="intro highlight">`, and two rules exist: `.intro { }` and `.highlight { }`. Which of them style this paragraph?
+    correct: Correct! The `class` attribute is a space-separated list, so the element has both classes and both rules apply to it.
+    wrong: Look back at "An Element Can Have Several Classes" and count how many class names are in that attribute.
+    [x] Both `.intro` and `.highlight`
+    [ ] Only `.intro`, because it is written first
+    [ ] Only `.highlight`, because it is written last
+    [ ] Neither, because a class name cannot contain a space
+    ```
+
+6. How are classes and IDs different?
+
+    ```{mcq}
+    Which statement about `class` and `id` is true?
+    correct: Correct! Any number of elements can share a class, but an ID should belong to a single element.
+    wrong: Remember that `class` marks a category of elements, while `id` names one specific element. Revisit "ID Selectors".
+    [x] Many elements can share the same class, but only one element should have a given ID.
+    [ ] Many elements can share the same ID, but only one element should have a given class.
+    [ ] Both classes and IDs can be used by only one element each.
+    [ ] Both classes and IDs can be used by any number of elements.
+    ```
+
+## Resources
+
+- [MDN: CSS selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/CSS_selectors)
+- [MDN: Type selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/Type_selectors)
+- [MDN: Class selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/Class_selectors)
+- [MDN: ID selectors](https://developer.mozilla.org/en-US/docs/Web/CSS/ID_selectors)

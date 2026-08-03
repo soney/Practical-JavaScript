@@ -1,0 +1,125 @@
+# Content Delivery Networks (CDNs)
+
+Downloading a library gives you a file to serve. A **Content Delivery Network**, or **CDN**, means you do not have to serve it at all. Somebody else's servers host the library, and your page points at theirs.
+
+On the Lodash site, next to the Full build and gzipped downloads, there is a third link: **CDN copies**. That is what it is offering.
+
+## What Changes
+
+Follow a visitor loading your page.
+
+Without a CDN, everything comes from you. The browser asks your server for `index.html`, reads the script tags in it, and comes back to your server again for `lodash.min.js` and for `my-code.js`.
+
+With a CDN, only the first part is yours. The browser still asks your server for `index.html`, but when it reaches the library's script tag, the URL points somewhere else entirely, so it asks **jsDelivr's** server for the library. Your server never sends that file, and you never downloaded it in the first place.
+
+In code, the difference is one attribute. This loads a copy you downloaded and are hosting:
+
+```html
+<script src="lodash.min.js"></script>
+```
+
+And this loads jsDelivr's copy:
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+```
+
+Nothing else about your code changes. `_` is defined the same way, `_.shuffle` works the same way, and load order still matters the same way.
+
+```{javascript autorun}
+const local = 'lodash.min.js';
+const cdn = 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js';
+
+console.log('same file name at the end: ' + cdn.endsWith(local));
+console.log('but a different server: ' + new URL(cdn).hostname);
+```
+
+Notice `lodash@4.17.21` in that URL. The CDN needs to be told *which version* you want, which is a topic of its own two readings from now.
+
+## Advantages
+
+1. **Easier setup.** There is no file to download and no file to keep in your project.
+2. **Caching across sites.** This is the interesting one. If a visitor has already been to some other website that used *the same URL* from the same CDN, their browser already has the file and does not download it again. Your page gets the library for free. That only works because thousands of sites point at the identical URL.
+3. **Geography.** A CDN has servers in many places and serves each user from one that is physically near them, which is faster than a single server on one continent.
+4. **Bandwidth.** You are not paying to send those megabytes. The CDN is.
+
+## Disadvantages
+
+1. **Uptime and blocking.** The CDN can go down, and then your page breaks even though your own server is fine. A user's firewall, network, or region may also block the CDN while allowing your site.
+2. **Privacy and security.** A CDN sees a request from every visitor to every site that uses it, which is a lot of information about who browsed where. And in principle a compromised CDN could serve a malicious version of a library to every site pointing at it. That has not happened to a major CDN to my knowledge, but the risk is real rather than imaginary.
+3. **No offline work.** You cannot develop or test on a plane or a bad connection, because your page cannot load its library.
+
+None of these makes CDNs a bad choice. They make it a choice, with the balance depending on what you are building.
+
+## Why Is This Free?
+
+It is a fair question. Most of the large CDNs are run or sponsored by big internet infrastructure companies. The extra load from serving library files is small next to what they already do, and running the service earns them goodwill among developers. That is the whole arrangement.
+
+## Exercises
+
+1. This page loads a downloaded copy of Lodash. Change the first tag to load version `4.17.21` from jsDelivr instead, and leave the second tag alone.
+
+    ```{html}
+    <script src="lodash.min.js"></script>
+    <script src="my-code.js"></script>
+    ```
+    ```+solution
+    <script src="https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js"></script>
+    <script src="my-code.js"></script>
+    ```
+    ```+test
+    wrap(/src\s*=\s*["']https:\/\/cdn\.jsdelivr\.net\/npm\/lodash@4\.17\.21\/lodash\.min\.js["']/.test(source)).should('equal', true).run('The first tag should point at `https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js`', 'Pointed the tag at the CDN');
+    wrap(/src\s*=\s*["']my-code\.js["']/.test(source)).should('equal', true).run('Leave the `my-code.js` tag alone; your own code is still served by you', 'Left your own script alone');
+    assert('script').should('have.length', 2).run('There should still be exactly two script tags', 'Kept both tags');
+    ```
+
+2. Given a CDN URL, log the hostname that will actually serve the file.
+
+    ```{javascript}
+    const cdnUrl = 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js';
+
+    const serverHost = /* Your code here */;
+
+    console.log(serverHost);
+    ```
+    ```+solution
+    const cdnUrl = 'https://cdn.jsdelivr.net/npm/lodash@4.17.21/lodash.min.js';
+
+    const serverHost = new URL(cdnUrl).hostname;
+
+    console.log(serverHost);
+    ```
+    ```+test
+    wrap(serverHost).should('equal', 'cdn.jsdelivr.net').run('Use `new URL(cdnUrl).hostname`, as in the cell above', 'Found the hostname');
+    ```
+
+3. What is the main idea behind loading a library from a CDN?
+
+    ```{mcq}
+    Where does the library come from when you use a CDN?
+    correct: Correct! The file is stored on and served from someone else's servers, so your server never sends it and you never have to download it.
+    wrong: Think about which server the browser asks for the library file.
+    [x] The library is stored and served from external servers rather than your own
+    [ ] The library is compiled automatically before it runs
+    [ ] The library code is converted into HTML before execution
+    [ ] The library works only once it has been downloaded locally
+    ```
+
+4. Which of these is a genuine advantage of loading a library from a CDN?
+
+    ```{mcq}
+    Pick the real advantage.
+    correct: Correct! Because many sites point at the identical URL, a visitor's browser may already have the file cached from another site entirely, and skips the download.
+    wrong: Look back at the four advantages, and be careful of the options that sound good but are not true.
+    [x] Browsers can cache the library and reuse it across different websites
+    [ ] It removes any possible security risk
+    [ ] It lets the library load without an internet connection
+    [ ] It guarantees users download the library from your own server
+    ```
+
+## Resources
+
+- [jsDelivr](https://www.jsdelivr.com/)
+- [MDN: What is a URL?](https://developer.mozilla.org/en-US/docs/Learn_web_development/Howto/Web_mechanics/What_is_a_URL)
+- [MDN: HTTP caching](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching)
+- [MDN: The script element](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script)

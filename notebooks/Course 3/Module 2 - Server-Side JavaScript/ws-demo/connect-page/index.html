@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>First WebSocket</title>
+  </head>
+  <body>
+    <h1>First WebSocket</h1>
+    <p>
+      Nothing moves on this page. The interesting part is in the Network
+      tab: loading the page opened a connection back to the server, and
+      one greeting crossed in each direction.
+    </p>
+
+    <script>
+      // #region connect
+      const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const ws = new WebSocket(wsProtocol + '//' + location.host + location.pathname);
+      // #endregion
+
+      // #region greet
+      ws.addEventListener('open', () => {
+        ws.send('hello from browser');
+      });
+      // #endregion
+    </script>
+  </body>
+</html>

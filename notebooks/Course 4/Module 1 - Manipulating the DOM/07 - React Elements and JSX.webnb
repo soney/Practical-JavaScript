@@ -1,0 +1,191 @@
+# React Elements and JSX
+
+Every component so far has returned something that looks like HTML sitting inside a JavaScript file. That is **JSX**, and this reading is about what it actually is.
+
+JSX is a syntax extension: it lets HTML-like markup appear inside JavaScript. Using it is **optional**. Nothing in React requires it, and essentially everybody uses it, because the alternative is harder to read.
+
+## JSX Is Not HTML
+
+It looks like HTML and it differs in a few places, each for a reason.
+
+**Reserved words have to be renamed.** `class` is a reserved keyword in JavaScript, so the attribute is **`className`**. `for` is reserved too, so the label attribute is **`htmlFor`**.
+
+**Multi-word attributes are camelCase.** HTML's `tabindex` becomes `tabIndex`, `onclick` becomes `onClick`, `maxlength` becomes `maxLength`. Capitalize every word after the first.
+
+**`style` takes an object, not a string.** In HTML you write `style="color: blue"`. In JSX you write `style={{ color: 'blue' }}`, an object whose keys are camelCase CSS properties. The outer braces mean "JavaScript goes here" and the inner ones are the object.
+
+```{react autorun}
+function StyledCard() {
+  return (
+    <article className="card" style={{ color: 'darkblue', backgroundColor: '#eef' }}>
+      <label htmlFor="who">Name</label>
+      <input id="who" tabIndex={1} />
+    </article>
+  );
+}
+
+renderReact(<StyledCard />);
+```
+
+Change `darkblue` to `crimson` and run it again. Then try writing `class` instead of `className` and watch the class stop being applied.
+
+**And one element comes back.** A component returns a single value, so a return of two sibling elements has to be wrapped, usually in a `<div>` or a `<section>`.
+
+## What JSX Turns Into
+
+JSX is not something the browser understands. Before your code runs, a tool called **Babel** translates it. This:
+
+```jsx
+const element = <p className="intro">Hello</p>;
+```
+
+becomes this:
+
+```jsx
+const element = React.createElement('p', { className: 'intro' }, 'Hello');
+```
+
+Three arguments: the element type, an object of attributes, and the children. That is the whole translation, and it is why `class` cannot be used (it would be a reserved word in that object) and why attributes are camelCase (they are JavaScript property names).
+
+You can write it either way. They produce exactly the same thing:
+
+```{react autorun}
+function WithJsx() {
+  return <span>Hello viewer</span>;
+}
+
+function WithoutJsx() {
+  return React.createElement('span', {}, 'Hello viewer');
+}
+
+function Both() {
+  return (
+    <div>
+      <p><WithJsx /></p>
+      <p><WithoutJsx /></p>
+    </div>
+  );
+}
+
+renderReact(<Both />);
+```
+
+Identical output. Now picture that second form for a page with fifty elements, and the appeal of JSX is clear enough.
+
+## A React Element Is Not a DOM Element
+
+This is the part worth slowing down for, because the names invite the wrong idea.
+
+`document.createElement('p')` creates **a real DOM element**, right now, that you can attach and modify.
+
+`React.createElement('p', ...)` creates **a description** of a paragraph that React might create. It is a plain JavaScript object. Nothing is on the page, and nothing has been created in the document.
+
+```{react autorun}
+const element = <span className="greeting">Hello viewer</span>;
+
+console.log('typeof:', typeof element);
+console.log('type:', element.type);
+console.log('props:', JSON.stringify(element.props));
+console.log('does it have a tagName, the way a DOM node would?', element.tagName !== undefined);
+
+renderReact(<div>The element above was described, then rendered here: {element}</div>);
+```
+
+An object with a `type` and some `props`, and no `tagName`, because it is not a node. React reads descriptions like this one, compares them with what is currently on screen, and makes whatever DOM changes are needed. Which DOM node eventually results, and whether one results at all, is React's business rather than yours. A later lesson covers how to reach the real DOM node when you genuinely need it.
+
+## The `.jsx` Extension
+
+Files containing JSX conventionally end in `.jsx`. This is a convention and not a requirement: `.js` works as long as the build setup knows to expect JSX in it. The extension is a signal to other people and to editors.
+
+## Exercises
+
+1. Fix the JSX so the class is applied.
+
+   ```{react}
+   function Card() {
+     return <article class="card">Card</article>;
+   }
+
+   renderReact(<Card />);
+   ```
+   ```+solution
+   function Card() {
+     return <article className="card">Card</article>;
+   }
+
+   renderReact(<Card />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('className')).should('equal', true).run('Use `className` in JSX, because `class` is a reserved word in JavaScript', 'Used `className`');
+     assert('article').should('have.class', 'card').run('Render the card class', 'Rendered the card class');
+   }, 50);
+   ```
+
+2. Write the JSX for a label and an input. The label's text is `Email`, it points at the input using the JSX form of the `for` attribute, and the input has `id="email"` and a maximum length of `40`.
+
+   ```{react}
+   function EmailField() {
+     return (
+       <div>
+         {/* TODO: a label with text Email, pointing at the input below */}
+         {/* TODO: an input with id email and a maximum length of 40 */}
+       </div>
+     );
+   }
+
+   renderReact(<EmailField />);
+   ```
+   ```+solution
+   function EmailField() {
+     return (
+       <div>
+         <label htmlFor="email">Email</label>
+         <input id="email" maxLength={40} />
+       </div>
+     );
+   }
+
+   renderReact(<EmailField />);
+   ```
+   ```+test
+   setTimeout(function () {
+     assert('label').should('have.text', 'Email').run('Render a `<label>` whose text is `Email`', 'Rendered the label');
+     assert('label').should('have.attribute', 'for', 'email').run('Point the label at the input. In JSX the attribute is `htmlFor`, because `for` is reserved', 'Linked the label to the input');
+     assert('input').should('have.attribute', 'id', 'email').run('Give the input `id="email"`', 'Set the input id');
+     assert('input').should('have.attribute', 'maxlength', '40').run('Set the maximum length to `40`. In JSX that attribute is camelCase: `maxLength`', 'Set the maximum length');
+   }, 50);
+   ```
+
+3. What does JSX become before it runs?
+
+   ```{mcq}
+   The browser never sees JSX. What does Babel translate it into?
+   correct: Correct! Each JSX tag becomes a `React.createElement(type, props, children)` call. That translation is why attributes are camelCase JavaScript property names and why `class` had to be renamed.
+   wrong: The translation target is a function call, and you have written that function by hand in this reading. Look back at "What JSX Turns Into".
+   [x] Calls to `React.createElement(type, props, children)`
+   [ ] An HTML string that is inserted with `innerHTML`
+   [ ] Calls to `document.createElement`
+   [ ] Nothing; browsers understand JSX directly
+   ```
+
+4. How does a React element differ from a DOM element?
+
+   ```{mcq}
+   You run `const element = <p>Hi</p>;`. What exists now?
+   correct: Correct! A plain JavaScript object describing a paragraph React might create. Nothing is in the document, and no DOM node has been made. `document.createElement` is the one that produces a real node immediately.
+   wrong: Compare what `React.createElement` returns with what `document.createElement` returns. Revisit "A React Element Is Not a DOM Element".
+   [x] A JavaScript object describing a paragraph that React might create
+   [ ] A real DOM node, already attached to the page
+   [ ] A real DOM node, not yet attached to the page
+   [ ] An HTML string ready to be inserted
+   ```
+
+## Resources
+
+- [React Docs: Writing markup with JSX](https://react.dev/learn/writing-markup-with-jsx)
+- [React Docs: createElement](https://react.dev/reference/react/createElement)
+- [React Docs: Common components and their props](https://react.dev/reference/react-dom/components/common)
+- [MDN: Document.createElement()](https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement)

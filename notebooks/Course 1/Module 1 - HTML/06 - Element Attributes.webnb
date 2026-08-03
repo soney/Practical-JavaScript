@@ -1,0 +1,94 @@
+# Element Attributes
+
+Element **attributes** give additional information about an element. For example, an attribute for an `<a>` (link) element might specify _where_ the link goes. An attributes for an `<img>` (image) element might specify _which image_ to display. Attributes have a _name_ and a _value_, specified in the opening tag of the element. For example, the following code creates a link to Google:
+
+```{html autorun}
+<a href="https://www.google.com">Google</a>
+```
+
+In this code, `href` is the name of the attribute and `https://www.google.com` is the value of the attribute. The value is enclosed in double quotes (`"`). The `href` attribute specifies the URL that the link goes to when clicked.
+
+### Multiple Attributes
+
+Elements can also have multiple attributes. For example, the following code creates an image with a `src` (source) attribute that specifies the URL of the image and an `alt` (alternative text) attribute that specifies the text to display if the image cannot be loaded:
+
+```{html autorun}
+<img src="images/puppy.jpg" alt="A puppy sitting in the grass" />
+```
+
+![A diagram showing the attributes of an HTML element](images/attributes.png)
+
+## Boolean Attributes (Attributes Without Values)
+
+In some cases, the meaning of an attribute is determined by its presence or absence. For example, the `disabled` attribute for `<button>` elements specifies that the button is disabled and cannot be clicked. We could set the value to be anything; `disabled="true"`, `disabled="disabled"`, `disabled="false"`, or even `disabled=""` (an empty string) would all make the `<button />` disabled.
+
+In these cases, we can omit the value and just write the attribute name. For example, the following code creates a disabled button:
+
+```{html autorun}
+<button disabled>You cannot click me</button>
+<button>You can click me</button>
+```
+
+## Exercises
+
+1. Create a link (`<a>`) element that links to `https://www.umich.edu/` and has the text "University of Michigan". The link should open in a new tab when clicked. You can do this with the following attributes:
+   - `href`: This specifies the URL the link goes to. Set this to `https://www.umich.edu/`.
+   - `target`: This specifies the tab where the link should open. Set this to `_blank` to open the link in a new tab.
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <a href="https://www.umich.edu/" target="_blank">University of Michigan</a>
+   ```
+
+   ```+test
+   assert('a').should('exist').run('Could not find an a element', 'Created an a element')
+   assert('a').should('have.attr', 'href', 'https://www.umich.edu/').run('The a element does not have the href attribute set to https://www.umich.edu/', 'Created an a element with the href attribute set to https://www.umich.edu/')
+   assert('a').should('have.attr', 'target', '_blank').run('The a element does not have the target attribute set to _blank', 'Created an a element with the target attribute set to _blank')
+   assert('a').should('have.text', 'University of Michigan').run('The a element does not have the text "University of Michigan"', 'Created an a element with the text "University of Michigan"')
+   ```
+
+2. Create an `<input>` element with the following attributes:
+   - `type` set to `"text"` (this specifies that the input is a text box)
+   - `placeholder` set to `"Enter your name"` (this specifies the text that will be displayed in the input box when it is empty).
+
+
+   ```{html}
+
+   ```
+
+   ```+solution
+   <input type="text" placeholder="Enter your name" />
+   ```
+
+   ```+test
+   assert('input').should('exist').run('Could not find an input element', 'Created an input element')
+   assert('input').should('have.attr', 'type', 'text').run('The input element does not have the type attribute set to text', 'Created an input element with the type attribute set to text')
+   assert('input').should('have.attr', 'placeholder', 'Enter your name').run('The input element does not have the placeholder attribute set to Enter your name', 'Created an input element with the placeholder attribute set to Enter your name')
+   ```
+
+3. Create an `<img>` element with the following attributes:
+   - `src` set to `images/cat.jpg` (this specifies the URL of the image to display)
+   - `alt` set to "A cat" (this specifies the text to display if the image cannot be loaded)
+   - `width` set to `200px` (this specifies the width of the image)
+
+   ```{html}
+
+   ```
+   ```+solution
+   <img src="images/cat.jpg" alt="A cat" width="200px" />
+   ```
+   ```+test
+   assert('img').should('exist').run('Could not find an img element', 'Created an img element')
+   assert('img').should('have.attribute', 'src', 'images/cat.jpg').run('The img element does not have the src attribute set to images/cat.jpg', 'Created an img element with the src attribute set to images/cat.jpg')
+   assert('img').should('have.attribute', 'alt', 'A cat').run('The img element does not have the alt attribute set to A cat', 'Created an img element with the alt attribute set to A cat')
+   assert('img').should('have.attribute', 'width', '200px').run('The img element does not have the width attribute set to 200px', 'Created an img element with the width attribute set to 200px')
+   ```
+
+## Resources
+
+- [MDN: HTML attributes](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes)
+- [MDN: Global attributes](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes)
+- [MDN: The href attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/a#href)

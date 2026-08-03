@@ -1,0 +1,131 @@
+# The DOM
+
+The **Document Object Model**, or DOM, is the actual content that shows up when someone views a web page. We met it briefly [at the end of Course 1](<../../Course 1/Module 4 - JavaScript Fundamentals/05 - DOM Elements in JavaScript.webnb>); now we are going to go into real depth, because everything in this course is built on it.
+
+Here is the key idea. When we write HTML, users never see or interact with that HTML directly. The browser reads it and creates **DOM elements** from it, and those elements are what the user sees. Understanding that gap is what makes the rest of this module make sense.
+
+Each of the three languages has a job:
+
+- **HTML** creates the initial DOM.
+- **CSS** tells the browser how to render the DOM.
+- **JavaScript** lets us change the DOM dynamically, while the page is running.
+
+![A diagram illustrating that the DOM is built from HTML, rendered according to CSS, and modified with JavaScript](images/dom.png)
+
+In this lesson we will reach into the DOM from JavaScript, pick out particular elements, and modify them, which changes what is on screen.
+
+## The DOM Is Not Quite Your HTML
+
+Most of the time the DOM tree matches the HTML you wrote closely enough that the distinction does not come up. Two situations make it obvious.
+
+### The Browser Fixes Your Mistakes
+
+If the HTML we write is not properly formatted, the browser still does its best to form a valid DOM tree. It does not refuse to render the page, and it does not report an error.
+
+Suppose we forget to close `</body>` and `</html>` entirely, or leave them out altogether. The DOM still ends up with `html`, `head`, and `body` elements, because a document has to have them.
+
+A more interesting case is overlapping elements:
+
+```html
+<p>This is a paragraph with some <strong>bold text</p></strong>
+```
+
+That is invalid. The `<p>` element ends before the `<strong>` element does, so the two overlap with no clear hierarchy, and a tree cannot represent that. The browser has to pick something, and what it picks is to put the `strong` inside the `p`.
+
+We can prove it. The cell below has exactly that malformed markup as its fixture, and the JavaScript asks the DOM what actually got built:
+
+```html id=page1
+<p>This is a paragraph with some <strong>bold text</p></strong>
+```
+
+```{javascript autorun}
+const paragraph = document.querySelector('p');
+
+console.log(paragraph.innerHTML);
+console.log(paragraph.querySelector('strong').innerText);
+```
+```+id=page1
+```
+
+The paragraph's contents include the whole `<strong>` element, and searching inside the paragraph finds it. The browser silently repaired our mistake, and the DOM it built is not the markup we typed.
+
+### Things You Did Not Write
+
+The reverse happens too: sometimes there are elements in the DOM that are in no HTML file of yours. If you inspect a page you are previewing in VS Code, you may find a `<script>` element you never wrote. That is the Live Preview extension injecting the script that refreshes your page whenever you edit it.
+
+## Seeing the DOM
+
+In the browser, what you are looking at *is* the DOM. The only way to see it as a tree is to open the developer tools: right-click and choose **Inspect**, and the Elements panel shows the real DOM as it exists right now.
+
+That is different from "View Source", which shows the HTML the server sent. Once JavaScript starts changing things, the two drift apart, and it is the Elements panel that tells the truth about what the user is seeing.
+
+## Where We Are Going
+
+Whether the DOM was formed by our HTML or by our JavaScript, it is what the user sees and interacts with. JavaScript reaches it through the **`document`** object.
+
+Over the next few lessons we will:
+
+1. **Get a reference to an element**, either by reaching into the existing tree with `document.querySelector`, or later by making a brand new one with `document.createElement`.
+2. **Modify that element**: its text content, its attributes, its classes, and more.
+
+The next lesson is the first half of that: selecting elements from JavaScript.
+
+## Exercises
+
+1. Build a small DOM tree with an `h1` whose text is `DOM Practice` and a `p` whose text is `JavaScript can change this page.`
+
+    ```{html}
+    <!-- Write your HTML here -->
+    ```
+    ```+solution
+    <h1>DOM Practice</h1>
+    <p>JavaScript can change this page.</p>
+    ```
+    ```+test
+    assert('h1').should('have.text', 'DOM Practice').run('Add an `h1` element with the text `DOM Practice`', 'Created the heading');
+    assert('p').should('have.text', 'JavaScript can change this page.').run('Add a `p` element with the text `JavaScript can change this page.`', 'Created the paragraph');
+    ```
+
+2. The fixture below has a `<strong>` that was never closed at all. Work out where the browser put it, then set `strongIsInsideParagraph` to `true` or `false` to record your answer, and run the cell to check.
+
+    ```html id=page2
+    <p>Grocery list: <strong>milk and apples</p>
+    ```
+
+    ```{javascript}
+    const paragraph = document.querySelector('p');
+
+    console.log(paragraph.innerHTML);
+
+    const strongIsInsideParagraph = /* true or false */;
+    ```
+    ```+id=page2
+    ```
+    ```+solution
+    const paragraph = document.querySelector('p');
+
+    console.log(paragraph.innerHTML);
+
+    const strongIsInsideParagraph = true;
+    ```
+    ```+test
+    wrap(strongIsInsideParagraph).should('equal', document.querySelector('p').querySelector('strong') !== null).run('Read the logged `innerHTML` of the paragraph and see whether the `strong` element ended up inside it', 'You read the repaired tree correctly');
+    ```
+
+3. Your HTML has a mistake in it. What does the browser do?
+
+    ```{mcq}
+    A page's HTML contains overlapping tags. What happens when the browser loads it?
+    correct: Correct! The browser does its best to build a valid tree anyway, silently, so the DOM can end up differing from the markup you wrote. Nothing is reported, which is exactly why the Elements panel is worth checking.
+    wrong: Look back at "The Browser Fixes Your Mistakes" and at what happened to the `strong` element.
+    [x] It builds the closest valid DOM tree it can, without reporting anything
+    [ ] It refuses to render the page
+    [ ] It shows an error in the console and stops
+    [ ] It renders the page exactly as written, overlaps and all
+    ```
+
+## Resources
+
+- [MDN: Introduction to the DOM](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction)
+- [MDN: Document](https://developer.mozilla.org/en-US/docs/Web/API/Document)
+- [MDN: Inspecting the DOM with the browser tools](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Structuring_content/Debugging_HTML)

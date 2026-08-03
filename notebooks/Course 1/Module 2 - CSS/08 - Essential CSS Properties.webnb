@@ -1,0 +1,462 @@
+# Essential CSS Properties
+
+There are far too many CSS properties to memorize, and each property accepts its own set of valid values. A color, for example, can be written as a name (`blue`), as RGB values (`rgb(43, 108, 176)`), or as a hex code (`#2b6cb0`). Rather than try to cover everything, this lesson walks through the handful of properties you will reach for constantly. Learn these and you will have enough to style the pages in this course.
+
+## Colors
+
+Several of the properties in this lesson take a color as their value: `color` sets the color of text, `background-color` sets the color behind an element, and `border` includes a color. Before the properties, then, it is worth knowing how a color is written, because you have a choice of three notations that all describe the same thing.
+
+### Color Names
+
+The most straightforward way to write a color is to write its name:
+
+```css
+color: red;
+background-color: lightblue;
+border: 2px solid rebeccapurple;
+```
+
+[CSS has over 100 built-in color names](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color), including "standard" colors (`red`, `blue`, `white`, `black`, `gray`) and many more (`tomato`, `salmon`, `steelblue`, `rebeccapurple`). Some of the names can be difficult to guess (`lightblue` is a color but `lightred` is not) and of course there is not a name for *every* color, so we often use *rgb()* or *hex codes* instead.
+
+### Mixing Light with rgb()
+
+Every color on a screen is made by mixing three lights: red, green, and blue. The `rgb()` notation is that recipe written out. You give it three numbers, always in that order, and each one says how much of that light to use, from `0` (none of it) to `255` (as much as possible) separated by commas. For example:
+
+```css
+color: rgb(255, 0, 0);                /* all red, no green, no blue: red */
+background-color: rgb(43, 108, 176);  /* a little red, some green, a lot of blue: a medium blue */
+```
+
+There is nothing to memorize here beyond which end of the scale is which. It helps to know what the extremes give you:
+
+| Value | What it says | Color |
+| --- | --- | --- |
+| `rgb(255, 0, 0)` | all red, no green, no blue | red |
+| `rgb(0, 255, 0)` | all green | green |
+| `rgb(0, 0, 255)` | all blue | blue |
+| `rgb(255, 255, 0)` | all red and all green | yellow |
+| `rgb(0, 0, 0)` | all three colors off | black |
+| `rgb(255, 255, 255)` | all three colors on | white |
+| `rgb(128, 128, 128)` | an equal amount of each | gray |
+
+`rgb()` also takes an optional fourth number, the **alpha**, which controls how opaque the color is. `rgb(255, 0, 0, 0.5)` is a red that is half see-through, so whatever sits behind it shows through. `0` is fully transparent and `1` is fully opaque. You will also see this written as `rgba(255, 0, 0, 0.5)`, an older spelling that still works everywhere.
+
+Try mixing your own color by adjusting the sliders below. Note: the `#` code under the swatch is the same color written another way, described next (in "Hex Codes").
+
+```{html hidecode}
+<div class="color-lab">
+  <label>
+    <span class="channel">Red</span>
+    <input class="r" type="range" min="0" max="255" value="43" oninput="colorLab(this)">
+    <span class="amount r-amount">43</span>
+  </label>
+  <label>
+    <span class="channel">Green</span>
+    <input class="g" type="range" min="0" max="255" value="108" oninput="colorLab(this)">
+    <span class="amount g-amount">108</span>
+  </label>
+  <label>
+    <span class="channel">Blue</span>
+    <input class="b" type="range" min="0" max="255" value="176" oninput="colorLab(this)">
+    <span class="amount b-amount">176</span>
+  </label>
+  <div class="mix" style="background-color: rgb(43, 108, 176)"></div>
+  <p class="readout">rgb(43, 108, 176) = #2b6cb0</p>
+</div>
+```
+```+css
+.color-lab {
+  font-family: sans-serif;
+  max-width: 420px;
+  padding: 20px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 12px;
+}
+
+.color-lab label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.color-lab .channel {
+  width: 46px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.color-lab .amount {
+  width: 34px;
+  text-align: right;
+  font-family: monospace;
+  font-size: 15px;
+}
+
+.color-lab input {
+  flex: 1;
+}
+
+.color-lab .r {
+  accent-color: rgb(255, 0, 0);
+}
+
+.color-lab .g {
+  accent-color: rgb(0, 140, 0);
+}
+
+.color-lab .b {
+  accent-color: rgb(0, 0, 255);
+}
+
+.color-lab .mix {
+  height: 130px;
+  margin-top: 4px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 10px;
+}
+
+.color-lab .readout {
+  margin: 12px 0 0;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 16px;
+  text-align: center;
+  background: rgba(128, 128, 128, 0.12);
+  border-radius: 8px;
+}
+```
+```+js
+window.colorLab = function (slider) {
+  const lab = slider.closest('.color-lab');
+  const amountOf = (channel) => Number(lab.querySelector('.' + channel).value);
+  const red = amountOf('r');
+  const green = amountOf('g');
+  const blue = amountOf('b');
+  const pair = (amount) => amount.toString(16).padStart(2, '0');
+
+  for (const channel of ['r', 'g', 'b']) {
+    lab.querySelector('.' + channel + '-amount').textContent = amountOf(channel);
+  }
+  lab.querySelector('.mix').style.backgroundColor = `rgb(${red}, ${green}, ${blue})`;
+  lab.querySelector('.readout').textContent =
+    `rgb(${red}, ${green}, ${blue}) = #${pair(red)}${pair(green)}${pair(blue)}`;
+};
+```
+
+### Hex Codes
+
+Hexidecimal numbers are a way to write numbers in base 16 rather than base 10. In base 10 we count `0 1 2 3 4 5 6 7 8 9` and then carry on with two digits: `10, 11, 12, ...`. In base 16 we count `0 1 2 3 4 5 6 7 8 9 a b c d e f` and then carry on with two digits: `10, 11, ...`, but now `10` is sixteen, `11` is seventeen, and so on up to `ff`, which is two hundred fifty-five. The letters are just a way to keep counting past nine.
+
+| Hex digit | `0` | `1` | `2` | `3` | `4` | `5` | `6` | `7` | `8` | `9` | `a` | `b` | `c` | `d` | `e` | `f` |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Value | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+
+Type a number from 0 to 255 in one box below, or a hex pair in the other, and each one fills in the other. The middle of the equation shows the arithmetic: the first hex character counts sixteens, and the second counts ones. Try `ff`, `80`, `0f`, and `10`.
+
+```{html hidecode}
+<div class="hex-number">
+  <div class="conversion">
+    <div class="field">
+      <input class="dec" type="number" inputmode="numeric" value="43" spellcheck="false" oninput="hexNumber(this)">
+      <span class="caption">number 0-255</span>
+    </div>
+    <span class="working">= (2 * 16) + 11 =</span>
+    <div class="field">
+      <input class="hex" type="text" value="2b" spellcheck="false" oninput="hexNumber(this)">
+      <span class="caption">hex</span>
+    </div>
+  </div>
+  <p class="note">b stands for 11</p>
+</div>
+```
+```+css
+.hex-number {
+  font-family: sans-serif;
+  max-width: 460px;
+  padding: 20px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  border-radius: 12px;
+}
+
+.hex-number .conversion {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 10px;
+}
+
+.hex-number .field {
+  flex: none;
+  width: 86px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.hex-number input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 22px;
+  text-align: center;
+  color: inherit;
+  background: transparent;
+  border: 1px solid rgba(128, 128, 128, 0.5);
+  border-radius: 8px;
+}
+
+.hex-number .caption {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  opacity: 0.75;
+}
+
+/* The arithmetic sits between the two boxes, centered on them. */
+.hex-number .working {
+  flex: 1;
+  padding-top: 12px;
+  font-family: monospace;
+  font-size: 16px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.hex-number .note {
+  margin: 16px 0 0;
+  min-height: 1.2em;
+  font-size: 13px;
+  text-align: center;
+  opacity: 0.75;
+}
+
+.hex-number .note.hint {
+  font-size: 14px;
+  opacity: 0.9;
+}
+```
+```+js
+window.hexNumber = function (input) {
+  const lab = input.closest('.hex-number');
+  const decimalBox = lab.querySelector('.dec');
+  const hexBox = lab.querySelector('.hex');
+  const digits = '0123456789abcdef';
+  let amount = NaN;
+
+  // Whichever box was typed in fills in the other one.
+  if (input === decimalBox) {
+    const typed = decimalBox.value.trim();
+    amount = /^\d{1,3}$/.test(typed) && Number(typed) <= 255 ? Number(typed) : NaN;
+    hexBox.value = Number.isNaN(amount) ? '' : amount.toString(16).padStart(2, '0');
+  } else {
+    const typed = hexBox.value.trim().replace(/^#/, '').toLowerCase();
+    amount = /^[0-9a-f]{1,2}$/.test(typed) ? parseInt(typed, 16) : NaN;
+    decimalBox.value = Number.isNaN(amount) ? '' : amount;
+  }
+
+  const working = lab.querySelector('.working');
+  const note = lab.querySelector('.note');
+  note.classList.toggle('hint', Number.isNaN(amount));
+  if (Number.isNaN(amount)) {
+    working.textContent = '= ? =';
+    note.textContent = 'Type a number from 0 to 255, or a hex pair from 00 to ff.';
+    return;
+  }
+
+  const pair = amount.toString(16).padStart(2, '0');
+  working.textContent = `= (${Math.floor(amount / 16)} * 16) + ${amount % 16} =`;
+  const letters = [...new Set(pair.split(''))].filter((digit) => digits.indexOf(digit) > 9);
+  note.textContent = letters.map((digit) => `${digit} stands for ${digits.indexOf(digit)}`).join(', ');
+};
+```
+
+You will also often see colors written as a **hex code**, which is an alternative way to write the same three numbers as `rgb()`. A hex code starts with a `#` and is followed by six characters, which are three pairs of hexadecimal digits. Each pair represents one of the three lights: red, green, and blue. For example, the hex code `#2b6cb0` is the same color as `rgb(43, 108, 176)`.
+
+```
+#00274C
+ ^^| |     00: how much red
+   ^^|     27: how much green
+     ^^    4C: how much blue
+```
+
+So we could write the color red as `#ff0000` (all red, no green, no blue), `rgb(255, 0, 0)`, or `red`.
+
+## Text Properties
+
+These properties change how text looks:
+
+- `color`: the text color, for example `color: blue;`
+- `font-size`: how large the text is, for example `font-size: 32px;`
+- `font-family`: which typeface to use, for example `font-family: sans-serif;` (this asks the browser for any sans-serif font)
+- `font-weight`: how heavy the text is, for example `font-weight: bold;`
+- `text-decoration`: adds or removes lines on text, for example `text-decoration: underline;` (or `text-decoration: none;` to remove the underline browsers add to links)
+- `text-align`: the horizontal alignment of text, for example `text-align: center;`
+
+## Background and Size
+
+- `background-color`: the fill behind the element's content, for example `background-color: yellow;`
+- `width` and `height`: the size of the element, for example `width: 250px;` and `height: 250px;` to make a 250-by-250 square. Not every element responds to width and height, but block-level elements like `<div>` do.
+
+## Borders
+
+A border is the line drawn around an element:
+
+- `border`: sets the border's width, style, and color at once, for example `border: 2px solid red;`
+- `border-radius`: rounds the corners, for example `border-radius: 12px;`
+
+## Spacing: Padding and Margin
+
+Two properties control the space around an element:
+
+- `padding` is the space *inside* the element, between its border and the content within it. Increasing the padding pushes an element's own content away from its edges. For example, `padding: 40px;` adds a lot of breathing room between a box and the text inside it.
+- `margin` is the space *around* the element, outside its border. Increasing the margin pushes neighboring elements away. For example, `margin: 40px;` moves an element apart from the elements next to it.
+
+![Diagram of the CSS box model: the content sits at the center, wrapped by the padding, then the border, then the margin on the outside, with arrows marking the content's width and height.](images/spacing.jpg)
+
+## A Worked Example
+
+Here is a single `<div>` styled with many of these properties at once. Edit the values and watch the box change.
+
+```html id=page1
+<div id="box">Styled box</div>
+```
+
+```{css}
+#box {
+  color: white;
+  background-color: #2b6cb0;
+  font-family: sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  width: 250px;
+  height: 250px;
+  border: 2px solid red;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 40px;
+}
+```
+```+id=page1
+```
+
+- `color` and `background-color` set the text and fill.
+- `font-family`, `font-size`, and `font-weight` control the type.
+- `width` and `height` make it a fixed square.
+- `border` draws a red outline and `border-radius` rounds the corners.
+- `padding` adds space between the border and the word inside; `margin` pushes the box away from the edges of the page.
+
+## Exercises
+
+1. How is green written as a hex code?
+
+    ```{mcq}
+    Which of these hex codes give you green? (Select all that apply)
+    correct: Correct. Green is the middle pair, so green is the middle pair at `ff` with the other two at `00`.
+    wrong: Not quite. The three pairs are red, green, and blue, in that order, and `00` is none of that light while `ff` is all of it.
+    [x] `#00ff00`
+      correct: Right: no red, all the green, no blue.
+      wrong: This is no red, all the green, and no blue, which is exactly green.
+    [x] `#0f0`
+      correct: Right, this is the three-character shorthand: each character is doubled, so it means `#00ff00`.
+      wrong: In the three-character shorthand each character is doubled, so `#0f0` means `#00ff00`, which is green.
+    [ ] `#ff0000`
+      wrong: The first pair is red, so this is all red and no green at all.
+    [ ] `#00ff`
+      wrong: A hex code has six characters, or three as a shorthand. Four is not a valid code.
+    ```
+
+2. Space inside the border
+
+    ```{mcq}
+    You want more space between a box's border and the text inside it. Which property do you use?
+    correct: Correct. `padding` is the space inside the element, between its border and its content.
+    wrong: One property adds space inside the element (between the border and the content); the other adds space outside it (pushing neighbors away).
+    [x] `padding`
+    [ ] `margin`
+    [ ] `border-radius`
+    [ ] `text-align`
+    ```
+
+3. Center the `<h1>` text and set its `font-size` to `40px`.
+
+    ```html id=page2
+    <h1>Styled heading</h1>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    h1 {
+      text-align: center;
+      font-size: 40px;
+    }
+    ```
+    ```+id=page2
+    ```
+    ```+test
+    assert('h1').should('exist').should('have.css', 'text-align: center').run('Failed to center the h1 text', 'Centered the h1 text');
+    assert('h1').should('have.css', 'font-size: 40px').run('Failed to set the h1 font size to 40px. An `<h1>` starts at `32px`, so this has to be set explicitly', 'Set the h1 font size to 40px');
+    ```
+
+4. Give the paragraph blue text and a yellow background.
+
+    ```html id=page3
+    <p>Practice paragraph</p>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    p {
+      color: blue;
+      background-color: yellow;
+    }
+    ```
+    ```+id=page3
+    ```
+    ```+test
+    assert('p').should('exist').should('have.css', 'color: blue').run('Failed to make the paragraph text blue', 'Made the paragraph text blue');
+    assert('p').should('have.css', 'background-color: yellow').run('Failed to make the paragraph background yellow', 'Made the paragraph background yellow');
+    ```
+
+5. Style the element with class `box`: give it a `width` of `250px`, `20px` of `padding`, and a `lightblue` background color.
+
+    ```html id=page4
+    <div class="box">Content</div>
+    ```
+
+    ```{css}
+    /* Write your CSS here */
+    ```
+    ```+solution
+    .box {
+      width: 250px;
+      padding: 20px;
+      background-color: lightblue;
+    }
+    ```
+    ```+id=page4
+    ```
+    ```+test
+    assert('.box').should('exist').should('have.css', 'width: 250px').run('Failed to set the box width to 250px', 'Set the box width to 250px');
+    assert('.box').should('have.css', 'padding: 20px').run('Failed to add 20px of padding inside the box', 'Added 20px of padding inside the box');
+    assert('.box').should('have.css', 'background-color: lightblue').run('Failed to give the box a light blue background', 'Gave the box a light blue background');
+    ```
+
+## Resources
+
+- [MDN: CSS reference](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference)
+- [MDN: Named colors](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color)
+- [MDN: The rgb() function](https://developer.mozilla.org/en-US/docs/Web/CSS/color_value/rgb)
+- [MDN: Hex color notation](https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color)
+- [MDN: The padding property](https://developer.mozilla.org/en-US/docs/Web/CSS/padding)
+- [MDN: The margin property](https://developer.mozilla.org/en-US/docs/Web/CSS/margin)
+- [MDN: The border property](https://developer.mozilla.org/en-US/docs/Web/CSS/border)

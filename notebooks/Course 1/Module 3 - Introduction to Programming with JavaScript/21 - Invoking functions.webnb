@@ -1,0 +1,148 @@
+# Invoking Functions
+
+Now that we know how to define a function, let's look more closely at how we **invoke** it, which is another word for calling it. Invoking a function runs the code inside it.
+
+We saw the basic form last lesson. Defining a function on its own logs nothing:
+
+```{javascript autorun}
+function myFunc() {
+  console.log('one');
+  console.log('two');
+  console.log('three');
+}
+```
+
+Add the function's name followed by parentheses, and the body runs:
+
+```{javascript autorun}
+function myFunc() {
+  console.log('one');
+  console.log('two');
+  console.log('three');
+}
+
+myFunc();
+```
+
+## The General Rule
+
+The rule is slightly broader than "name followed by parentheses". To invoke a function you need **an expression whose value is a function**, and then you add `()` after it.
+
+Almost always that expression is a function's name, which is why every example so far has looked the same. The parentheses are what does the calling; the name in front of them is just the expression that produces the function.
+
+Later we will put **arguments** inside those parentheses to customize how the function runs. That is the next lesson. For now they stay empty.
+
+## Referencing Versus Calling
+
+This is the part that is genuinely confusing at first, and it is worth slowing down for. Compare these two lines:
+
+```javascript
+const x = funcName();   // with parentheses
+const y = funcName;     // without parentheses
+```
+
+They look almost identical, and they do completely different things.
+
+- `funcName()` **calls** the function. The value of that expression is whatever the function returns, so `x` ends up holding the function's output.
+- `funcName` **references** the function. No call happens at all, so `y` ends up holding the function itself: the gray box, not anything it produces.
+
+To make that concrete we need a function that produces something. The `return` statement says what a function spits out when it is called; we will cover it properly in a couple of lessons, but `return 5` means "when called, hand back `5`".
+
+```{javascript autorun}
+function funcName() {
+  console.log('calling the function');
+  return 5;
+}
+
+const x = funcName();
+const y = funcName;
+
+console.log(x);
+console.log(y);
+console.log(typeof x, typeof y);
+```
+
+Read the output carefully. There are three things in it worth noticing:
+
+- `calling the function` appears **once**, not twice. The line that assigned `x` ran the body. The line that assigned `y` did not run anything; it only pointed at the function.
+- `x` is `5`, the value the function returned.
+- `y` is the function object itself, and `typeof y` is `'function'`.
+
+Forgetting the parentheses is a common slip, and the symptom is distinctive: nothing happens, and the variable you expected to hold a result holds a function instead.
+
+## Exercises
+
+1. The function `calculateTotal` is already defined below. Invoke it so that `total` becomes `100`.
+
+    ```{javascript}
+    let total = 0;
+
+    function calculateTotal() {
+      total = 100;
+    }
+
+    // Write your code here
+
+    console.log(total);
+    ```
+    ```+solution
+    let total = 0;
+
+    function calculateTotal() {
+      total = 100;
+    }
+
+    calculateTotal();
+
+    console.log(total);
+    ```
+    ```+test
+    wrap(total).should('equal', 100).run('`total` should be `100`. Did you invoke `calculateTotal()` with parentheses?', 'Invoked the function');
+    ```
+
+2. Invoke `increase` twice so that `clicks` becomes `2`.
+
+    ```{javascript}
+    let clicks = 0;
+
+    function increase() {
+      clicks = clicks + 1;
+    }
+
+    // Invoke increase twice here
+
+    console.log(clicks);
+    ```
+    ```+solution
+    let clicks = 0;
+
+    function increase() {
+      clicks = clicks + 1;
+    }
+
+    increase();
+    increase();
+
+    console.log(clicks);
+    ```
+    ```+test
+    wrap(clicks).should('equal', 2).run('`clicks` should be `2` after invoking `increase` twice', 'Invoked the function twice');
+    ```
+
+3. What is stored in `result`?
+
+    ```{mcq}
+    A function `getScore` returns the number `10`. A script runs the line `const result = getScore;` with no parentheses. What is in `result`?
+    correct: Correct! Without parentheses nothing is called, so `result` holds the function itself rather than the number it would have returned.
+    wrong: Revisit "Referencing Versus Calling" and look at what happened to `y` in that example.
+    [x] The function `getScore` itself
+    [ ] The number `10`
+    [ ] `undefined`
+    [ ] An error, because a function must always be called
+    ```
+
+## Resources
+
+- [MDN: Functions guide](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions)
+- [MDN: Calling functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Functions#calling_functions)
+- [MDN: return](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/return)

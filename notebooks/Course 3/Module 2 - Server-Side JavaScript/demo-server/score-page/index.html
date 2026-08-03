@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Live scoreboard</title>
+    <style>
+      body { font-family: sans-serif; text-align: center; margin-top: 3em; }
+      #board { font-size: 64px; font-weight: bold; color: #00274c; }
+      p { color: #555; }
+    </style>
+  </head>
+  <body>
+    <div id="board">
+      Home: <span id="home">0</span> - Away: <span id="away">0</span>
+    </div>
+
+    <p>Open this page in a second window. Both update at the same instant.</p>
+
+    <script>
+      const eventSource = new EventSource('/score');
+
+      eventSource.addEventListener('message', (scoreEvent) => {
+        const data = JSON.parse(scoreEvent.data);
+
+        document.querySelector('#home').textContent = data.home;
+        document.querySelector('#away').textContent = data.away;
+      });
+    </script>
+  </body>
+</html>

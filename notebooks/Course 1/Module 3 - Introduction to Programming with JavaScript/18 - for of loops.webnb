@@ -1,0 +1,191 @@
+# `for...of` Loops
+
+Last lesson we learned about `for` loops, which put initialization, condition, and update code on one line. This lesson is about **`for...of` loops**, which sound similar and are actually very different.
+
+The name is unfortunate, honestly. A `for...of` loop has very little to do with the `for` loop we just learned. It is built for one job: iterating over a sequence, such as an array, one item at a time.
+
+## From an Indexed Loop to a `for...of` Loop
+
+Here is the indexed `for` loop we wrote last lesson, with the item pulled out into a variable:
+
+```{javascript autorun}
+const L = ['a', 'b', 'c'];
+
+for (let index = 0; index < L.length; index++) {
+  const item = L[index];
+  console.log(item);
+}
+```
+
+Look at what that loop actually needs. The index is not interesting in itself; it exists only so we can get at each item. A `for...of` loop lets us say that directly. We throw away everything inside the parentheses and replace it with the item variable, the keyword `of`, and the array:
+
+```{javascript autorun}
+const L = ['a', 'b', 'c'];
+
+for (const item of L) {
+  console.log(item);
+}
+```
+
+Same output, and there is no index to initialize, compare, or increment, which means there is no index to get wrong.
+
+## The Two Parts
+
+```javascript
+for (const i of L) {
+  // code that runs once per item
+}
+```
+
+- `i` is the **iterator variable**. On each pass it holds one item from the sequence.
+- `L` is the **iterable**: the thing being iterated over, which for now will always be an array.
+
+Spelling out exactly what the loop does: it runs the code before the loop, then sets `i` to `L[0]` and runs the body, then sets `i` to `L[1]` and runs the body, and so on through `i = L[L.length - 1]`, after which it runs the code following the loop. If `L` is `['a', 'b', 'c']`, then `i` is `'a'`, then `'b'`, then `'c'`, and the body runs three times.
+
+![The same for...of loop shown two ways. On the left is the loop as written: a gray "(before) code block", then the line for (const i of L) { with i in a green box labeled Iterator and L in a blue box labeled Iterable, a red "loop code block" inside the braces, the closing brace, and a gray "(after) code block" below. A large arrow points to the right, where the loop has been unrolled into a straight run of statements: the same "(before) code block", then i = L[0]; followed by a copy of the loop code block, then i = L[1]; followed by another copy, then a comment reading two slashes and an ellipsis, then i = L[L.length - 1]; followed by a final copy, and then the "(after) code block".](images/unrolling-for-of.png)
+
+*The loop is shorthand for the sequence on the right. Nothing else about how the code runs changes.*
+
+The items can be of any type, because the loop never looks at them; it just hands each one to you in turn:
+
+```{javascript autorun}
+for (const score of [98, 85, 95, 100]) {
+  console.log(score);
+}
+
+for (const city of ['Ann Arbor', 'Lansing']) {
+  console.log(city);
+}
+```
+
+## An Example: Summing and Averaging
+
+A very common shape is to keep a running total. Declare a variable before the loop, add to it on each pass, and use it after the loop has finished:
+
+```{javascript autorun}
+const L = [1, 2, 3, 4];
+
+let sum = 0;
+
+for (const item of L) {
+  sum = sum + item;
+}
+
+console.log(sum);
+
+const average = sum / L.length;
+console.log(average);
+```
+
+The sum of `1, 2, 3, 4` is `10`, and dividing by `L.length`, which is `4`, gives an average of `2.5`. Try changing the array to `[10, 20]` and running it again; the average becomes `15` with no other edits, because `L.length` does the counting for us.
+
+Note that `sum` has to be declared with `let` rather than `const`, since it is reassigned on every pass, and it has to be declared *before* the loop. A variable declared inside the loop body would be a brand new variable on each pass, and would be gone by the time we wanted to log it.
+
+## `break` and `continue` Still Work
+
+`break` and `continue` mean the same thing in a `for...of` loop as in every other loop. `break` ends the loop right away:
+
+```{javascript autorun}
+const L = ['Alice', 'Bob', 'Charlie', 'Dana'];
+
+for (const name of L) {
+  if (name === 'Charlie') {
+    break;
+  }
+
+  console.log(name);
+}
+```
+
+That logs `Alice` and `Bob`, then stops without looking at `Charlie` or `Dana`.
+
+`continue` skips the rest of the current pass and moves on to the next item:
+
+```{javascript autorun}
+const scores = [98, 45, 85, 30, 100];
+
+for (const score of scores) {
+  if (score < 60) {
+    continue;
+  }
+
+  console.log(score);
+}
+```
+
+That logs `98`, `85`, and `100`. There is no bookkeeping to get wrong here: the loop advances to the next item by itself, so a `continue` can never leave it stuck the way it can in a `while` loop.
+
+## When to Use Which Loop
+
+You now know three kinds of loop, so here is the short version of when to reach for each:
+
+- Use **`for...of`** when you want to do something to every item in an array. This is the most common case by far, and it is the clearest to read.
+- Use a **`for`** loop when you need the index itself, for example to go backwards, to skip every other item, or to count from one number to another rather than walk a list.
+- Use a **`while`** loop when the number of passes is not known in advance and depends on some condition, such as "keep going until the game is over".
+
+## Exercises
+
+1. Use a `for...of` loop to add every number in `values` into `total`.
+
+    ```{javascript}
+    const values = [10, 20, 30];
+    let total = 0;
+
+    // Write your loop here
+
+    console.log(total);
+    ```
+    ```+solution
+    const values = [10, 20, 30];
+    let total = 0;
+
+    for (const value of values) {
+      total = total + value;
+    }
+
+    console.log(total);
+    ```
+    ```+test
+    wrap(total).should('equal', 60).run('`total` should end up as `60`', 'Added up the values');
+    wrap(source.includes(' of ')).should('equal', true).run('Use a `for...of` loop', 'Used a for...of loop');
+    ```
+
+2. Rewrite the indexed `for` loop below as a `for...of` loop that logs the same three letters.
+
+    ```{javascript}
+    const letters = ['a', 'b', 'c'];
+
+    for (let index = 0; index < letters.length; index++) {
+      console.log(letters[index]);
+    }
+    ```
+    ```+solution
+    const letters = ['a', 'b', 'c'];
+
+    for (const letter of letters) {
+      console.log(letter);
+    }
+    ```
+    ```+test
+    wrap(console.history().map(entry => entry.text).join(',')).should('equal', 'a,b,c').run('The loop should still log `a`, `b`, and `c`', 'Logged the three letters');
+    wrap(source.includes(' of ')).should('equal', true).run('Use a `for...of` loop, with no index variable', 'Used a for...of loop');
+    wrap(source.includes('letters.length')).should('equal', false).run('A `for...of` loop does not need `letters.length`', 'Removed the index bookkeeping');
+    ```
+
+3. Which loop would you use to log an array backwards?
+
+    ```{mcq}
+    You need to log the items of an array from last to first. Which loop fits best?
+    correct: Correct! A `for...of` loop always walks a sequence from the first item to the last, and gives you no index to work with, so going backwards calls for an indexed `for` loop.
+    wrong: Look back at "When to Use Which Loop", and think about whether a `for...of` loop gives you any control over the order.
+    [x] An indexed `for` loop, starting at `length - 1` and counting down
+    [ ] A `for...of` loop, which can be told to run in reverse
+    [ ] A `for...of` loop, which always runs in reverse
+    [ ] None of them; an array cannot be walked backwards
+    ```
+
+## Resources
+
+- [MDN: for...of](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...of)
+- [MDN: Loops and iteration](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Loops_and_iteration)
+- [MDN: Iteration protocols](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols)

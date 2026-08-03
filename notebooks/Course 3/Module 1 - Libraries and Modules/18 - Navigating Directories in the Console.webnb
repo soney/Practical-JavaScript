@@ -1,0 +1,203 @@
+# Navigating Directories in the Console
+
+Every console has a **working directory**: the directory it is currently in. Every command you type runs relative to it, so before running anything it is worth knowing where you are.
+
+Three commands cover almost all of the moving around.
+
+- **`pwd`**, print working directory, outputs the absolute path of where you are.
+- **`ls`**, list, shows the contents of the working directory.
+- **`cd`**, change directory, moves you somewhere else. With an argument it goes there; with no argument at all it takes you to your home directory, `~`.
+
+When you open a console on its own, it starts in your home directory. When you open one in VS Code, it starts in the folder you have open, which is usually what you want.
+
+## Moving Around
+
+Take the file system from the paths reading, and walk it. Starting out:
+
+```
+$ pwd
+/home/alice
+```
+
+Move into `code`:
+
+```
+$ cd code
+$
+```
+
+Notice there is **no output**. `cd` changes the working directory silently, which throws people at first; nothing appearing means it worked. To see the effect, ask:
+
+```
+$ pwd
+/home/alice/code
+```
+
+Look around:
+
+```
+$ ls
+data-analysis  personal-website
+```
+
+Go deeper:
+
+```
+$ cd personal-website
+$ pwd
+/home/alice/code/personal-website
+```
+
+And come back up two levels in one command, using the `..` from the previous reading:
+
+```
+$ cd ../..
+$ pwd
+/home/alice
+```
+
+Since `cd` takes a path, everything from that reading applies: `cd ..`, `cd ../../shared`, `cd ~/code`, and `cd /` all work.
+
+## Other Commands Worth Knowing
+
+Square brackets below mark a placeholder, so `touch [filename]` means you type a real file name in place of `[filename]`.
+
+| Command | What it does |
+| --- | --- |
+| `touch [filename]` | Creates an empty file with that name |
+| `mkdir [dirname]` | Creates a new, empty directory |
+| `cp [from] [to]` | Copies a file or directory |
+| `mv [from] [to]` | Moves a file or directory, which is also how you rename one |
+| `rm [filename]` | Removes a file, or several |
+| `rmdir [dirname]` | Removes an empty directory |
+| `clear` | Clears the console display |
+| `exit` | Closes the console |
+
+For example, from `/home/alice`:
+
+```
+$ mkdir new-dir
+$ ls
+code  new-dir  Pictures
+```
+
+One caution on `rm`: it deletes, and it does not move anything to a recycle bin or trash. There is no undo. It is worth running `ls` first and being sure of what you are pointing at.
+
+## Spaces Are Argument Separators
+
+This one bites everybody once.
+
+You want a directory called `personal website`, so you type:
+
+```
+$ mkdir personal website
+```
+
+The console splits arguments on spaces, so `mkdir` sees **two** arguments and makes two directories, `personal` and `website`. Nothing warned you, and now there is a mess to clean up.
+
+There are two ways to say "this space is part of the name". Quote the whole argument:
+
+```
+$ mkdir "personal website"
+```
+
+Or escape the space with a **backslash**, which is a forward-leaning `\`, not the `/` used in paths:
+
+```
+$ mkdir personal\ website
+```
+
+Both work. Because both are a nuisance to type, and because quoting has to be remembered every single time you refer to that directory afterwards, a lot of people simply avoid spaces in names, using dashes or underscores instead: `personal-website` or `personal_website`.
+
+## Try It
+
+```{external}
+title: Navigation practice
+interval: off
+- command: pwd | Find out where you are
+- command: ls | List what is here
+- command: mkdir temp-project | Create a directory
+- command: cd temp-project | Move into it
+- command: pwd | Confirm the working directory changed
+- command: cd .. | Go back up one level
+```
+```+terminal
+welcome: Type each command and press Enter, then run the cell to check.
+prompt: $
+```
+
+## Exercises
+
+1. You are deep inside a project directory. Check exactly where you are, list everything in that directory, then go back to your home directory, using the shortest form of each command.
+
+    ```{external}
+    title: Where am I, what is here, take me home
+    interval: off
+    - command: pwd | Print the working directory
+    - command: ls | List the contents
+    - command: cd | With no argument at all, `cd` returns you to your home directory
+    ```
+    ```+terminal
+    welcome: Three commands, in order.
+    prompt: $
+    ```
+
+2. Write `safeArgument`, which prepares a name for use as a console argument by quoting it when it contains a space.
+
+    ```{javascript}
+    function safeArgument(name) {
+      // TODO: wrap the name in double quotes only if it contains a space
+      return name;
+    }
+
+    console.log('mkdir ' + safeArgument('Blue Sky'));
+    console.log('mkdir ' + safeArgument('blue-sky'));
+    ```
+    ```+solution
+    function safeArgument(name) {
+      if (name.includes(' ')) {
+        return '"' + name + '"';
+      }
+
+      return name;
+    }
+
+    console.log('mkdir ' + safeArgument('Blue Sky'));
+    console.log('mkdir ' + safeArgument('blue-sky'));
+    ```
+    ```+test
+    wrap(safeArgument('Blue Sky')).should('equal', '"Blue Sky"').run('A name containing a space needs to be wrapped in double quotes', 'Quoted the name with a space');
+    wrap(safeArgument('blue-sky')).should('equal', 'blue-sky').run('A name with no space should be returned unchanged', 'Left the simple name alone');
+    wrap(safeArgument('notes.txt')).should('equal', 'notes.txt').run('A file name with no space needs no quotes either', 'Left the file name alone');
+    wrap(safeArgument('My Old Files')).should('equal', '"My Old Files"').run('Several spaces still only need one pair of quotes around the whole name', 'Handled several spaces');
+    ```
+
+3. You are deep inside a project folder. You want to check your exact location, then see everything in the folder, then go back to your home directory. In what order do the commands go?
+
+    ```{mcq}
+    Which sequence does that?
+    correct: Correct! `pwd` reports where you are, `ls` shows what is there, and `cd` with no argument returns you to your home directory.
+    wrong: Match each of the three jobs to the command that does it, in the order the question asks for them.
+    [x] `pwd`, then `ls`, then `cd`
+    [ ] `cd`, then `ls`, then `pwd`
+    [ ] `ls`, then `pwd`, then `mkdir`
+    [ ] `touch`, then `cd`, then `ls`
+    ```
+
+4. You need a new directory called `Blue Sky`, with an empty file called `notes.txt` inside it. Which sequence works?
+
+    ```{mcq}
+    Which of these gets you `Blue Sky/notes.txt`?
+    correct: Correct! The quotes keep `Blue Sky` as a single argument in both commands, and `touch` is what creates an empty file.
+    wrong: Watch two things: how the space in `Blue Sky` is handled, and which command creates a file rather than a directory.
+    [x] `mkdir "Blue Sky"`, then `cd "Blue Sky"`, then `touch notes.txt`
+    [ ] `mkdir Blue Sky`, then `touch notes.txt`
+    [ ] `mkdir Blue\ Sky`, then `cd Blue Sky`, then `mkdir notes.txt`
+    [ ] `cd "Blue Sky"`, then `mkdir notes.txt`, then `pwd`
+    ```
+
+## Resources
+
+- [MDN: command line crash course](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Transform/Command_line)
+- [VS Code: the integrated terminal](https://code.visualstudio.com/docs/terminal/basics)
+- [MDN: String.prototype.includes()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/includes)

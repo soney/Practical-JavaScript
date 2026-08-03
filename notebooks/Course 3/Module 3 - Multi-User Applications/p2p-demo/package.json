@@ -1,0 +1,16 @@
+{
+  "name": "p2p-demo",
+  "version": "1.0.0",
+  "description": "Runnable WebRTC and Yjs examples for the Real-Time Peer-to-Peer readings",
+  "license": "ISC",
+  "dependencies": {
+    "html-webpack-plugin": "^5.6.6",
+    "quill": "^2.0.3",
+    "webpack": "^5.105.4",
+    "webpack-cli": "^7.0.2",
+    "ws": "^8.20.0",
+    "y-quill": "^1.0.0",
+    "y-webrtc": "^10.3.0",
+    "yjs": "^13.6.30"
+  }
+}

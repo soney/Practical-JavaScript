@@ -1,0 +1,192 @@
+# Web APIs
+
+A **Web API** (application programming interface) is a service on the web that our programs can send requests to in order to fetch data. There are a great many free ones, covering categories from animals and art to dictionaries, sports, weather, and machine learning. Lists of free APIs are everywhere and worth browsing; you will get ideas for projects just from scrolling one.
+
+We already have every tool we need: `fetch` to make the request, `URLSearchParams` to build the query string, and `response.json()` to turn the reply into an object. This lesson is about putting them against real services.
+
+## Every API Is Different, So Read the Documentation
+
+There is no single URL or format that works everywhere. Each API decides four things for itself:
+
+- The **base URL** to send requests to.
+- The **query parameters** it accepts, and what each one means.
+- Whether it needs **authentication**, such as an API key.
+- The **shape of the response**: which fields come back.
+
+The only reliable way to learn those four things is to read that API's documentation. Documentation normally opens with a description, gives example URLs, and then lists every parameter. Getting comfortable reading it is most of the skill of using APIs.
+
+## Example: Datamuse
+
+The [Datamuse API](https://www.datamuse.com/api/) is free and needs no key. Its documentation says word searches go to `https://api.datamuse.com/words`, and that `sl` means "sounds like".
+
+```{javascript autorun}
+const BASE_URL = 'https://api.datamuse.com/words?';
+
+const params = new URLSearchParams({ sl: 'giraffe' });
+
+const fullURL = BASE_URL + params.toString();
+
+console.log(fullURL);
+```
+
+Then fetching it is the pattern from the last few lessons:
+
+```javascript
+fetch(fullURL)
+  .then((response) => response.json())
+  .then((result) => {
+    for (const item of result) {
+      console.log(item.word);
+    }
+  });
+```
+
+We know to use `sl`, and we know each result has a `word` field, **only because the documentation says so.** A different question needs different parameters: `sp` searches by spelling pattern, so `sp=t??k` finds four-letter words starting with `t` and ending with `k`, and `ml` searches by meaning, as we saw last lesson.
+
+## API Keys
+
+Some APIs require an **API key**: a string identifying you as the developer making the request. It lets the service authenticate requests, track usage, and enforce limits.
+
+The [OMDb API](https://www.omdbapi.com/) is an example. Its documentation says to send requests to `https://www.omdbapi.com/?`, use `t` for a movie title, and pass your key as `apikey`.
+
+```{javascript autorun}
+const MY_API_KEY = 'demo123';
+
+const BASE_URL = 'https://www.omdbapi.com/?';
+
+const params = new URLSearchParams({ t: 'Star Wars', apikey: MY_API_KEY });
+
+console.log(BASE_URL + params.toString());
+```
+
+```javascript
+fetch(BASE_URL + params.toString())
+  .then((response) => response.json())
+  .then((movie) => {
+    console.log(movie.Title, movie.Year);
+  });
+```
+
+Call OMDb without a key and the reply is an error: `No API key provided`.
+
+Three things to know about keys:
+
+- **Getting one.** Most APIs that need a key have a sign-up form. OMDb emails you a free key, with a link to activate it.
+- **Limits.** Free keys usually come with quotas. OMDb's free tier allows 1,000 requests a day.
+- **Keep it private.** A key is tied to your account, so treat it like a password. Do not post it publicly or commit it to a shared repository.
+
+### A Warning About Keys in Front-End Code
+
+That last point deserves more than a bullet, because there is an uncomfortable truth in it.
+
+Any key you put in JavaScript that runs in the browser is **visible to anyone who visits your page**. They can read your source, or simply open the Network panel and look at the request. There is no way to hide it. This is the same lesson as "never log a password to the console", and it applies just as much here.
+
+For practice projects with free, rate-limited keys, this is a normal thing to live with. For anything that costs money or touches private data, the key belongs on a server you control, which then makes the request on the page's behalf. We will build exactly that kind of server in Course 3.
+
+## Response Fields Vary Too
+
+Just as parameters differ between APIs, so do the fields you get back. Datamuse returns objects with a `word`. OMDb returns `Title`, `Year`, `Actors`, `Awards`, `BoxOffice`, `Plot`, and more, with capitalized names, which not every API does.
+
+When you meet a new API, log the parsed response and expand it in the console. That, plus the documentation, tells you what you have to work with.
+
+## Exercises
+
+1. Build the Datamuse URL for words that **sound like** `giraffe`.
+
+    ```{javascript}
+    const BASE_URL = 'https://api.datamuse.com/words?';
+    const params = new URLSearchParams({ sl: 'giraffe' });
+
+    const fullURL = /* Your code here */;
+
+    console.log(fullURL);
+    ```
+    ```+solution
+    const BASE_URL = 'https://api.datamuse.com/words?';
+    const params = new URLSearchParams({ sl: 'giraffe' });
+
+    const fullURL = BASE_URL + params.toString();
+
+    console.log(fullURL);
+    ```
+    ```+test
+    wrap(fullURL).should('equal', 'https://api.datamuse.com/words?sl=giraffe').run('Concatenate `BASE_URL` with `params.toString()`', 'Built the Datamuse request URL');
+    ```
+
+2. Build an OMDb URL that searches for the title `Star Wars` and includes the API key. Both parameters go in the query string.
+
+    ```{javascript}
+    const apiKey = 'demo123';
+    const BASE_URL = 'https://www.omdbapi.com/?';
+    const params = new URLSearchParams();
+
+    // Add the two parameters here
+
+    const fullURL = BASE_URL + params.toString();
+
+    console.log(fullURL);
+    ```
+    ```+solution
+    const apiKey = 'demo123';
+    const BASE_URL = 'https://www.omdbapi.com/?';
+    const params = new URLSearchParams();
+
+    params.set('t', 'Star Wars');
+    params.set('apikey', apiKey);
+
+    const fullURL = BASE_URL + params.toString();
+
+    console.log(fullURL);
+    ```
+    ```+test
+    wrap(fullURL).should('equal', 'https://www.omdbapi.com/?t=Star+Wars&apikey=demo123').run('Set both the `t` and `apikey` parameters. Note that the space in `Star Wars` is encoded for you', 'Built the OMDb request URL');
+    ```
+
+3. Complete the chain so it logs the movie title from the stand-in response. The documentation for this API says the field is called `Title`.
+
+    ```{javascript}
+    function fakeFetch(url) {
+      return Promise.resolve({
+        json: () => Promise.resolve({ Title: 'Star Wars', Year: '1977', Actors: 'Mark Hamill' })
+      });
+    }
+
+    fakeFetch('https://www.omdbapi.com/?t=Star+Wars')
+      // Add your .then calls here
+    ```
+    ```+solution
+    function fakeFetch(url) {
+      return Promise.resolve({
+        json: () => Promise.resolve({ Title: 'Star Wars', Year: '1977', Actors: 'Mark Hamill' })
+      });
+    }
+
+    fakeFetch('https://www.omdbapi.com/?t=Star+Wars')
+      .then((response) => response.json())
+      .then((movie) => console.log(movie.Title));
+    ```
+    ```+test
+    setTimeout(() => {
+      check.consoleLogged(/^Star Wars$/).run('Parse the response with `.json()` and log the `Title` field. Field names come from the API\'s documentation, and this one is capitalized', 'Read the documented field');
+    }, 200);
+    ```
+
+4. You put your API key in the JavaScript of a page and deploy it. Who can see the key?
+
+    ```{mcq}
+    An API key is written into a `<script>` on a public page. Who can read it?
+    correct: Correct! Anything that runs in the browser is visible to the person using that browser, through view-source or the Network panel. There is no way to hide a key in front-end code; keeping it secret requires a server.
+    wrong: Revisit "A Warning About Keys in Front-End Code", and think about what the developer tools can show a visitor.
+    [x] Any visitor to the page, by reading the source or the Network panel
+    [ ] Nobody, because JavaScript source is compiled before it is sent
+    [ ] Only the API provider
+    [ ] Only visitors who are signed in to your site
+    ```
+
+## Resources
+
+- [MDN: Using the Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch)
+- [MDN: URLSearchParams](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams)
+- [Datamuse API documentation](https://www.datamuse.com/api/)
+- [OMDb API](https://www.omdbapi.com/)
+- [Public APIs: a large list of free APIs](https://github.com/public-apis/public-apis)

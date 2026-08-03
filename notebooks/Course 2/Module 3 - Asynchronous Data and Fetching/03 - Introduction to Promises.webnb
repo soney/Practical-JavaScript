@@ -1,0 +1,166 @@
+# Introduction to Promises
+
+Suppose we want to take a small piece of another website and put it on ours: a widget in the corner showing the current temperature, say. To do that we need code that retrieves information from a third-party weather service, and that is going to take time. **Promises** are how we handle that.
+
+Last lesson we saw callbacks get messy. Promises are a different way of thinking about the same problem, and in situations where we are fetching information asynchronously they are usually a better one. They are **not** a replacement for callbacks in general; event listeners will always be callbacks.
+
+## A Box That Will Be Filled Later
+
+A **promise** is an object that promises to have a value in the future. The analogy to hold on to is an empty box that something will be teleported into later.
+
+![A cardboard box drawn in cross-section, representing a promise](images/promise_box.png =x110)
+
+A promise is always in one of **three states**:
+
+**Pending**: the box is empty, waiting for something to arrive.
+
+![The same box, empty inside, representing a pending promise](images/promise_pending.png =x110)
+
+**Fulfilled**: a value has arrived and the box now holds it.
+
+![The same box with a blue cube inside it, representing a fulfilled promise](images/promise_fulfilled.png =x110)
+
+**Rejected**: something went wrong while trying to fill the box, such as a runtime error or a failed network request.
+
+![The box drawn in red with a warning exclamation mark on it, representing a rejected promise](images/promise_rejected.png =x110)
+
+A pending promise settles into exactly one of the other two states, once, and stays there.
+
+## Why a Box Is Better Than a Callback
+
+Here is the difference that matters. With a callback, we ask for a thing and hand over a function to be run when it arrives:
+
+```javascript
+getThing((value) => {
+  // `value` only exists in here
+});
+```
+
+The value is only reachable **inside that callback**. If some other part of our program needs it, we have to arrange for the callback to hand it over, which is where the tangle from last lesson came from.
+
+A promise-returning function gives us something back **immediately**:
+
+```javascript
+const thingPromise = getThingPromise();
+```
+
+`thingPromise` is a real object, right now, even though it is empty. We can store it in a variable, pass it to a function, keep it in an array, and attach handlers to it in more than one place. Later, when the box is filled, everyone holding that promise can see the value.
+
+That is the subtle genius of the design: **a promise turns a future value into an object you can carry around today.**
+
+## `.then()` and `.catch()`
+
+Promises are objects with methods. Two matter now:
+
+- **`.then(callback)`** runs the callback when the promise is **fulfilled**, and passes it the value.
+- **`.catch(callback)`** runs the callback when the promise is **rejected**, and passes it the error.
+
+`Promise.resolve(value)` builds a promise that is already fulfilled, which is handy for experimenting:
+
+```{javascript autorun}
+const fulfilled = Promise.resolve('the value arrived');
+
+console.log(fulfilled);
+
+fulfilled.then((value) => {
+  console.log(value);
+});
+
+console.log('this line runs before the value is logged');
+```
+
+Look at the order of the output. `console.log(fulfilled)` shows a `Promise` object, not the string. The `.then` callback runs *after* the last line, even though the promise was already fulfilled: promise callbacks always go through the queue, exactly like the timer callbacks from the event loop lesson.
+
+And `Promise.reject` builds one that has already failed:
+
+```{javascript autorun}
+const failed = Promise.reject('something went wrong');
+
+failed.catch((error) => {
+  console.log('caught: ' + error);
+});
+```
+
+Being honest about it: this does not look better than callbacks yet. We are still passing a callback to `.then`, and now a second one to `.catch`. The payoff comes over the next few lessons, when we can take this:
+
+```javascript
+asyncFunction1((value1) => {
+  asyncFunction2((value2) => {
+    asyncFunction3((value3) => {
+      console.log(value1, value2, value3);
+    });
+  });
+});
+```
+
+and write it like this instead:
+
+```javascript
+console.log(await pFunc1(), await pFunc2(), await pFunc3());
+```
+
+Next we will look at how to create promises of our own.
+
+## Exercises
+
+1. Create a promise named `answerPromise` that is already fulfilled with the value `42`, then log that value from a `.then` callback.
+
+    ```{javascript}
+    // Write your code here
+    ```
+    ```+solution
+    const answerPromise = Promise.resolve(42);
+
+    answerPromise.then((value) => {
+      console.log(value);
+    });
+    ```
+    ```+test
+    wrap(answerPromise instanceof Promise).should('equal', true).run('`answerPromise` should be a promise. `Promise.resolve(...)` creates one that is already fulfilled', 'Created a promise');
+    setTimeout(() => {
+      check.consoleLogged(/^42$/).run('Log the value from inside a `.then` callback', 'Read the value with .then');
+    }, 200);
+    ```
+
+2. Attach both handlers to this promise: log `got: ` plus the value if it fulfills, and `failed: ` plus the error if it rejects.
+
+    ```{javascript}
+    const risky = Promise.reject('network down');
+
+    // Write your code here
+    ```
+    ```+solution
+    const risky = Promise.reject('network down');
+
+    risky.then((value) => {
+      console.log('got: ' + value);
+    }).catch((error) => {
+      console.log('failed: ' + error);
+    });
+    ```
+    ```+test
+    wrap(source.includes('.then')).should('equal', true).run('Attach a `.then` handler', 'Attached a then handler');
+    wrap(source.includes('.catch')).should('equal', true).run('Attach a `.catch` handler', 'Attached a catch handler');
+    setTimeout(() => {
+      check.consoleLogged('failed: network down').run('This promise is rejected, so the `.catch` handler should log `failed: network down`', 'The catch handler ran');
+    }, 200);
+    ```
+
+3. What are the three states of a promise?
+
+    ```{mcq}
+    Using the box analogy, which set of states is right?
+    correct: Correct! A promise starts pending, and then settles exactly once into either fulfilled, with a value, or rejected, with an error.
+    wrong: Look back at the three boxes near the top of this lesson.
+    [x] Pending is an empty box, fulfilled is a box holding a value, rejected means something went wrong while filling it
+    [ ] Pending means the box already holds a value, fulfilled means it was thrown away, rejected means it was replaced
+    [ ] Pending means the box is locked, fulfilled means it vanished, rejected means it became a new empty box
+    [ ] Pending means resolved, fulfilled means still waiting, rejected means the operation succeeded
+    ```
+
+## Resources
+
+- [MDN: Promise](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise)
+- [MDN: How to use promises](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS/Promises)
+- [MDN: Promise.prototype.then()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/then)
+- [MDN: Promise.prototype.catch()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/catch)

@@ -16,11 +16,18 @@ given in the course lab and its description as that folder's README. The
 44 practice assignments also publish their solutions; the
 15 graded ones do not, and no autograder tests are published.
 
-Paths in both follow the course structure:
+[`notebooks/`](notebooks/) - the 214 interactive lesson
+notebooks (`.webnb`), exactly as they appear pre-loaded in each course's lab.
+They are plain text and readable on GitHub; the
+[notebook index](notebooks/README.md) explains how to view them
+fully rendered.
+
+Paths in all three follow the course structure:
 
 ```
 presentation-code/course-<n>/module-<n>/lesson-<n>/<sample>/
 assignments/Course <n>/Module <n>/<assignment>/<problem>/
+notebooks/Course <n>/Module <n> - <title>/<NN - notebook>.webnb
 ```
 
 so `presentation-code/course-1/module-1/lesson-2/introduction-to-html/` is the

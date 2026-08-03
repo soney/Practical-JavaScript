@@ -1,0 +1,221 @@
+# CommonJS Modules
+
+The [`import` and `export` syntax](<12 - Modules Overview.webnb>) from Lesson 3 is the modern standard, and it is called **ES modules**. Node.js existed before that syntax did, and it needed a way to split code across files, so it used an older system called **CommonJS**.
+
+CommonJS has not gone anywhere. You will meet it in Node code, in configuration files, and in plenty of published packages, and you will meet it in this course: the servers you write in Module 2 and Module 3 use it, and so does the Webpack configuration file in the next lesson. Both systems do the same job with different words.
+
+## Requiring
+
+Where ES modules say `import`, CommonJS calls a function named **`require`**. It returns whatever the other file exports.
+
+There are three kinds of thing you can require, and the shape of the argument tells you which:
+
+```javascript
+const http = require('http');              // a module built into Node
+const express = require('express');        // a package installed with npm
+const utils = require('./math-utils.js');  // a file of your own
+```
+
+A bare name means one of Node's own modules or an installed package; a name starting with `./` or `../` means a path to your own file, exactly as in an ES module import.
+
+Requiring works in these notebooks for a few modules, `path` among them, so this runs:
+
+```{node autorun}
+const path = require('path');
+
+console.log(path.basename('/workspace/src/app.js'));
+console.log(path.join('src', 'app.js'));
+```
+
+### Taking Pieces Out with Braces
+
+Often you want two or three things from a module rather than the whole object, and you will see that written like this:
+
+```{node autorun}
+const { basename, join } = require('path');
+
+console.log(basename('/workspace/src/app.js'));
+console.log(join('src', 'app.js'));
+```
+
+The braces are **destructuring**: they pull named properties out of the object on the right and declare a variable for each one. That line is a shorter way of writing:
+
+```javascript
+const path = require('path');
+const basename = path.basename;
+const join = path.join;
+```
+
+It reads much like a named import, and it is worth recognizing, because real Node code is full of it:
+
+```javascript
+const { WebSocketServer } = require('ws');
+```
+
+## Exporting
+
+Where ES modules use the `export` keyword, a CommonJS file has an object called **`module.exports`**, and whatever you put on it is what `require` hands back. There are two ways to write it.
+
+Replace the whole object:
+
+```{node autorun}
+// math-utils.js
+
+function double(number) {
+  return number * 2;
+}
+
+function triple(number) {
+  return number * 3;
+}
+
+module.exports = {
+  double: double,
+  triple: triple
+};
+
+console.log(module.exports.double(5));
+```
+
+Or add one property at a time:
+
+```{node autorun}
+// math-utils.js
+
+exports.double = function (number) {
+  return number * 2;
+};
+
+exports.triple = function (number) {
+  return number * 3;
+};
+
+console.log(exports.triple(5));
+```
+
+`exports` starts out pointing at the same object as `module.exports`, which is why adding to it works. The trap is mixing the two styles: if you assign `module.exports = { ... }` *after* adding things to `exports`, you have replaced the object and the earlier additions are gone.
+
+The requiring file then gets exactly that object:
+
+```javascript
+const utils = require('./math-utils.js');
+
+console.log(utils.double(5));
+```
+
+## The Two Systems Side by Side
+
+| Job | ES modules | CommonJS |
+| --- | --- | --- |
+| Bring in named things | `import { join } from 'path';` | `const { join } = require('path');` |
+| Bring in everything | `import * as path from 'path';` | `const path = require('path');` |
+| Bring in the main thing | `import path from 'path';` | `const path = require('path');` |
+| Share one value | `export default thing;` | `module.exports = thing;` |
+| Share several values | `export { a, b };` | `module.exports = { a, b };` |
+| Turn it on | `type="module"` in the HTML | nothing; it is Node's default |
+
+Two differences go beyond spelling.
+
+**`require` is an ordinary function call.** It can sit inside an `if`, or halfway down a file, and it runs at that moment. `import` statements are declarations, processed before any of the file's own code runs, which is what lets tools work out a project's whole dependency graph without executing it.
+
+**What comes back is a plain object.** An ES module import is a [read-only live binding](<14 - Importing Variables.webnb#imported-values-are-read-only>), as we saw in Lesson 3. A `require` result is just a value you are holding, so nothing stops you reassigning your own variable.
+
+## Which Should You Write?
+
+For new code, prefer ES modules. For code in this course, follow whatever the file you are editing already uses, and read the surrounding lines before adding an import to a server file.
+
+Node decides which system a `.js` file uses from the nearest `package.json`. With no `"type"` field it treats the file as CommonJS; with `"type": "module"` it treats it as an ES module. Two extensions settle the question outright, `.cjs` for CommonJS and `.mjs` for ES modules, which helps when one project needs both.
+
+## Exercises
+
+1. Export both functions so that `require` hands back an object with `celsius` and `fahrenheit` on it.
+
+    ```{node}
+    // temps.js
+
+    function celsius(tempF) {
+      return (tempF - 32) * 5 / 9;
+    }
+
+    function fahrenheit(tempC) {
+      return tempC * 9 / 5 + 32;
+    }
+
+    // Write your export here
+    ```
+    ```+solution
+    // temps.js
+
+    function celsius(tempF) {
+      return (tempF - 32) * 5 / 9;
+    }
+
+    function fahrenheit(tempC) {
+      return tempC * 9 / 5 + 32;
+    }
+
+    module.exports = {
+      celsius: celsius,
+      fahrenheit: fahrenheit
+    };
+    ```
+    ```+test
+    wrap(typeof module.exports.celsius).should('equal', 'function').run('Put `celsius` on `module.exports`', 'Exported celsius');
+    wrap(typeof module.exports.fahrenheit).should('equal', 'function').run('Put `fahrenheit` on `module.exports` as well', 'Exported fahrenheit');
+    wrap(module.exports.fahrenheit(100)).should('equal', 212).run('The exported `fahrenheit` should still convert 100C to 212F', 'The exported functions work');
+    ```
+
+2. Require just `extname` and `join` from `path`, using the braces form, and use both.
+
+    ```{node}
+    // Write your require statement here
+
+    const fullPath = /* join 'src' and 'index.js' */;
+    const extension = /* the extension of fullPath */;
+
+    console.log(fullPath, extension);
+    ```
+    ```+solution
+    const { extname, join } = require('path');
+
+    const fullPath = join('src', 'index.js');
+    const extension = extname(fullPath);
+
+    console.log(fullPath, extension);
+    ```
+    ```+test
+    wrap(/const\s*\{[^}]*\}\s*=\s*require\(/.test(source)).should('equal', true).run('Use the destructuring form, `const { ... } = require(\'path\');`', 'Used the braces form');
+    wrap(fullPath).should('equal', 'src/index.js').run('`join(\'src\', \'index.js\')` should give `src/index.js`', 'Joined the path');
+    wrap(extension).should('equal', '.js').run('`extname(fullPath)` should give `.js`', 'Read the extension');
+    ```
+
+3. A file contains `export default connectToDatabase;`. What is the CommonJS equivalent?
+
+    ```{mcq}
+    Rewrite that line for a CommonJS file.
+    correct: Correct! Assigning to `module.exports` replaces the whole exported value, which is what a default export does.
+    wrong: Check the comparison table for the row about sharing exactly one value.
+    [x] `module.exports = connectToDatabase;`
+    [ ] `exports default connectToDatabase;`
+    [ ] `require(connectToDatabase);`
+    [ ] `return connectToDatabase;`
+    ```
+
+4. ES modules are the modern standard, so why be able to read CommonJS?
+
+    ```{mcq}
+    Where will you actually run into CommonJS?
+    correct: Correct! Node was CommonJS-only for years, so servers, tool configuration files such as `webpack.config.js`, and a great many published packages are written this way. You will read and edit files like these in this course.
+    wrong: Think about the files you are about to write in Modules 2 and 3, and what a Webpack configuration file looks like.
+    [x] Node servers, tool configuration files, and many published packages still use it
+    [ ] It is the only way to load CSS into a page
+    [ ] Browsers require it in order to handle click events
+    [ ] ES modules cannot export functions, only values
+    ```
+
+## Resources
+
+- [Node.js: CommonJS modules](https://nodejs.org/api/modules.html)
+- [Node.js: determining module system](https://nodejs.org/api/packages.html#determining-module-system)
+- [MDN: destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring)
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)

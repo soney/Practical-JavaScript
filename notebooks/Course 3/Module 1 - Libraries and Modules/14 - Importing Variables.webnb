@@ -1,0 +1,207 @@
+# Importing Variables
+
+Exporting offers a value. **Importing** is the other half: naming what you want and saying which file it comes from.
+
+```javascript
+import { clear } from './cart.js';
+
+clear();
+```
+
+Read that as three parts:
+
+- **`import`**, then **what** you want, usually in curly braces.
+- **`from`**, then the **module path**, in quotes.
+- The `./` at the front of `'./cart.js'` means "relative to this file's own directory".
+
+Once imported, `clear` is just a name in your file. You call it like anything else.
+
+## Importing Several Names
+
+Separate them with commas:
+
+```javascript
+import { clear, checkout } from './cart.js';
+```
+
+A notebook cell cannot be two files, so we cannot import from `./cart.js` here. The notebook runtime does provide a few real modules though, including `path`, so the import statements below genuinely run:
+
+```{javascript autorun}
+import { basename, extname } from 'path';
+
+console.log(basename('/workspace/src/app.js'));
+console.log(extname('/workspace/src/app.js'));
+```
+
+Two names imported from one module, then used directly.
+
+## Renaming with `as`
+
+Sometimes the name a module chose does not suit you, usually because it collides with a name you already have. Rename it on the way in with `as`:
+
+```{javascript autorun}
+import { basename as fileNameOf } from 'path';
+
+console.log(fileNameOf('/workspace/src/app.js'));
+```
+
+The imported thing is unchanged; only the name you refer to it by is different. In the video's example, `import { clear as clearCart } from './cart.js'` brings in the same function under a clearer name for the importing file.
+
+You can mix plain and renamed imports in one statement:
+
+```javascript
+import { add, subtract as minus } from './math.js';
+```
+
+## Importing Everything
+
+If you want a module's whole public surface without listing names, use `*` with a name to hold it all:
+
+```{javascript autorun}
+import * as pathTools from 'path';
+
+console.log(pathTools.basename('/workspace/src/app.js'));
+console.log(pathTools.join('src', 'app.js'));
+```
+
+Everything the module exports hangs off that one name, so it is `pathTools.basename` rather than `basename`. For `./cart.js` that would read:
+
+```javascript
+import * as cart from './cart.js';
+
+cart.clear();
+cart.checkout();
+```
+
+This is a trade-off rather than a shortcut. You do not have to maintain a list of names, and in exchange every use is prefixed, and a reader cannot tell from the import line which parts you actually use.
+
+## Importing Nothing
+
+Occasionally you want a file to *run* and do not want anything out of it. Leave off the names and the `from`:
+
+```javascript
+import './utils/init.js';
+```
+
+That executes `init.js` once and imports none of its exports. It is uncommon, and it is the right tool when a file's job is a side effect, like registering something or setting up configuration.
+
+## Imported Values Are Read-Only
+
+This one surprises people, so it is worth being precise.
+
+Whatever the exporting file used, `const`, `let`, or `var`, **the importing file cannot reassign an imported name.** Suppose `module.js` has:
+
+```javascript
+// module.js
+export let count = 0;
+
+export function increment() {
+  count++;
+}
+```
+
+Inside `module.js`, `count` is a perfectly ordinary `let` and can be reassigned freely. But in the file that imports it:
+
+```javascript
+// main.js
+import { count, increment } from './module.js';
+
+console.log(count);   // 0
+
+count = count + 1;    // TypeError: Assignment to constant variable
+```
+
+The import is a **binding** back to the variable in `module.js`, not a copy you own, and you get read-only access to it.
+
+That last point has a consequence people find surprising in the other direction. You cannot change `count` yourself, but you do see changes the module makes:
+
+```javascript
+// main.js
+import { count, increment } from './module.js';
+
+console.log(count);   // 0
+
+increment();
+
+console.log(count);   // 1
+```
+
+`count` changed without your reassigning it, because the name is a live link to `module.js`'s variable rather than a snapshot of its value. This is the normal way to expose changeable state from a module: keep the variable private to write and export a function that does the writing.
+
+## Exercises
+
+1. Import `join` and `extname` from `path`, bringing `extname` in under the name `extensionOf`, and use both.
+
+    ```{javascript}
+    // Write your import statement here
+
+    const fullPath = /* join 'src' and 'main.js' */;
+    const extension = /* the extension of fullPath */;
+
+    console.log(fullPath, extension);
+    ```
+    ```+solution
+    import { join, extname as extensionOf } from 'path';
+
+    const fullPath = join('src', 'main.js');
+    const extension = extensionOf(fullPath);
+
+    console.log(fullPath, extension);
+    ```
+    ```+test
+    wrap(fullPath).should('equal', 'src/main.js').run('Use `join(\'src\', \'main.js\')` to build the path', 'Joined the path');
+    wrap(extension).should('equal', '.js').run('Use your renamed import on `fullPath` to get `.js`', 'Read the extension');
+    wrap(/import\s*\{[^}]*extname\s+as\s+extensionOf[^}]*\}/.test(source)).should('equal', true).run('Rename `extname` to `extensionOf` in the import, using `as`', 'Renamed the import');
+    wrap(/import\s*\{[^}]*\bjoin\b[^}]*\}/.test(source)).should('equal', true).run('Import `join` in the same statement, separated by a comma', 'Imported both names');
+    ```
+
+2. Import everything from `path` under the name `paths`, then use it to get the file name out of the path.
+
+    ```{javascript}
+    // Write your import statement here
+
+    const fileNameOnly = /* the last part of '/workspace/notes/todo.txt' */;
+
+    console.log(fileNameOnly);
+    ```
+    ```+solution
+    import * as paths from 'path';
+
+    const fileNameOnly = paths.basename('/workspace/notes/todo.txt');
+
+    console.log(fileNameOnly);
+    ```
+    ```+test
+    wrap(/import\s*\*\s*as\s+paths\s+from/.test(source)).should('equal', true).run('Use `import * as paths from \'path\';` to bring in everything under one name', 'Imported the whole module');
+    wrap(fileNameOnly).should('equal', 'todo.txt').run('Call `paths.basename(...)`, with the prefix, since every export now hangs off `paths`', 'Found the file name');
+    ```
+
+3. You want `add` under its own name, and `subtract` renamed to `minus`. Which line is right?
+
+    ```{mcq}
+    One import statement, one name kept and one renamed.
+    correct: Correct! Renaming happens inside the braces, per name, with `as`. Names you do not rename are simply listed as they are.
+    wrong: Look back at "Renaming with `as`" and where the `as` goes.
+    [x] `import { add, subtract as minus } from './math.js';`
+    [ ] `import { add, minus as subtract } from './math.js';`
+    [ ] `import { add, subtract } as { add, minus } from './math.js';`
+    [ ] `import { add } from './math.js'; import { minus } from './math.js';`
+    ```
+
+4. `module.js` has `export let count = 0;`. In `main.js`, `count = count + 1;` throws an error. Why?
+
+    ```{mcq}
+    The variable was declared with `let`, so why can the importing file not reassign it?
+    correct: Correct! An import is a read-only binding to the exporting module's variable, no matter how that variable was declared. You can watch it change; you cannot change it.
+    wrong: Think about what an imported name actually refers to, and which file is allowed to write to it.
+    [x] Imported values are read-only bindings in the importing file, even when declared with `let`
+    [ ] The variable must have been declared with `const` in the original file
+    [ ] Reassigning is only allowed when you use `import * as`
+    [ ] The `count` variable was never exported
+    ```
+
+## Resources
+
+- [MDN: import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import)
+- [MDN: export](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export)
+- [MDN: JavaScript modules](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules)

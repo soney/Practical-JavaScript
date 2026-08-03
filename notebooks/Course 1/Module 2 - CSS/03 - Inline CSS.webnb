@@ -1,0 +1,92 @@
+# Inline CSS
+
+Suppose we have an HTML document like this:
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+  <body>
+    <p>Hello, world!</p>
+  </body>
+</html>
+```
+
+...and we want to make the text red. We can do this by adding a `style` attribute to the `p` element:
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+  <body>
+    <p style="color: red">Hello, world!</p>
+  </body>
+</html>
+```
+
+The `style` attribute is a way to add CSS directly to an HTML element. It's called "inline" because the CSS is "in line" with the HTML. Within the value of `style`, we write only the *declarations* (the property-value pairs), with no selector and no curly braces. In this case, we have one declaration: `color: red`. The property is `color`, and the value is `red`. The property and value are separated by a colon (`:`).
+
+The `color` property is a CSS property that describes the color of the text. [There are many CSS properties.](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference). We'll go over some of the essentials but `color` is one to remember, controlling the text color. The value of the `color` property can be set to any [color name](https://developer.mozilla.org/en-US/docs/Web/CSS/named-color), [hex code](https://developer.mozilla.org/en-US/docs/Web/CSS/hex-color), or there are other ways to set the color. So in this case, we're setting the color to red.
+
+If we wanted to add more declarations, we could separate them with semicolons (`;`):
+
+```{html autorun}
+<!DOCTYPE html>
+<html>
+  <body>
+    <p style="color: red; font-weight: bold; background-color: yellow">Hello, world!</p>
+  </body>
+</html>
+```
+
+Each declaration is a property and a value separated by a colon. As with HTML attributes, the property names are built into CSS, so we cannot invent our own: [the reference lists them](https://developer.mozilla.org/en-US/docs/Web/CSS/Reference). Here `color` controls the text color, `font-weight` controls how heavy the text is, and `background-color` controls the background color.
+
+
+## The Problem with Inline CSS
+
+That all works, and yet we will mostly avoid inline CSS, because it does not hold up. This example has one `<p>` element, but imagine a page with fifty elements carrying inline styles. Changing the color of all of them means editing all fifty. Changing the color of one means hunting through the HTML to find it. The styling is scattered through the content instead of gathered anywhere you can read it, and it takes more code to say the same thing, because the declarations are repeated on every element rather than written once.
+
+So this is **not** how we will typically use CSS in this course. There is a place for it: a quick test, or a value that genuinely belongs to one element and nothing else. In the next readings we will see the more maintainable options.
+
+## Exercises
+
+1. Which HTML attribute is used to define inline styles?
+
+    ```{mcq}
+    Which HTML attribute allows you to write inline CSS?
+    correct: Correct! The `style` attribute allows for inline CSS styling.
+    wrong: Think about the name of the language you are writing inside the attribute!
+    [x] `style`
+    [ ] `css`
+    [ ] `class`
+    [ ] `design`
+    ```
+
+2. Add a `style` attribute to the `h1` element to set its text color to `blue`.
+
+    ```{html}
+    <h1>Welcome to my website!</h1>
+    ```
+    ```+solution
+    <h1 style="color: blue">Welcome to my website!</h1>
+    ```
+    ```+test
+    assert('h1').should('exist').should('have.attr', 'style').run('Add a `style` attribute to the `h1` element.', 'The h1 has a style attribute.');
+    assert('h1').should('have.css', 'color: blue').run('The heading should be blue. Check the `color` declaration inside the `style` attribute.', 'The heading is blue!');
+    ```
+
+3. Why is using inline CSS generally discouraged for large projects?
+
+    ```{mcq}
+    Why is inline CSS generally discouraged?
+    correct: Correct! Inline CSS makes code hard to maintain because styles are scattered throughout the HTML.
+    wrong: Think about what happens if you need to update styles across 100 different files.
+    [x] It mixes content and styling, making it difficult to maintain and update across many elements.
+    [ ] It causes the browser to crash.
+    [ ] It only supports a few CSS properties like `color` and `font-size`.
+    [ ] It cannot be viewed on mobile devices.
+    ```
+
+## Resources
+
+- [MDN: The style global attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Global_attributes/style)
+- [MDN: The color property](https://developer.mozilla.org/en-US/docs/Web/CSS/color)
+- [MDN: CSS values](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Styling_basics/Values_and_units)

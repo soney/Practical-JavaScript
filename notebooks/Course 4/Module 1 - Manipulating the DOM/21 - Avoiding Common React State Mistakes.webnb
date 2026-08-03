@@ -1,0 +1,258 @@
+# Avoiding Common React State Mistakes
+
+State bugs often come from treating a state variable like a normal variable. React only re-renders when you give a setter a *new* value, and the setter does not change the variable on the very next line. Keeping those rules in mind helps you avoid the mistakes below.
+
+Common mistakes include:
+
+- putting a prop or an unchanging constant into state when it never changes,
+- mutating arrays or objects in state instead of creating new ones,
+- expecting state to update immediately on the next line,
+- storing a value in state that you could compute from other state,
+- using a plain variable where you actually need a state variable.
+
+## Do Not Put Props or Constants in State
+
+State is for values that change over time in response to the user. If a value never changes, you do not need state for it. A common mistake is copying a prop into state:
+
+```jsx
+function Greeting({ name }) {
+  const [displayName, setDisplayName] = React.useState(name);
+  return <p>Hello, {displayName}</p>;
+}
+```
+
+Nothing here ever calls `setDisplayName`, so `displayName` can never change. The state variable adds no value and can even go stale if the `name` prop changes later. Reference the prop directly instead:
+
+```jsx
+function Greeting({ name }) {
+  return <p>Hello, {name}</p>;
+}
+```
+
+The same rule applies to a plain constant: if a value is fixed, use a regular `const`, not `React.useState`.
+
+## Do Not Mutate Arrays in State
+
+React decides whether to re-render by checking whether the value you passed to the setter is a *new* object. If you change the existing array in place, React sees the same array reference and skips the re-render.
+
+Wrong:
+
+```jsx
+items.push('New item');
+setItems(items);
+```
+
+`items.push('New item')` does add the item, but it mutates the existing array, so React still thinks `items` is unchanged and does not re-render. Create a new array instead:
+
+```jsx
+setItems((items) => [...items, 'New item']);
+```
+
+The `...items` spread copies the previous values into a brand-new array, so React can tell the value changed and re-renders the list.
+
+## Do Not Store Derived State
+
+If you can compute a value from other state, do not keep a second state variable for it. Storing that derived value means you have to remember to update it everywhere, and the two values can drift out of sync.
+
+Storing the count separately is unnecessary:
+
+```jsx
+const [items, setItems] = React.useState(['A', 'B']);
+const [numItems, setNumItems] = React.useState(2);
+
+function addItem() {
+  setItems((current) => [...current, 'C']);
+  setNumItems((n) => n + 1);
+}
+```
+
+The number of items is always `items.length`, so compute it during render instead of storing it:
+
+```jsx
+const [items, setItems] = React.useState(['A', 'B']);
+const numItems = items.length;
+
+function addItem() {
+  setItems((current) => [...current, 'C']);
+}
+```
+
+Now there is only one source of truth, and `numItems` can never fall out of sync with `items`.
+
+## Use State When a Value Needs to Trigger a Re-render
+
+The opposite mistake is using a plain variable when you actually need state. A regular variable can change, but React has no way to know it changed, so the screen never updates:
+
+```jsx
+function Counter() {
+  let clickCount = 0;
+  return <button onClick={() => clickCount++}>{clickCount}</button>;
+}
+```
+
+A value the user changes that should appear on screen belongs in `React.useState`, and you update it by calling its setter.
+
+## Example
+
+```{react}
+function TodoList() {
+  const [items, setItems] = React.useState(['Read']);
+  const count = items.length;
+
+  function addItem() {
+    setItems((currentItems) => [...currentItems, 'Practice']);
+  }
+
+  return (
+    <section>
+      <button onClick={addItem}>Add</button>
+      <p>{items.join(', ')}</p>
+      <p>Count: {count}</p>
+    </section>
+  );
+}
+
+renderReact(<TodoList />);
+```
+
+- `items` is the single source of truth for the list.
+- `count` is *derived* from `items` during render, so it never drifts out of sync.
+- `addItem` creates a new array with the spread syntax, so React re-renders.
+
+## Exercises
+
+1. Which state update avoids mutation?
+
+   ```{mcq}
+   Which state update avoids mutation?
+   correct: Correct. The spread syntax creates a new array with the added item.
+   wrong: Think about whether the old array is changed directly.
+   [x] `setItems((items) => [...items, 'New'])`
+   [ ] `items.push('New')`
+   [ ] `items[0] = 'New'`
+   [ ] `items.length = 0`
+   ```
+
+2. Fix the array update so clicking adds `Practice`.
+
+   ```{react}
+   function TodoList() {
+     const [items, setItems] = React.useState(['Read']);
+
+     function addItem() {
+       items.push('Practice');
+       setItems(items);
+     }
+
+     return (
+       <section>
+         <button onClick={addItem}>Add</button>
+         <p>{items.join(', ')}</p>
+       </section>
+     );
+   }
+
+   renderReact(<TodoList />);
+   ```
+   ```+solution
+   function TodoList() {
+     const [items, setItems] = React.useState(['Read']);
+
+     function addItem() {
+       setItems((currentItems) => [...currentItems, 'Practice']);
+     }
+
+     return (
+       <section>
+         <button onClick={addItem}>Add</button>
+         <p>{items.join(', ')}</p>
+       </section>
+     );
+   }
+
+   renderReact(<TodoList />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('push(')).should('equal', false).run('Do not mutate the array with push', 'Avoided array mutation');
+     assert('button').click().run('Click Add', 'Clicked Add');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('p').should('have.text', 'Read, Practice').run('Add Practice to the displayed list', 'Updated the list');
+     }, 50);
+   }, 50);
+   ```
+
+3. This component stores the item count in a second state variable, and the count is stuck at `1`. Remove the `count` state and derive it from `items.length` instead so the count updates when you add items.
+
+   ```{react}
+   function Cart() {
+     const [items, setItems] = React.useState(['Apple']);
+     const [count, setCount] = React.useState(1);
+
+     function addItem() {
+       setItems((current) => [...current, 'Apple']);
+     }
+
+     return (
+       <section>
+         <button onClick={addItem}>Add</button>
+         <p>Count: {count}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Cart />);
+   ```
+   ```+solution
+   function Cart() {
+     const [items, setItems] = React.useState(['Apple']);
+     const count = items.length;
+
+     function addItem() {
+       setItems((current) => [...current, 'Apple']);
+     }
+
+     return (
+       <section>
+         <button onClick={addItem}>Add</button>
+         <p>Count: {count}</p>
+       </section>
+     );
+   }
+
+   renderReact(<Cart />);
+   ```
+   ```+test
+   // React commits its render asynchronously, so the assertions below run
+   // on the next tick. Asserting immediately would find an empty container.
+   setTimeout(function () {
+     wrap(source.includes('setCount')).should('equal', false).run('Remove the separate count state and its setter', 'Removed the derived state variable');
+     assert('button').click().run('Click Add', 'Clicked Add');
+     assert('button').click().run('Click Add again', 'Clicked Add again');
+     // The state update re-renders asynchronously too, so give it a tick.
+     setTimeout(function () {
+       assert('p').should('have.text', 'Count: 3').run('The count should equal the number of items', 'Count stays in sync with items');
+     }, 50);
+   }, 50);
+   ```
+
+4. A `Greeting` component receives a `name` prop and never calls the setter. Why should you reference `name` directly instead of copying it into state?
+
+   ```{mcq}
+   A Greeting component copies its name prop into state with React.useState(name) but never calls the setter. Why is the state variable unnecessary here?
+   correct: Correct. The value never changes, so state adds nothing and can even go stale if the prop changes.
+   wrong: Consider whether the value ever changes and what state is actually for.
+   [x] The value never changes, so state adds nothing and can drift out of sync with the prop.
+   [ ] Props cannot be read inside a component body.
+   [ ] React.useState is not allowed to receive a prop as its initial value.
+   [ ] State variables make JSX invalid.
+   ```
+
+## Resources
+
+- [React Docs: Choosing the State Structure](https://react.dev/learn/choosing-the-state-structure)
+- [React Docs: Updating Arrays in State](https://react.dev/learn/updating-arrays-in-state)
+- [React Docs: State as a Snapshot](https://react.dev/learn/state-as-a-snapshot)
