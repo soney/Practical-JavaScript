@@ -18,7 +18,7 @@ Inside `runAnimation`:
 
 After the animation finishes, the box has moved all the way to the right side of the stage. The page should look similar to this image:
 
-![Expected output: Lesson 1.2 rendered page](layout.png)
+![Expected output: a red box resting on the stage floor at the right edge, with a Start Animation button below](layout.png)
 
 ---
 

@@ -4,9 +4,9 @@ Edit `Lesson 2.1/index.html`:
 
 Create a `<p>` element with the text: "The mascot for the University of Michigan is **the Wolverine**." Put the text "the Wolverine" inside a `<strong>` tag.
 
-> **Note 1**: The `<strong>` tag makes the text inside it bold.
->
-> **Note 2**: The specifics matter; double check your capitalization, spelling, and punctuation. Also, the "period" should **not** be inside the `<strong>` tag.
+***Note 1**: The `<strong>` tag makes the text inside it bold.*
+
+***Note 2**: The specifics matter; double check your capitalization, spelling, and punctuation. Also, the "period" should **not** be inside the `<strong>` tag.*
 
 The resulting page should look similar to this image:
 
