@@ -2,7 +2,7 @@
 
 In the last lesson we declared variables, which in the box analogy is creating a box, labeling it, and putting something inside. The logical next question is how to find out what is in the box later, or to take the thing back out. That is called **referencing** a variable, and it fetches the value stored in it.
 
-To reference a variable, write its name. That is the whole syntax.
+To reference a variable, write its name.
 
 ```{javascript autorun}
 const pi = 3.14;
@@ -20,6 +20,28 @@ console.log(myVar + 5);
 ```
 
 The first log gives `6`, and the second gives `11`, because `myVar + 5` is an arithmetic expression with a variable reference on one side of the `+`.
+
+## Compound Assignment
+
+"Compound assignment" (the name is not important) is a shorthand way to reference a variable and assign it to a new value. For example, suppose we wanted to increase the value of a variable `count` by `1`.
+
+We could write `count = count + 1`:
+
+```{javascript autorun}
+let count = 5;
+count = count + 1;  // Add 1 to the current value of count and store it back in count
+console.log(count); // 6
+```
+
+But there is a shorter way of writing this, `count += 1`:
+
+```{javascript autorun}
+let count = 5;
+count += 1;  // Same as: count = count + 1
+console.log(count); // 6
+```
+
+There are also other operators that we could use: `count -= 1` (subtract 1), `count *= 2` (multiply by 2), and `count /= 3` (divide by 3).
 
 ## You Get the Value It Has Right Now
 
@@ -48,7 +70,7 @@ console.log('greeting');
 
 The first line logs `hello, world`, the value stored in the variable. The second logs the word `greeting`, because the quotes made it a piece of text that has nothing to do with any variable. The two lines look almost the same and mean entirely different things.
 
-To reference a variable, write the bare name, with no quotation marks around it.
+To reference a variable, write the variable name, with no quotation marks around it.
 
 ## Values, Not Expressions, Again
 
@@ -122,7 +144,31 @@ You will see the same kind of error from a typo in the name, because variable na
     check.consoleLogged(/^120$/).run('Reference the variable by writing its name without quotation marks', 'Logged the value of the variable');
     ```
 
-3. What happens when a variable is referenced before it is declared?
+3. Rewrite both updates below using compound assignment: use `+=` to add `25` to `balance`, then `*=` to double it. The cell should still log `250`.
+
+    ```{javascript}
+    let balance = 100;
+
+    balance = balance + 25;  // TODO: shorten this line with compound assignment
+    balance = balance * 2;   // TODO: shorten this line with compound assignment
+
+    console.log(balance);
+    ```
+    ```+solution
+    let balance = 100;
+
+    balance += 25;
+    balance *= 2;
+
+    console.log(balance);
+    ```
+    ```+test
+    wrap(balance).should('equal', 250).run('`balance` should end up as `250`', 'Updated balance to 250');
+    wrap(source.includes('+=')).should('equal', true).run('Use `+=` to add `25` to `balance`', 'Used += to add 25');
+    wrap(source.includes('*=')).should('equal', true).run('Use `*=` to double `balance`', 'Used *= to double balance');
+    ```
+
+4. What happens when a variable is referenced before it is declared?
 
     ```{mcq}
     A script calls `console.log(score)` on line 1 and declares `const score = 10;` on line 2. What happens?

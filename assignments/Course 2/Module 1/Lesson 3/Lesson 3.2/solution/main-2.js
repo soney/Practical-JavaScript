@@ -2,7 +2,7 @@ const input = document.querySelector('#tag-input');
 const btn = document.querySelector('#add-tag-btn');
 const container = document.querySelector('#tag-container');
 
-btn.addEventListener('click', () => {
+btn.addEventListener('click', function () {
   const text = input.value.trim();
 
   if (text !== '') {
@@ -12,7 +12,7 @@ btn.addEventListener('click', () => {
     newTag.classList.add('tag-item');
 
     // Clicking the tag removes it
-    newTag.addEventListener('click', () => {
+    newTag.addEventListener('click', function () {
       newTag.remove();
     });
 
