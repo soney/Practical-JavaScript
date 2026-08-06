@@ -9,7 +9,8 @@ The badge above opens this repository in GitHub Codespaces with the course
 lab ready to use: the lesson notebooks render and run, assignment pages
 preview in the editor, and every package the server assignments need is
 already installed (the [`.devcontainer/`](.devcontainer/) folder is what
-makes that work).
+makes that work). Use **Chrome or Edge** (or the desktop VS Code app) for
+Codespaces - Safari blocks the previews and notebook rendering.
 
 ## What is here
 

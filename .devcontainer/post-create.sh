@@ -37,13 +37,18 @@ echo "post-create: node $(node --version), shared packages installed in $parent/
 
 # Suppress the workspace-trust prompt, as the course lab does. Trust is an
 # application-scoped setting, so it goes in the remote machine settings.
+# Merge-only: if an existing file does not parse (JSONC etc.), leave it
+# alone rather than clobbering whatever the platform put there.
 machine_settings="$HOME/.vscode-remote/data/Machine/settings.json"
 mkdir -p "$(dirname "$machine_settings")"
 node -e '
 const fs = require("fs");
 const p = process.argv[1];
 let s = {};
-try { s = JSON.parse(fs.readFileSync(p, "utf8")); } catch (e) {}
+if (fs.existsSync(p)) {
+  try { s = JSON.parse(fs.readFileSync(p, "utf8")); }
+  catch (e) { console.error("post-create: leaving unparseable " + p + " alone"); process.exit(0); }
+}
 s["security.workspace.trust.enabled"] = false;
 s["security.workspace.trust.startupPrompt"] = "never";
 fs.writeFileSync(p, JSON.stringify(s, null, 2));
