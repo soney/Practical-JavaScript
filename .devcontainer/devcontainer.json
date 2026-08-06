@@ -1,0 +1,97 @@
+// Dev container for the Practical JavaScript course materials.
+// Opening this repo in GitHub Codespaces (or any devcontainer host) gives the
+// same working setup as the Coursera course lab: Node 24, the Web Notebook
+// extension for the .webnb lesson notebooks, live preview for the assignment
+// pages, TODO highlighting for the starter-code edit markers, and every
+// package the Course 3 server assignments need already installed.
+{
+    "name": "Practical JavaScript",
+    "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+    "features": {
+        // Node 24.x on purpose: the course autograder and the Coursera lab
+        // both pin this major, so code that runs here also grades.
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "24"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                // Renders the .webnb lesson notebooks (published on the
+                // VS Code Marketplace by the course author).
+                "oney.web-notebook",
+                // Lights up the TODO:/FIXME:/NOTE: edit markers in starters.
+                "wayou.vscode-todo-highlight"
+            ],
+            "settings": {
+                // Keep the webnb lesson notebooks free of editing chrome: no
+                // per-cell "+ Code / + Markdown" insert bar and no notebook
+                // toolbar across the top.
+                "notebook.insertToolbarLocation": "hidden",
+                "notebook.globalToolbar": false,
+                // Lesson notebooks keep their structure and instructions
+                // locked; code cells stay editable and runnable, and the
+                // "View solution" / "Show Answer" buttons stay available.
+                "webnb.lockCellStructure": true,
+                "webnb.lockMarkdown": true,
+                "webnb.allowRevealingSolutions": true,
+                // Every edit marker in the starters is written as "TODO:",
+                // so those light up; "FIXME:" flags a bug to repair and
+                // "NOTE:" is informational. Matching is case-sensitive.
+                "todohighlight.isEnable": true,
+                "todohighlight.isCaseSensitive": true,
+                "todohighlight.keywords": [
+                    {
+                        "text": "TODO:",
+                        "color": "#1a1a1a",
+                        "backgroundColor": "#ffb300",
+                        "overviewRulerColor": "#ffb300",
+                        "borderRadius": "3px"
+                    },
+                    {
+                        "text": "FIXME:",
+                        "color": "#ffffff",
+                        "backgroundColor": "#e53935",
+                        "overviewRulerColor": "#e53935",
+                        "borderRadius": "3px"
+                    },
+                    {
+                        "text": "NOTE:",
+                        "color": "#ffffff",
+                        "backgroundColor": "#1e88e5",
+                        "overviewRulerColor": "#1e88e5",
+                        "borderRadius": "3px"
+                    }
+                ],
+                "editor.wordWrap": "on",
+                "editor.formatOnPaste": true,
+                "editor.formatOnType": true,
+                "workbench.startupEditor": "none",
+                // Keep the AI chat side bar out of the way, as the lab does.
+                "workbench.secondarySideBar.defaultVisibility": "hidden",
+                // No "trust this folder" prompt, as the lab; post-create
+                // also writes these into the machine settings, since trust
+                // is application-scoped.
+                "security.workspace.trust.enabled": false,
+                "security.workspace.trust.startupPrompt": "never"
+            }
+        }
+    },
+    // The Course 3 server assignments listen on ports in this range; 3000 is
+    // the one the instructions use most.
+    "forwardPorts": [3000],
+    "portsAttributes": {
+        "3000": {
+            "label": "Assignment server"
+        }
+    },
+    // Matches the Coursera lab machine (2 CPU / 4 GB).
+    "hostRequirements": {
+        "cpus": 2,
+        "memory": "4gb"
+    },
+    "postCreateCommand": "bash .devcontainer/post-create.sh",
+    // The two course-specific extensions below are not on any marketplace,
+    // so they install from the vendored .vsix files once the editor attaches.
+    "postAttachCommand": "bash .devcontainer/install-local-extensions.sh"
+}
