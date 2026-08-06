@@ -73,7 +73,16 @@
                 // also writes these into the machine settings, since trust
                 // is application-scoped.
                 "security.workspace.trust.enabled": false,
-                "security.workspace.trust.startupPrompt": "never"
+                "security.workspace.trust.startupPrompt": "never",
+                // Practice solutions are removed from the tree by
+                // sparse-checkout (post-create + post-start); this hides
+                // them from the explorer and search as a second layer.
+                "files.exclude": {
+                    "**/solution": true
+                },
+                "search.exclude": {
+                    "**/solution": true
+                }
             }
         }
     },
@@ -91,7 +100,10 @@
         "memory": "4gb"
     },
     "postCreateCommand": "bash .devcontainer/post-create.sh",
-    // The two course-specific extensions below are not on any marketplace,
-    // so they install from the vendored .vsix files once the editor attaches.
+    // Runs every start: keeps solution folders sparse-checked out even for
+    // codespaces created from an older configuration.
+    "postStartCommand": "bash .devcontainer/post-start.sh",
+    // The course-specific extensions below are not on any marketplace, so
+    // they install from the vendored .vsix files once the editor attaches.
     "postAttachCommand": "bash .devcontainer/install-local-extensions.sh"
 }

@@ -17,12 +17,14 @@ if ! command -v code >/dev/null 2>&1; then
     exit 0
 fi
 
-installed="$(code --list-extensions 2>/dev/null || true)"
+# id@version pairs: the version pin means a newer vendored vsix reinstalls
+# over an older copy on the next attach (the plain id check would skip it).
+installed="$(code --list-extensions --show-versions 2>/dev/null || true)"
 
 for pair in \
-    "local.portable-live-preview:portable-live-preview.vsix" \
-    "local.save-files-as-zip:save-files-as-zip.vsix" \
-    "oney.practical-js-companion:practical-js-companion.vsix"; do
+    "local.portable-live-preview@0.1.0:portable-live-preview.vsix" \
+    "local.save-files-as-zip@0.0.1:save-files-as-zip.vsix" \
+    "oney.practical-js-companion@0.2.1:practical-js-companion.vsix"; do
     id="${pair%%:*}"
     file="${pair#*:}"
     case "$installed" in
