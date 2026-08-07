@@ -53,4 +53,4 @@ const term = parsedUrl.searchParams.get('term');
 
 Course 3, Module 2 - practice assignment (ungraded): [Practice: Request Types](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/2qUuv/practice-request-types) - `Lesson 2.3`
 
-The files here are the starter you get in the course. [`solution/main.js`](solution/main.js) is the finished `main.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%202/Lesson%202/Lesson%202.3/solution); in the course codespace that folder is hidden so you can work the problem first.

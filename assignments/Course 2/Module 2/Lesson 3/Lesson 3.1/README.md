@@ -41,4 +41,4 @@ After selecting some seats, they turn blue and the count and total price update.
 
 Course 2, Module 2 - practice assignment (ungraded): [Practice: Scope and Functions](https://www.coursera.org/learn/building-interactive-web-applications-with-javascript/programming/urR98/practice-scope-and-functions) - `Lesson 3.1`
 
-The files here are the starter you get in the course. [`solution/main-1.js`](solution/main-1.js) is the finished `main-1.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main-1.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%202/Module%202/Lesson%203/Lesson%203.1/solution); in the course codespace that folder is hidden so you can work the problem first.

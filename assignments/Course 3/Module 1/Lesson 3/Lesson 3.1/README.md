@@ -30,4 +30,4 @@ Export both functions even though the page only calls `celsiusToFahrenheit`. A n
 
 Course 3, Module 1 - practice assignment (ungraded): [Practice: Modules](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/BtcXQ/practice-modules) - `Lesson 3.1`
 
-The files here are the starter you get in the course. [`solution/temperature-utils.js`](solution/temperature-utils.js) is the finished `temperature-utils.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `temperature-utils.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%201/Lesson%203/Lesson%203.1/solution); in the course codespace that folder is hidden so you can work the problem first.

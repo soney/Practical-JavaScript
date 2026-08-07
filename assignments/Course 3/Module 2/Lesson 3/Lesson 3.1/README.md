@@ -49,4 +49,4 @@ Handle the `message` event on `ws`. Each time a message arrives:
 
 Course 3, Module 2 - practice assignment (ungraded): [Practice: Real-Time Communication](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/nF7pb/practice-real-time-communication) - `Lesson 3.1`
 
-The files here are the starter you get in the course. [`solution/client-1.js`](solution/client-1.js) is the finished `client-1.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `client-1.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%202/Lesson%203/Lesson%203.1/solution); in the course codespace that folder is hidden so you can work the problem first.

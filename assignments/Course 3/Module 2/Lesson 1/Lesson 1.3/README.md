@@ -36,4 +36,4 @@ This file runs in the browser. Make it ask the server for the count and show it 
 
 Course 3, Module 2 - practice assignment (ungraded): [Practice: Creating Web Servers](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/89334/practice-creating-web-servers) - `Lesson 1.3`
 
-The files here are the starter you get in the course. [`solution/client.js`](solution/client.js) and [`solution/main.js`](solution/main.js) are the finished `client.js` and `main.js`; copy them over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `client.js` and `main.js` are in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%202/Lesson%201/Lesson%201.3/solution); in the course codespace that folder is hidden so you can work the problem first.

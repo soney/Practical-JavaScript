@@ -24,4 +24,4 @@ Leave the existing `PORT` constant and `server.listen(...)` call in place so the
 
 Course 3, Module 2 - practice assignment (ungraded): [Practice: Creating Web Servers](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/89334/practice-creating-web-servers) - `Lesson 1.1`
 
-The files here are the starter you get in the course. [`solution/main.js`](solution/main.js) is the finished `main.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%202/Lesson%201/Lesson%201.1/solution); in the course codespace that folder is hidden so you can work the problem first.

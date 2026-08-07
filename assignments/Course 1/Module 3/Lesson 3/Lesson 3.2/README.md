@@ -20,4 +20,4 @@ Edit `Lesson 3.2/main-2.js`:
 
 Course 1, Module 3 - practice assignment (ungraded): [Practice: Booleans and Conditionals](https://www.coursera.org/learn/web-development-fundamentals-html-css-javascript/programming/Os3rG/practice-booleans-and-conditionals) - `Lesson 3.2`
 
-The files here are the starter you get in the course. [`solution/main-2.js`](solution/main-2.js) is the finished `main-2.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main-2.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%201/Module%203/Lesson%203/Lesson%203.2/solution); in the course codespace that folder is hidden so you can work the problem first.

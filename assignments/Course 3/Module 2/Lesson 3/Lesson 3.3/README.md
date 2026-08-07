@@ -35,4 +35,4 @@ After the server is running, one browser tab is connected, and two messages have
 
 Course 3, Module 2 - practice assignment (ungraded): [Practice: Real-Time Communication](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/nF7pb/practice-real-time-communication) - `Lesson 3.3`
 
-The files here are the starter you get in the course. [`solution/client-3.js`](solution/client-3.js) and [`solution/server.js`](solution/server.js) are the finished `client-3.js` and `server.js`; copy them over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `client-3.js` and `server.js` are in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%202/Lesson%203/Lesson%203.3/solution); in the course codespace that folder is hidden so you can work the problem first.

@@ -31,4 +31,4 @@ After adding a few tasks, it should look similar to this. Each task appears as i
 
 Course 2, Module 1 - practice assignment (ungraded): [Practice: Creating and Removing Elements](https://www.coursera.org/learn/building-interactive-web-applications-with-javascript/programming/RjzMb/practice-creating-and-removing-elements) - `Lesson 3.1`
 
-The files here are the starter you get in the course. [`solution/main-1.js`](solution/main-1.js) is the finished `main-1.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main-1.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%202/Module%201/Lesson%203/Lesson%203.1/solution); in the course codespace that folder is hidden so you can work the problem first.

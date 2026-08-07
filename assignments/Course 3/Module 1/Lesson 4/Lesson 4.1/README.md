@@ -26,4 +26,4 @@ Your task in `main.js`:
 
 Course 3, Module 1 - practice assignment (ungraded): [Practice: Package Managers and the Console](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/VQ8LZ/practice-package-managers-and-the-console) - `Lesson 4.1`
 
-The files here are the starter you get in the course. [`solution/main.js`](solution/main.js) is the finished `main.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%201/Lesson%204/Lesson%204.1/solution); in the course codespace that folder is hidden so you can work the problem first.

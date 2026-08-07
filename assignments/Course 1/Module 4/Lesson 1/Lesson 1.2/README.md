@@ -18,4 +18,4 @@ Inside the existing `<script>` element, add the JavaScript for the button.
 
 Course 1, Module 4 - practice assignment (ungraded): [Practice: JavaScript Objects and Elements](https://www.coursera.org/learn/web-development-fundamentals-html-css-javascript/programming/EjTll/practice-javascript-objects-and-elements) - `Lesson 1.2`
 
-The files here are the starter you get in the course. [`solution/index.html`](solution/index.html) is the finished `index.html`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `index.html` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%201/Module%204/Lesson%201/Lesson%201.2/solution); in the course codespace that folder is hidden so you can work the problem first.

@@ -12,4 +12,4 @@ Read `window.innerWidth` *inside* the function (not before it), so that each cal
 
 Course 1, Module 4 - practice assignment (ungraded): [Practice: JavaScript Objects and Elements](https://www.coursera.org/learn/web-development-fundamentals-html-css-javascript/programming/EjTll/practice-javascript-objects-and-elements) - `Lesson 1.1`
 
-The files here are the starter you get in the course. [`solution/main-1.js`](solution/main-1.js) is the finished `main-1.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main-1.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%201/Module%204/Lesson%201/Lesson%201.1/solution); in the course codespace that folder is hidden so you can work the problem first.

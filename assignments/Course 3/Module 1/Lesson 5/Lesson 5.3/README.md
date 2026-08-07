@@ -28,4 +28,4 @@ With `devtool: 'source-map'`, the build writes both `dist/main.js` and `dist/mai
 
 Course 3, Module 1 - practice assignment (ungraded): [Practice: Bundlers](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/7EyOs/practice-bundlers) - `Lesson 5.3`
 
-The files here are the starter you get in the course. [`solution/webpack.config.js`](solution/webpack.config.js) is the finished `webpack.config.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `webpack.config.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%201/Lesson%205/Lesson%205.3/solution); in the course codespace that folder is hidden so you can work the problem first.

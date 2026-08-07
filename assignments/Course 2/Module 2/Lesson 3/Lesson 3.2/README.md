@@ -31,4 +31,4 @@ When the page loads and `100` is typed while `EUR` is selected, the page should 
 
 Course 2, Module 2 - practice assignment (ungraded): [Practice: Scope and Functions](https://www.coursera.org/learn/building-interactive-web-applications-with-javascript/programming/urR98/practice-scope-and-functions) - `Lesson 3.2`
 
-The files here are the starter you get in the course. [`solution/main-2.js`](solution/main-2.js) is the finished `main-2.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main-2.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%202/Module%202/Lesson%203/Lesson%203.2/solution); in the course codespace that folder is hidden so you can work the problem first.

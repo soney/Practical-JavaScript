@@ -33,4 +33,4 @@ When it works, the `#output` box shows a formatted heading, a bulleted list, bol
 
 Course 3, Module 1 - practice assignment (ungraded): [Practice: External Libraries](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/Q6bA8/practice-external-libraries) - `Lesson 2.3`
 
-The files here are the starter you get in the course. [`solution/index.html`](solution/index.html) and [`solution/main-3.js`](solution/main-3.js) are the finished `index.html` and `main-3.js`; copy them over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `index.html` and `main-3.js` are in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%201/Lesson%202/Lesson%202.3/solution); in the course codespace that folder is hidden so you can work the problem first.

@@ -32,4 +32,4 @@ When your default export is in place, `main-3.js` runs `formatName('ada')` and t
 
 Course 3, Module 1 - practice assignment (ungraded): [Practice: Modules](https://www.coursera.org/learn/developing-full-stack-applications-with-javascript/programming/BtcXQ/practice-modules) - `Lesson 3.3`
 
-The files here are the starter you get in the course. [`solution/formatter.js`](solution/formatter.js) is the finished `formatter.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `formatter.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%203/Module%201/Lesson%203/Lesson%203.3/solution); in the course codespace that folder is hidden so you can work the problem first.

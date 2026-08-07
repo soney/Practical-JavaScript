@@ -16,4 +16,4 @@ For example, `canDrive(20)` should return `true`, and `canDrive(15)` should retu
 
 Course 1, Module 3 - practice assignment (ungraded): [Practice: Functions](https://www.coursera.org/learn/web-development-fundamentals-html-css-javascript/programming/ILrIX/practice-functions) - `Lesson 5.3`
 
-The files here are the starter you get in the course. [`solution/main-3.js`](solution/main-3.js) is the finished `main-3.js`; copy it over the starter to run the completed assignment.
+The files here are the starter you get in the course. The finished `main-3.js` is in the [solution folder on GitHub](https://github.com/soney/Practical-JavaScript/tree/main/assignments/Course%201/Module%203/Lesson%205/Lesson%205.3/solution); in the course codespace that folder is hidden so you can work the problem first.
