@@ -17,7 +17,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 (
     cd "$here/.." && \
     git config --global --add safe.directory "$(pwd)" 2>/dev/null; \
-    git sparse-checkout set --no-cone '/*' '!**/solution/**'
+    git sparse-checkout set --no-cone '/*' '!/assignments/**/solution/**'
 ) || echo "post-create: sparse-checkout of solution/ dirs failed; post-start will retry" >&2
 parent="$(dirname "$(dirname "$here")")"   # /workspaces in a codespace
 

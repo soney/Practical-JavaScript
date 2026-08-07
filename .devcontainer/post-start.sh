@@ -22,7 +22,7 @@ count_solutions() {
 }
 
 if [ "$(count_solutions)" != "0" ]; then
-    git sparse-checkout set --no-cone '/*' '!**/solution/**' || true
+    git sparse-checkout set --no-cone '/*' '!/assignments/**/solution/**' || true
     git sparse-checkout reapply 2>/dev/null || true
     left="$(count_solutions)"
     if [ "$left" != "0" ]; then
