@@ -8,6 +8,17 @@
 set -euo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
+
+# FIRST, before anything that could fail the script: learners should not
+# have the practice solutions sitting next to the starters. sparse-checkout
+# drops them from the working tree while keeping it clean (authors:
+# `git sparse-checkout disable` restores them; they remain on GitHub).
+# safe.directory guards against Codespaces ownership mismatches.
+(
+    cd "$here/.." && \
+    git config --global --add safe.directory "$(pwd)" 2>/dev/null; \
+    git sparse-checkout set --no-cone '/*' '!**/solution/**'
+) || echo "post-create: sparse-checkout of solution/ dirs failed; post-start will retry" >&2
 parent="$(dirname "$(dirname "$here")")"   # /workspaces in a codespace
 
 if [ ! -w "$parent" ] && command -v sudo >/dev/null 2>&1; then
@@ -28,12 +39,6 @@ cd "$parent"
 npm install --no-audit --no-fund
 echo "post-create: node $(node --version), shared packages installed in $parent/node_modules"
 
-# Learners should not have the practice solutions sitting next to the
-# starters. git sparse-checkout drops them from the working tree while
-# keeping it clean (authors: `git sparse-checkout disable` restores them;
-# they also remain visible in the repo on GitHub).
-(cd "$here/.." && git sparse-checkout set --no-cone '/*' '!**/solution/**' 2>/dev/null) || \
-    echo "post-create: sparse-checkout of solution/ dirs failed; they remain visible" >&2
 
 # Suppress the workspace-trust prompt, as the course lab does. Trust is an
 # application-scoped setting, so it goes in the remote machine settings.
