@@ -70,6 +70,12 @@
                 // env var the extension reads), so it never enters this
                 // public repo. See self-hosted/aws-grader/README.md.
                 "pjsCompanion.graderUrl": "https://2qvsy4up9k.execute-api.us-east-2.amazonaws.com",
+                // Opening a problem puts the description preview beside the
+                // starter and gives it focus, and VS Code normally hides an
+                // inactive group's title-bar actions. Without this the Submit
+                // button vanishes at exactly the moment a learner looks for
+                // it, so keep every group's actions on screen.
+                "workbench.editor.alwaysShowEditorActions": true,
                 "editor.wordWrap": "on",
                 "editor.formatOnPaste": true,
                 "editor.formatOnType": true,

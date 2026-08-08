@@ -111,12 +111,14 @@ to rewatch, and it is searchable with `Ctrl+F` (`Cmd+F` on a Mac).
 
 Clicking an assignment problem sets up both halves of the job at once.
 
-![An assignment open: the starter file on the left with its TODO comment marked, the problem description rendered on the right](images/cs-06-assignment.png)
+![An assignment open: the starter file on the left with its TODO comment marked, the Submit button in the title bar, the problem description rendered on the right](images/cs-06-assignment.png)
 
 1. **The starter file**, with a `TODO:` comment highlighted in yellow marking
    the exact spot you are meant to change. Where a problem has several steps,
    they are numbered `TODO: (1)`, `TODO: (2)`, and so on.
-2. **The problem description**, rendered beside your code so you can read the
+2. **The Submit button**, the small cloud icon in the title bar above your
+   code. That is what sends your work to the grader; Step 5 below covers it.
+3. **The problem description**, rendered beside your code so you can read the
    requirements without switching tabs.
 
 Two rules that will save you trouble:
@@ -171,17 +173,20 @@ A few things worth knowing:
 
 ## Step 5: Submit for grading
 
-When you are ready, submit from the button in the editor's title bar, or from
-the command palette (`F1`, then "Submit Assignment for Grading"). You can also
-right-click the problem's folder and submit from there.
+When you are ready, click the **cloud icon** in the title bar above your code.
+The same command sits on every problem in the outline (hover the row and click
+its cloud icon) and in the command palette (`F1`, then "Submit Assignment for
+Grading"), and you can right-click the problem's folder and submit from there.
 
-![The graded result: the score panel beside the code, and the problem checked off in the outline](images/cs-08-feedback.png)
+![The graded result: the feedback panel beside the code listing every check, and the problem checked off in the outline](images/cs-08-feedback.png)
 
-1. **Your score.** This is the course's real grader, the same checks the
+1. **Your result.** This is the course's real grader, the same checks the
    Coursera course runs, so a pass here is a genuine pass.
 2. **The outline checks the problem off** as soon as it passes.
-3. **The feedback panel** opens beside your code. When something fails it names
-   the element, the text, or the behavior it expected, and you fix and resubmit.
+3. **Every check the grader ran**, in the same report Coursera shows. On a pass
+   you can read exactly what was verified; when something fails it names the
+   element, the text, or the behavior it expected, suggests what to try, and
+   keeps the raw error under "Technical details" if you want it.
 
 Grading takes a few seconds, because a real browser opens your page and works
 through a list of checks. You can submit as many times as you like, so
