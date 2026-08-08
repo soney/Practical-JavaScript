@@ -79,7 +79,8 @@ Clicking a video opens the lecture inside the editor.
 Under the video you will also find **Code from this video**: the exact folder
 and files written on camera during that lecture. Clicking a file opens it beside
 the video, so you can follow along in the real code instead of retyping from the
-screen.
+screen. The **Next** button at the right of that same bar names whatever comes
+after this lecture and takes you there, which is usually its reading.
 
 ### In-video questions
 
