@@ -3,15 +3,6 @@
 Public course materials for the **Practical JavaScript** specialization
 by Steve Oney, University of Michigan.
 
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/soney/Practical-JavaScript)
-
-The badge above opens this repository in GitHub Codespaces with the course
-lab ready to use: the lesson notebooks render and run, assignment pages
-preview in the editor, and every package the server assignments need is
-already installed (the [`.devcontainer/`](.devcontainer/) folder is what
-makes that work). Use **Chrome or Edge** (or the desktop VS Code app) for
-Codespaces - Safari blocks the previews and notebook rendering.
-
 ## What is here
 
 [`presentation-code/`](presentation-code/) - the source code written during the lecture
@@ -58,8 +49,3 @@ Most are single HTML files - open them in a browser. Folders with a
 A few samples call third-party APIs and ship with the key replaced by a
 placeholder such as `YOUR_OMDB_API_KEY`. Get your own (they are free) and drop
 it in. Nothing here contains a working credential.
-
-## Where this comes from
-
-This repository is generated from the course's private authoring repository and
-should not be edited directly - changes here are overwritten on the next sync.

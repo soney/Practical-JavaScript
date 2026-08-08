@@ -12,6 +12,3 @@ Container") gives you the same setup as the Coursera course lab:
   Node's lookup path (no `npm install` needed inside assignment folders;
   lecture samples with their own `package.json` still use `npm install` +
   `npm start` as their READMEs say)
-
-Like the rest of this repository, these files are generated from the course's
-private authoring repository; changes here are overwritten on the next sync.
