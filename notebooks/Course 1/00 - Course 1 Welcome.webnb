@@ -26,7 +26,7 @@ JavaScript is the language of the web and [the most widely used programming lang
 - If you want to load these on your own computer, you can (optionally):
   1. Install [Visual Studio Code](https://code.visualstudio.com/)
   2. Install [the WebNB extension](https://marketplace.visualstudio.com/items/?itemName=oney.web-notebook)
-  3. Download [the course repository from GitHub](https://github.com/academic-innovation-online-learning/Practical-JavaScript)
+  3. Download [the course repository from GitHub](https://github.com/soney/Practical-JavaScript)
 - However, you can also use the web version of the notebooks. You can run them in your browser without installing anything.
 
 These notebooks come equipped with interactive exercises. For example, in the following code cell, try to:

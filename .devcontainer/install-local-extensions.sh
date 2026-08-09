@@ -24,7 +24,7 @@ installed="$(code --list-extensions --show-versions 2>/dev/null || true)"
 for pair in \
     "local.portable-live-preview@0.1.0:portable-live-preview.vsix" \
     "local.save-files-as-zip@0.0.1:save-files-as-zip.vsix" \
-    "oney.practical-js-companion@0.4.0:practical-js-companion.vsix"; do
+    "oney.practical-js-companion@0.4.1:practical-js-companion.vsix"; do
     id="${pair%%:*}"
     file="${pair#*:}"
     case "$installed" in
