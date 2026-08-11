@@ -1,0 +1,9 @@
+{
+  "version": "f12746339c4d",
+  "plaintextSha256": "f12746339c4dd399ebde46e86e940af8e995bfc3a395aaa12ab321219de8ef42",
+  "plaintextBytes": 13596118,
+  "encBytes": 13596154,
+  "cipher": "aes-256-gcm scrypt (see bundle-format.js)",
+  "source": "autograde-docker.zip",
+  "builtAt": "2026-08-10T20:04:23.587Z"
+}

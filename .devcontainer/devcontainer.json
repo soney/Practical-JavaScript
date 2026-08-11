@@ -63,13 +63,12 @@
                         "borderRadius": "3px"
                     }
                 ],
-                // The course grading endpoint (public API Gateway in front
-                // of the scale-to-zero Lambda grader). Only the URL lives
-                // here - it is public and gated by a token. The token is
-                // delivered as the Codespaces secret PJS_GRADER_TOKEN (an
-                // env var the extension reads), so it never enters this
-                // public repo. See self-hosted/aws-grader/README.md.
-                "pjsCompanion.graderUrl": "https://2qvsy4up9k.execute-api.us-east-2.amazonaws.com",
+                // Grading runs inside the codespace: post-create installs
+                // the course autograder from the encrypted bundle in
+                // grader/ and post-start keeps a local grading service
+                // running (see grader/README.md). The Submit button posts
+                // here; nothing leaves the machine.
+                "pjsCompanion.graderUrl": "http://127.0.0.1:8123",
                 // Opening a problem puts the description preview beside the
                 // starter and gives it focus, and VS Code normally hides an
                 // inactive group's title-bar actions. Without this the Submit
@@ -80,7 +79,12 @@
                 "editor.formatOnPaste": true,
                 "editor.formatOnType": true,
                 "workbench.startupEditor": "none",
-                // Keep the AI chat side bar out of the way, as the lab does.
+                // Keep the AI chat out of the way, as the lab does. The
+                // hidden side bar default alone is not enough: the Chat view
+                // reveals itself on a workspace's first open. Learners who
+                // want Copilot back can flip "Chat: Disable AI Features" off
+                // in Settings.
+                "chat.disableAIFeatures": true,
                 "workbench.secondarySideBar.defaultVisibility": "hidden",
                 // No "trust this folder" prompt, as the lab; post-create
                 // also writes these into the machine settings, since trust
@@ -105,6 +109,13 @@
     "portsAttributes": {
         "3000": {
             "label": "Assignment server"
+        },
+        // The local grading service. Internal to the codespace; without
+        // this attribute the port-forward toast would pop up on every
+        // container start.
+        "8123": {
+            "label": "Course grader (internal)",
+            "onAutoForward": "ignore"
         }
     },
     // Matches the Coursera lab machine (2 CPU / 4 GB).

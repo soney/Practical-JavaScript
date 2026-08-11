@@ -9,6 +9,24 @@
 set -uo pipefail
 
 here="$(cd "$(dirname "$0")" && pwd)"
+
+# --- In-codespace autograder -------------------------------------------
+# Keep the local grading service alive across restarts. setup-grader is a
+# fast no-op while the installed bundle matches .devcontainer/grader/, and
+# installs it when post-create failed (or a git pull brought a new bundle
+# and the container restarted). Port matches pjsCompanion.graderUrl.
+if command -v node >/dev/null 2>&1 && [ -f "$here/grader/grader-server.js" ]; then
+    node "$here/grader/setup-grader.js" --quiet || \
+        echo "post-start: grader bundle install failed; Submit will not work yet" >&2
+    if ! (exec 3<>/dev/tcp/127.0.0.1/8123) 2>/dev/null; then
+        mkdir -p "$HOME/.pjs-grader"
+        nohup node "$here/grader/grader-server.js" >>"$HOME/.pjs-grader/server.log" 2>&1 &
+        echo "post-start: grading service starting on 127.0.0.1:8123"
+    else
+        exec 3>&- 2>/dev/null || true
+    fi
+fi
+
 cd "$here/.." || exit 0
 [ -d .git ] || exit 0
 

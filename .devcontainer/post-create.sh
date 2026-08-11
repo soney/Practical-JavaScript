@@ -39,6 +39,30 @@ cd "$parent"
 npm install --no-audit --no-fund
 echo "post-create: node $(node --version), shared packages installed in $parent/node_modules"
 
+# --- In-codespace autograder -------------------------------------------
+# Grading runs locally against the encrypted bundle in grader/ (see
+# grader/README.md). None of this is required to work through the course
+# materials, so a failure here warns instead of breaking codespace
+# creation; post-start retries the install on every container start.
+grader_system_deps() {
+    # Cypress's Electron browser needs an X server and the usual GTK/NSS
+    # runtime libraries (Ubuntu 24.04 package names).
+    sudo apt-get update -y && \
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        xvfb xauth unzip \
+        libgtk2.0-0t64 libgtk-3-0t64 libgbm1 libnotify4 \
+        libnss3 libxss1 libasound2t64 libxtst6
+}
+if command -v sudo >/dev/null 2>&1 && grader_system_deps; then
+    if node "$here/grader/setup-grader.js"; then
+        echo "post-create: in-codespace grader installed"
+    else
+        echo "post-create: grader setup failed; Submit will not work until 'node .devcontainer/grader/setup-grader.js' succeeds" >&2
+    fi
+else
+    echo "post-create: could not install grader system packages; skipping grader setup" >&2
+fi
+
 
 # Suppress the workspace-trust prompt, as the course lab does. Trust is an
 # application-scoped setting, so it goes in the remote machine settings.

@@ -14,7 +14,9 @@ that video and links to it.
 59 Coursera assignments. Every problem folder holds the starter code you are
 given in the course lab and its description as that folder's README. The
 44 practice assignments also publish their solutions; the
-15 graded ones do not, and no autograder tests are published.
+15 graded ones do not, and no autograder tests are published in
+readable form (grading runs inside the Codespace against the encrypted bundle
+in `.devcontainer/grader/`).
 
 [`notebooks/`](notebooks/) - the 214 interactive lesson
 notebooks (`.webnb`), exactly as they appear pre-loaded in each course's lab.
